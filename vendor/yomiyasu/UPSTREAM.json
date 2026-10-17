@@ -1,0 +1,300 @@
+{
+  "name": "yomiyasu",
+  "version": "2.0.0",
+  "repository": "https://github.com/nanaism/yomiyasu",
+  "commit": "68075bea91ae27958766effd6aaa56d42d6be125",
+  "commit_date": "2026-10-16T14:50:14Z",
+  "license": "MIT",
+  "additional_notice": "UNICODE-LICENSE.txt",
+  "modifications": "None. Exact upstream file bytes; original skills/yomiyasu package root flattened to vendor/yomiyasu. Images and plugin metadata omitted. Hook script preserved but no hooks installed or enabled.",
+  "files": [
+    {
+      "path": "LICENSE",
+      "original_path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/LICENSE",
+      "git_blob_oid": "f0d06f87f9b209d47c7f7963321ff71bab68c1e8",
+      "sha256": "79d802f15bc8caf67f1a83c1bdbe214ccb41a0a0275f9046b329b89c65ee1fca",
+      "bytes": 1064
+    },
+    {
+      "path": "UNICODE-LICENSE.txt",
+      "original_path": "UNICODE-LICENSE.txt",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/UNICODE-LICENSE.txt",
+      "git_blob_oid": "56da58912807030b451a4700687d5bd02c72d6ed",
+      "sha256": "e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96",
+      "bytes": 1995
+    },
+    {
+      "path": "SKILL.md",
+      "original_path": "skills/yomiyasu/SKILL.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/SKILL.md",
+      "git_blob_oid": "b44ec5f81ba64b594c5c22e0258544b817a0763a",
+      "sha256": "b3ca0bd8d1a479eb9789dca2f8e4cf22ad008f0fc8df0e922614ea9ec10aa7ae",
+      "bytes": 110419
+    },
+    {
+      "path": "references/audience.md",
+      "original_path": "skills/yomiyasu/references/audience.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/audience.md",
+      "git_blob_oid": "c9e4004bf226f61680cc9d17387ecf9ec7542b0c",
+      "sha256": "406938162e6238dc08dc46fcd2160ea6a2731fdb60478429903b15577bd4dbf8",
+      "bytes": 21145
+    },
+    {
+      "path": "references/doc-types/article.md",
+      "original_path": "skills/yomiyasu/references/doc-types/article.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/doc-types/article.md",
+      "git_blob_oid": "5555ad6fac4139c443c30bcc71bd31b90b126787",
+      "sha256": "e5009c496b4b4ac8974c16f2f15b0f8ce93620863dfe721803b01138db845716",
+      "bytes": 1338
+    },
+    {
+      "path": "references/doc-types/essay.md",
+      "original_path": "skills/yomiyasu/references/doc-types/essay.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/doc-types/essay.md",
+      "git_blob_oid": "7e6ee762ab3b991b599299e5602491d75dee5aaf",
+      "sha256": "0f937b0dc89094813f83cdc51bc89c1eb3c9dc99a6ab08302941825ac1f54646",
+      "bytes": 4399
+    },
+    {
+      "path": "references/doc-types/formal.md",
+      "original_path": "skills/yomiyasu/references/doc-types/formal.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/doc-types/formal.md",
+      "git_blob_oid": "c2ed7aa505cf4e26fb6cedcf83c380b62312a32a",
+      "sha256": "61afdef04d810aee80d173daf675f8a75c9cde82db09fb0ed8fcedd1b362afad",
+      "bytes": 2582
+    },
+    {
+      "path": "references/doc-types/incident.md",
+      "original_path": "skills/yomiyasu/references/doc-types/incident.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/doc-types/incident.md",
+      "git_blob_oid": "287165f83caa12e08065a187d9c5754a91aee3c5",
+      "sha256": "d25282690b220e5d4fa2595228d282d65f7b03d8d4b325c30bf251b58a474b77",
+      "bytes": 1841
+    },
+    {
+      "path": "references/doc-types/mail.md",
+      "original_path": "skills/yomiyasu/references/doc-types/mail.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/doc-types/mail.md",
+      "git_blob_oid": "6f6300df44e8203b5764f67ab07106b3726200ea",
+      "sha256": "43c84865368c6e1e61c0ac1645583933092ddcaabb49b6ed4b6c4621e9ba2d4f",
+      "bytes": 6329
+    },
+    {
+      "path": "references/doc-types/manual.md",
+      "original_path": "skills/yomiyasu/references/doc-types/manual.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/doc-types/manual.md",
+      "git_blob_oid": "72685c6d34b023e3d22a7814ef360c20a2e7fd32",
+      "sha256": "37971c4b7cf8159656a2435b30444a05692fbdffdd7dc3dd8e8f4ada90e8ef8f",
+      "bytes": 1567
+    },
+    {
+      "path": "references/doc-types/minutes.md",
+      "original_path": "skills/yomiyasu/references/doc-types/minutes.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/doc-types/minutes.md",
+      "git_blob_oid": "0e21a3edb43c7b3ecc1c613d1a6294322570e093",
+      "sha256": "7869c10e72e0e4ce6ecb94833e84452beba7f8b676230908fe623deddc49b140",
+      "bytes": 1356
+    },
+    {
+      "path": "references/doc-types/paper.md",
+      "original_path": "skills/yomiyasu/references/doc-types/paper.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/doc-types/paper.md",
+      "git_blob_oid": "adffd64ac057608444d149e060e863219cb2c15c",
+      "sha256": "ed2957332ef12464d4bc43bc22ca2250229eca57f39b11597d2632fab020f12c",
+      "bytes": 5681
+    },
+    {
+      "path": "references/doc-types/pr.md",
+      "original_path": "skills/yomiyasu/references/doc-types/pr.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/doc-types/pr.md",
+      "git_blob_oid": "a49dccda870f97f8e2bbf3b437c1b5910f8fe00b",
+      "sha256": "d7bb8a4ac7f5344abf66bb7dfe893480c67ea8d635078c5a8d2582264a21506b",
+      "bytes": 1736
+    },
+    {
+      "path": "references/doc-types/promo.md",
+      "original_path": "skills/yomiyasu/references/doc-types/promo.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/doc-types/promo.md",
+      "git_blob_oid": "8dd8f778be6c693d166bc3ed564998ad9790e48a",
+      "sha256": "f25c7b387077cc354a97ecd94580ce550a94cec34f28e2c11ed86dfaa71112bb",
+      "bytes": 6141
+    },
+    {
+      "path": "references/doc-types/proposal.md",
+      "original_path": "skills/yomiyasu/references/doc-types/proposal.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/doc-types/proposal.md",
+      "git_blob_oid": "cc03100c37ec983afc3cdc69cb48223a39c28fe2",
+      "sha256": "2a8d8a557b33f2df51aedeed02ba5bb8ed623fcde55f6a42ff4b477920853731",
+      "bytes": 1408
+    },
+    {
+      "path": "references/doc-types/slides.md",
+      "original_path": "skills/yomiyasu/references/doc-types/slides.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/doc-types/slides.md",
+      "git_blob_oid": "5c3f9cad2093c5a33a9df44d8f0334ad555aa703",
+      "sha256": "6443d9b6e6d1782795b37a2e6edae65a439b0f23534aed885373a308262762fc",
+      "bytes": 1744
+    },
+    {
+      "path": "references/domains/business.md",
+      "original_path": "skills/yomiyasu/references/domains/business.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/domains/business.md",
+      "git_blob_oid": "fda8c9dcd1049df62594b09842b2bc936baf6d0b",
+      "sha256": "7d5be30f2bac61b7f47849193f02eaecebd8b27ef5f00e75af12144c9ab061ea",
+      "bytes": 9153
+    },
+    {
+      "path": "references/domains/essay.md",
+      "original_path": "skills/yomiyasu/references/domains/essay.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/domains/essay.md",
+      "git_blob_oid": "1450f9fec4a986eb8fc734853d997addbeef0976",
+      "sha256": "aeeeb9f9c842d68fa0fcf2e956bd2f87c5f450bc820df931f3f94b903a8a8c7a",
+      "bytes": 4696
+    },
+    {
+      "path": "references/domains/tech.md",
+      "original_path": "skills/yomiyasu/references/domains/tech.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/domains/tech.md",
+      "git_blob_oid": "49f36b1a5916e56f8e2b973bee21656207ccf916",
+      "sha256": "255b1bcbf42a0c7ea7f42c7293cd964e541d70f6f5079ebcbffc332ce6b7b0dd",
+      "bytes": 6130
+    },
+    {
+      "path": "references/fact-recovery-details.md",
+      "original_path": "skills/yomiyasu/references/fact-recovery-details.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/fact-recovery-details.md",
+      "git_blob_oid": "77e5c445c5b2e3f87b60c636ec3d1f891d84fd67",
+      "sha256": "d845b843578c9f7cb452b7a776adf8b0c162d6a46078271c9cfc6c2311a3875d",
+      "bytes": 18637
+    },
+    {
+      "path": "references/fact-recovery.md",
+      "original_path": "skills/yomiyasu/references/fact-recovery.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/fact-recovery.md",
+      "git_blob_oid": "7e4a36792a0b858d54605de0e8b91d3ebf19b81d",
+      "sha256": "431eca7304c970570a1d04e81ad27f836dedf7b43cd876a9bb20e6ba7048bef8",
+      "bytes": 17828
+    },
+    {
+      "path": "references/gemini-syntax.md",
+      "original_path": "skills/yomiyasu/references/gemini-syntax.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/gemini-syntax.md",
+      "git_blob_oid": "5825bae34df02890602689e5d6058cf7ce3daf27",
+      "sha256": "156c2c97481b386c0674161f84ea5931dc79c84751f3b86539116d215f407143",
+      "bytes": 54611
+    },
+    {
+      "path": "references/lists/fact-gaps.txt",
+      "original_path": "skills/yomiyasu/references/lists/fact-gaps.txt",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/lists/fact-gaps.txt",
+      "git_blob_oid": "30ad50259ec20cad225cd677b976544b6a8fa0c7",
+      "sha256": "9511f320413e9b9cb970e32b19d238954e20387d8958c3a98a28608a065bfb86",
+      "bytes": 4076
+    },
+    {
+      "path": "references/lists/feelings.txt",
+      "original_path": "skills/yomiyasu/references/lists/feelings.txt",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/lists/feelings.txt",
+      "git_blob_oid": "73a7f9b0a72238dc2223096bbe18bc1a3c99b177",
+      "sha256": "5f71a66f5e2679de04ecd30395ab74ca61962297c22ef3f4efa5c8e625446166",
+      "bytes": 4232
+    },
+    {
+      "path": "references/lists/hedges.txt",
+      "original_path": "skills/yomiyasu/references/lists/hedges.txt",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/lists/hedges.txt",
+      "git_blob_oid": "2a20cefc2886ce03116eef8743d84b62523e911e",
+      "sha256": "ed666036f63f4705d2c129d3fd30e971018d50732bbef2c18081412a61ccd771",
+      "bytes": 303
+    },
+    {
+      "path": "references/lists/intensifiers.txt",
+      "original_path": "skills/yomiyasu/references/lists/intensifiers.txt",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/lists/intensifiers.txt",
+      "git_blob_oid": "7594085d2951a125a392b766ed50c6a95da8fe58",
+      "sha256": "3e4829226d871ce10e4ae89c49ae218b6d9ed77cafcd6ddfd0fdb6cecd1fec2e",
+      "bytes": 1391
+    },
+    {
+      "path": "references/lists/nominalization.txt",
+      "original_path": "skills/yomiyasu/references/lists/nominalization.txt",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/lists/nominalization.txt",
+      "git_blob_oid": "a2ecc4169e1aa267388a40c7d68bc3131cc56b74",
+      "sha256": "2f685bbcd7dfc5ea871ff5655368195d471cea6ac4ff57e75a0648aadd466048",
+      "bytes": 2256
+    },
+    {
+      "path": "references/persona.md",
+      "original_path": "skills/yomiyasu/references/persona.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/persona.md",
+      "git_blob_oid": "390dbd8db6f94fd3413a2677d66d27ce89f4eb40",
+      "sha256": "3c1517aac4227411cabd7c462dc5fe833bb8015bd83c842c5b5fe14d566bbdf2",
+      "bytes": 23905
+    },
+    {
+      "path": "references/rephrase-test.md",
+      "original_path": "skills/yomiyasu/references/rephrase-test.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/rephrase-test.md",
+      "git_blob_oid": "bc84913bedc141e32edada970b8b07f50479195b",
+      "sha256": "6b6b857c0f09f94e07d5406890e10c270dd64cb3232dc3983b975c204b5ad8bf",
+      "bytes": 8826
+    },
+    {
+      "path": "references/review-points.md",
+      "original_path": "skills/yomiyasu/references/review-points.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/review-points.md",
+      "git_blob_oid": "05e8f206eb441f6da21f22b5a67a5e4f789f7249",
+      "sha256": "4d0163afa982b877de01e366361a93cc60761f0a9fe11ff99d9b432e5634c7a2",
+      "bytes": 29423
+    },
+    {
+      "path": "references/slop-catalog.md",
+      "original_path": "skills/yomiyasu/references/slop-catalog.md",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/slop-catalog.md",
+      "git_blob_oid": "d2519770231c4ad21819012f795a7d760f332dfe",
+      "sha256": "94a30e54fe272180e9483d9602e12039d457d17f0c6d930747c7357974641d57",
+      "bytes": 38827
+    },
+    {
+      "path": "scripts/markdown_visibility.py",
+      "original_path": "skills/yomiyasu/scripts/markdown_visibility.py",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/scripts/markdown_visibility.py",
+      "git_blob_oid": "aadff0926cb9a9a3abb8ea26d532a479d5d06f45",
+      "sha256": "3fb581980c3e4ee8a30dd9bbdc25a120de6f9e77c25bdf39b8d4718b0461bf8b",
+      "bytes": 34655
+    },
+    {
+      "path": "scripts/yomiyasu_check.py",
+      "original_path": "skills/yomiyasu/scripts/yomiyasu_check.py",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/scripts/yomiyasu_check.py",
+      "git_blob_oid": "dc4bb56526e61c44db9445113103f8f8cdd2168f",
+      "sha256": "844ba9abf031e01c130c99cf4faf8fb0090eb99f036ce5da7d8be1557b781f8c",
+      "bytes": 271530
+    },
+    {
+      "path": "scripts/yomiyasu_diff.py",
+      "original_path": "skills/yomiyasu/scripts/yomiyasu_diff.py",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/scripts/yomiyasu_diff.py",
+      "git_blob_oid": "2ea17bdecbf0b55b04ec049092a832da43704f10",
+      "sha256": "c09399b0bece3f36a8f41d06a7bb3f2f542efe4913e29f0e6a12a23b239d9a78",
+      "bytes": 536977
+    },
+    {
+      "path": "scripts/yomiyasu_hook.py",
+      "original_path": "skills/yomiyasu/scripts/yomiyasu_hook.py",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/scripts/yomiyasu_hook.py",
+      "git_blob_oid": "7cb43b94e2d94eb93797743d2c3a633c75249e57",
+      "sha256": "507ac23bd27bf840b737a31d380cc9e3a15bdc578d73f10de3c49982723d3d66",
+      "bytes": 38612
+    },
+    {
+      "path": "scripts/yomiyasu_lint.py",
+      "original_path": "skills/yomiyasu/scripts/yomiyasu_lint.py",
+      "url": "https://raw.githubusercontent.com/nanaism/yomiyasu/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/scripts/yomiyasu_lint.py",
+      "git_blob_oid": "9c4f2325dfc144a2c0089cb2469af3e30f3a1038",
+      "sha256": "9c657b9d0c5657271bb8cc4658814ba04175531f9907053911438c4dd6390161",
+      "bytes": 156326
+    }
+  ]
+}

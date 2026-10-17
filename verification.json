@@ -1,0 +1,1036 @@
+{
+  "stage": "release_prepared_and_locally_verified",
+  "verified_on": "2026-10-18",
+  "spec_consultations": [
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "specification consultation only",
+      "receipt_sha256": "e580a3981cbbfab25ad8c3db569cfdbcbbab1e39198635dc393a03f508ae7012",
+      "receipt_published": false
+    },
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "specification consultation only",
+      "receipt_sha256": "d487a5138fa9a049cac7f3b6febc17e29d881396730948ceecb7b3a7cbd85f66",
+      "receipt_published": false
+    },
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "Decider integration design consultation only",
+      "receipt_sha256": "953d47b6d01378c42f4269be02882036636818267b35555de05999ed76d0e6fd",
+      "receipt_published": false
+    },
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "Decider implementation review by reading source only",
+      "receipt_sha256": "2fa2282b54711c060b2c5b2f4ee607f1dd1fd63c9110fc4252530d5fa297234e",
+      "receipt_published": false
+    },
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "Windows OSS packaging specification consultation",
+      "receipt_sha256": "107290a36529b5054597bba1786803dd8661baf833ed624638602870361aedd9",
+      "receipt_published": false
+    },
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "Cross-platform plugin source review",
+      "receipt_sha256": "ac7c65d9ffd8de099a1aa9b37e29a3c25cee77f1122d4caa33d0b87ff2cd1222",
+      "receipt_published": false
+    },
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "Google-login CLI integration design consultation only; not source approval",
+      "receipt_sha256": "f5530c47eff40db05b770985bb25c6018bb93b5faa70dda28ad0583313140666",
+      "receipt_published": false
+    },
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "Minimal two-pane Gothic UI design consultation only; not source approval",
+      "receipt_sha256": "af0b19e0a2647c9433f6e7989c7a01e1fcbf4b81897ae39a21550521f593b678",
+      "receipt_published": false
+    },
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "Independent generation/meaning toggles and automatic-result UI design consultation only; not source approval",
+      "receipt_sha256": "8313ba2fa48e8fd55d5cff8bd07506be7af9493b9b503c7c29d8a60d76ab014d",
+      "receipt_published": false
+    },
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "Bounded automatic CLI retries, isolation and waiting UI consultation only; not source approval",
+      "receipt_sha256": "10d9faf3c57588bb3e46f4329ab4c9db9797553d1cc67fb700bc4489c2c8fcdb",
+      "receipt_published": false
+    },
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "Mac24 preflight and Yomiyasu guidance wiring source review only; not native Mac execution",
+      "receipt_sha256": "1e56b7bb0e64de40582040e826a7c40b0fae039351c04527fc7883b7433adc8d",
+      "receipt_published": false
+    }
+  ],
+  "upstream": {
+    "repository": "nanaism/yomiyasu",
+    "commit": "68075bea91ae27958766effd6aaa56d42d6be125",
+    "files_unchanged": 36
+  },
+  "checks": {
+    "python_unittest": {
+      "passed": 222,
+      "command": "python -B -m unittest discover -s apps/japanese-editor/tests -q"
+    },
+    "javascript_syntax": "passed",
+    "skill_format": "passed",
+    "vendor_sha256": "passed",
+    "python_syntax": {
+      "status": "passed",
+      "files": 33,
+      "method": "ast.parse; no bytecode",
+      "paths": [
+        "app.py",
+        "cli_login.py",
+        "decider.py",
+        "decider_runtime.py",
+        "desktop.py",
+        "engine.py",
+        "gemini_cli.py",
+        "generators.py",
+        "install.py",
+        "integrations.py",
+        "mac_credentials.py",
+        "progress.py",
+        "provider_settings.py",
+        "runtime_paths.py",
+        "service_runtime.py",
+        "tests/test_decider.py",
+        "tests/test_desktop_build.py",
+        "tests/test_engine.py",
+        "tests/test_gemini_cli.py",
+        "tests/test_gemini_setup.py",
+        "tests/test_generators.py",
+        "tests/test_integrations.py",
+        "tests/test_macos_resources.py",
+        "tests/test_mcp_recovery.py",
+        "tests/test_progress.py",
+        "tests/test_provider_integration.py",
+        "tests/test_setup_decider.py",
+        "tools/build_release.py",
+        "tools/build_windows.py",
+        "tools/decider_worker.py",
+        "tools/download_decider.py",
+        "tools/evaluate_decider.py",
+        "tools/setup_decider.py"
+      ]
+    },
+    "public_source_links": "passed",
+    "web_ui_regression": {
+      "passed": 19,
+      "command": "node --test tests/test_web_ui.js"
+    }
+  },
+  "browser": {
+    "rules": "executed",
+    "generator_reported_model": "claude-opus-5-5",
+    "synthetic_article_candidates": 3,
+    "single_accept_revert_and_reapply": "observed",
+    "original_retained": "observed",
+    "profile_change_invalidates_results": "observed",
+    "export_run_verify": "executed",
+    "download_started": "observed",
+    "download_file_readback": "not_run",
+    "narrow_viewport": "not_tested",
+    "flash_runtime": {
+      "synthetic_article_characters": 60,
+      "generator_reported_model": "claude-opus-5-5",
+      "candidates": 2,
+      "native_decisions": [
+        "preserved",
+        "preserved"
+      ],
+      "scope": "document",
+      "original_retained": true,
+      "first_candidate_accepted_only": true,
+      "export_run_verify": "executed",
+      "download_started": "observed",
+      "download_file_readback": "not_run",
+      "screenshot_published": false,
+      "screenshot_sha256": "d1be26d9d996ded57ad7f7434ee48532a7455fd5cfa8036a45a3feac13b685b7"
+    },
+    "evidence_version": "0.2.1_or_earlier"
+  },
+  "fiction": {
+    "synthetic_examples": 1,
+    "edits": 0,
+    "questions": 0,
+    "human_style_approval": false
+  },
+  "mcp": {
+    "host": "Claude Code",
+    "configuration": "isolated per-invocation, not installed globally",
+    "model_reported": [
+      "claude-opus-5-5"
+    ],
+    "tool_calls": [
+      "mcp__yebisu_japanese_editor__japanese_editor_review_proposals",
+      "mcp__yebisu_japanese_editor__japanese_editor_finalize"
+    ],
+    "tool_errors": 0,
+    "codex_host": "v0.2.2_globally_registered_windows_cli_executed",
+    "decider": {
+      "status": "executed",
+      "choice": "preserved",
+      "scope": "document",
+      "stream_receipt_sha256": "4fd1c4cf50caa36cc3e1e622a40ddcf2ecc6d230809c976f8d8a6bf3dd27da4e",
+      "finalize_reinference": false
+    },
+    "decider_evidence_version": "0.2.1",
+    "initial_host_evidence_version": "0.2.1_or_earlier",
+    "codex_registration_version": "0.2.5"
+  },
+  "decider": {
+    "status": "actual_local_inference_completed",
+    "model": "pplx-decider-flash-v1.2",
+    "revision": "6d771ad7b5ecff5e93b8fc7b90d4c5ccc341954d",
+    "backend": "native_fast_false_shared_local_service",
+    "device": "cpu",
+    "precision": "bfloat16",
+    "precision_override": true,
+    "reference_path": "native_fast_false_cpu_bfloat16_override",
+    "official_cpu_fp32_parity": "not_tested",
+    "max_length": 2048,
+    "cpu_threads": 8,
+    "asynchronous_weight_loading": false,
+    "weights_downloaded": true,
+    "downloaded_files_sha256_verified": 23,
+    "download_bytes": 9100065100,
+    "separate_environment": true,
+    "torch": "2.14.0+cpu",
+    "transformers": "5.17.0",
+    "api_calls": 0,
+    "large_27b": "not_downloaded_not_run",
+    "load_latency_ms": 27130.9,
+    "synthetic_pair_latency_ms": {
+      "min": 1706.7,
+      "max": 3215.9,
+      "median": 2440.05
+    },
+    "evaluation": {
+      "cases": 18,
+      "matches_creator_expectation": 17,
+      "human_gold": false,
+      "held_out": false,
+      "result_path": "evaluation/runtime-results.json",
+      "japanese_quality_approval": false
+    },
+    "cli": {
+      "status": "executed",
+      "source_characters": 3273,
+      "context_characters": 592,
+      "scope": "excerpt",
+      "latency_ms": 9184.0,
+      "native_length_error_recoverable": true,
+      "worker_reused_after_error": true
+    },
+    "judgment_budget_seconds": 480,
+    "native_request_timeout_seconds": 180,
+    "application_memory_peak_short_samples_gib": 10.03,
+    "notes": [
+      "Resource floor is a guard for this restricted context, not a measured universal minimum.",
+      "Samples are synthetic, creator expectations unreviewed; no Japanese accuracy claim.",
+      "Original model code and checkpoint files verified; CPU load precision explicitly overridden."
+    ],
+    "lifecycle": {
+      "reload": "executed",
+      "second_load_latency_ms": 24454.5,
+      "subsequent_choice": "preserved",
+      "stop_command": "executed",
+      "owned_wrapper_and_model_process_both_exited": true,
+      "left_running": "shared_http_service_only_model_unloaded",
+      "next_judgment_reloads": true,
+      "private_receipt_sha256": "173ab080550e80d268216d4e2ab0c7e4d1f2e5546fd886bd25a2179e78d03f95",
+      "frozen_startup_guard_recovery": {
+        "startup_error": "insufficient_memory",
+        "original_error_preserved": true,
+        "recovery": "same_service_configuration_changed_from_FP32_to_BF16",
+        "resource_guard_unchanged": true,
+        "choices": [
+          "preserved",
+          "preserved"
+        ],
+        "owned_worker_unload_and_service_exit": "confirmed",
+        "receipt_sha256": "aea20a0785790f37f88b0e0c756517e945d4069beabefa91c3dea8acb598dde0"
+      }
+    }
+  },
+  "publication": {
+    "repository": "https://github.com/studio-yebisu/japanese-editor",
+    "release_tag": "v0.2.5",
+    "release_url": "https://github.com/studio-yebisu/japanese-editor/releases/tag/v0.2.5",
+    "status_basis": "Packaged before publication; GitHub repository and release are the current publication record.",
+    "catalog_added": false,
+    "deployed": false,
+    "oss_source_and_windows_zips_prepared": true,
+    "model_weights_or_personal_settings_included": false
+  },
+  "artifacts_sha256": {
+    ".claude-plugin/plugin.json": "5d752e6e2243f0f92b4afacea79a503b6ac38a17a9c968a43e3dc5d190bf5891",
+    ".gitattributes": "a681ad5904ee3ee60c4c1c11f02667dd1d70b9e2d17fca5344e5c02b8fd47f7e",
+    ".gitignore": "5ea601b323026f6a92861c85605ad27c6a645a94ac3676c8b9697d776c671ed8",
+    "app.py": "927dfe1bdaec0f1132e761736c94041aedf0f3fbb13d93970f3d9d551a5c9c2c",
+    "build/windows.spec": "523cf10594da68700ea7c90d0445f2aaf7e7c1283707d45d2e345d1972eb3c56",
+    "cli_login.py": "cb1b6c56a859a3c08cd6902f7c9686a43d21a98b393c8ca9a8b62500feeddff7",
+    "CONTRIBUTING.md": "e06e59c7921b8cc7fe0990e87966336045943e763e91f64e9663bb7ab9b30a7e",
+    "decider.py": "12bf6633274c45e2edbc0c9ce63ae72b5a9b5aac33c74a5c912305496e281182",
+    "decider_runtime.py": "dfd29c67753c695a28a0ddc328dbbaeda8e224dc6f53011d851a65672c04f996",
+    "desktop.py": "d2eb93d7380a7fa77c61a93ec690b733087176db42a8700b3227a70a7079cb0f",
+    "docs/assets/editor.png": "42895c983da89332d5953ec643a38716d5c399bd0c2c857017ba1b9a2b6c717c",
+    "docs/DECIDER_RUNTIME.md": "3b752bad931d3919411373de0d496750c4ea7272a73257c8ef9b8556ef12262e",
+    "docs/INSTALL.md": "d6fb38f782d9ae787b6585d3ff7539832bbefc1192d6b2324ebe40286bf7e6eb",
+    "docs/PLUGINS.md": "9abff7c296732d4168f559a6eb90df3dad46915d5b0c419f2a2c669a43cb8689",
+    "docs/PROVIDERS.md": "211dabc2f4a3658eb6bb0fdc0fc3f3455561376ce6ebb8fe5365422e321e971b",
+    "docs/SOURCES.md": "6c7e84b5fac4f955708259e46ef393ea5621e60a60e6fbb15718179ccea3cd88",
+    "docs/STATUS.md": "8212b81ea16aa80561c3991a97a0e6b05e252e0cb5a59729861907ae57346546",
+    "docs/WINDOWS.md": "97718d7572127922fbda3488a9f9ba1e49ccc87ee9e35a6f5cc63732a4fac098",
+    "engine.py": "78e22ae8b34549f21566e8d4f519bf7e98c74d87c7b445bb1fd404655ea824ee",
+    "evaluation/cases.json": "7f9d24da9aea81f5d381fb555dbe639dab39f9b12750921a4ed5fd0b2ae8f87c",
+    "evaluation/controls.json": "28370f55fee9b93eb09086e5b56c6fdae7ebee0ece0548a4e25e62dd85897716",
+    "evaluation/README.md": "2ac737f729caa7aa3cd4c618df60daf9aefef7a2a7ebe8e3985ed1c932e9d3f5",
+    "evaluation/runtime-results.json": "8627ceccb467751e1aa534baa6abd8c76984fcb82064d26f9afd6bfaec1a95ea",
+    "gemini_cli.py": "04a6a4b44d333469d7691e54aef7b4c44454ef9b06effbc2b0e222c95ae02dda",
+    "generators.py": "c44f4b1d1c2f7fc645d1ae4e6a059e90cd52efea1bdbd341dfd6abfd98d16f76",
+    "install.ps1": "49ef1c83e88790b83b532369a08b36e6942b99e5dbd0fdf1ef0aa41f3073fa09",
+    "install.py": "f963f221bdf8f93d86eb123c51e88aa5144c673888badefe0b471959017ec849",
+    "install.sh": "368d436138804976fca54e14d4386aab89bdbec2a7ae94061524b5e7b43b9d48",
+    "integrations.py": "a1a925f8d33b9f3eed140f17b922a27f89d8d6e5149073177e5efc1094f39bf6",
+    "LICENSE": "d90f55562b9f84fed7da43692eca81aa1b012fda98623acc6f3b5a89b9b778dd",
+    "mac_credentials.py": "7827d2c5c91e3c1591520379ef490d573d1f2be01f9a94e63b13aea4a99a59b2",
+    "plugin.json": "1d940d951e9613aef2964f382d925c92a23d0459deb4b570fa246749a86e25ff",
+    "profiles.json": "dff9739e68486d1f5782972ab7d0eb007062c19030e9e35a361ba1c823059a47",
+    "progress.py": "87f9fbb5f82947da29edc45afe48d331118540d7c04a4ec60d3cd5fbab010658",
+    "provider_settings.py": "ed657766153208c1ffa22f8e435f3f49bada043bd2542b62500bcc38fdbcd400",
+    "README.md": "1a4ae4eb979b370eabde329f1c8367762d14304117031f32a11b48af85bd015c",
+    "runtime_paths.py": "ee1d493a2846f850f86359f4c7f53831476e8c647e5bc223333e3a11207393ca",
+    "SECURITY.md": "fbb865fef02bab92cc8bd7e50c69c8bb18a8555e633326c390e1924f6db5237b",
+    "service_runtime.py": "88ac513375b871d1f99081f6938e6d1654470b433af861d9b1d0c21f083a07dd",
+    "skills/japanese-editor/SKILL.md": "1317d01cf56e7cea97bdfab93328ebad446904745b7fc2d96df1df10f4140437",
+    "skills/setup/SKILL.md": "8e12cc3d81fdffae87b2c64cad69e5b6f76a3ce4a3559373eeae77847da9c61b",
+    "start.ps1": "369c60e56d89c56253343ae35aba63efef4e97c391f548c0cafb397a7f2d96db",
+    "tests/test_decider.py": "b318b9e183fcd7ddc2b441cc8bb15266c7915e5e6cb49fcfae87196235932a43",
+    "tests/test_desktop_build.py": "b00bd071d78fb6f0da1e45c596b660a656298af112d1cda5fd15253f3ea49809",
+    "tests/test_engine.py": "5fdfb3962ad7f9c69560cf21922347548ba2b48ca1b723b4c8ec8bd7e91fe2e8",
+    "tests/test_gemini_cli.py": "9625584e93dcf8c3dee2fa1cd8c6e79b69e8ac6ce40e0b75d07de59e0be9a2cd",
+    "tests/test_gemini_setup.py": "fb19200b486c50a33bd5abc8f8b143be47d2916b274587ebdff9ce9a8456fe10",
+    "tests/test_generators.py": "cc577ec6d06c2b618d294cb685eed718d083d2a1c5e5359d4e0dec7bd89fe80b",
+    "tests/test_integrations.py": "dd36bdbaeec4c8a669ab1237f33dc861d1b98c41a068bdec816d6c3a8f8bea14",
+    "tests/test_macos_resources.py": "6c2c2f2c7bec32cfb30e96f3f178362525a39c2f575e92ba644dc5f7daae340a",
+    "tests/test_mcp_recovery.py": "b7be6cea41110bb7773327da949398f5b9bf4458a54bce481e1ec83d530d9a2b",
+    "tests/test_progress.py": "af764c95736ca8b0efde73413d77c261d3a07353d0827545b90d734b4492a9a1",
+    "tests/test_provider_integration.py": "6f8e2cf9edc5eb7558c5c9848c54d8c19d2da53597abfaffb83380b30818de56",
+    "tests/test_setup_decider.py": "1f0370a1ff2922ea953c2dbc8bf373cca8a50abcb672e1ed0ee297bd6778dd70",
+    "tests/test_web_ui.js": "f27766e1e40f6356140b1d775ec3eeeafb2b03efa3a43a536e20ab0c7d94afae",
+    "THIRD_PARTY_NOTICES.md": "355d094f3cad0dd35857b4c410bfd3d97f4f39a84c8cec3cb79627b3d625ae64",
+    "tools/build_release.py": "208168979f6bfe4f4149e00b502112a8de6894c639bf1324529947c0b0934820",
+    "tools/build_windows.py": "c6f9063ee235eaa83990a453f61946dbfc4dae5dc184bc20c416884dbb37f331",
+    "tools/decider_worker.py": "9647df80ee7b5441da000775376fd2c6a71eae01677bbd7b7e77a09d5c14a8ec",
+    "tools/download_decider.py": "de808acd9692544007a0eabc3940cbe4d6782d06c192d9690b45d12d559ae1bc",
+    "tools/evaluate_decider.py": "9988cfd61fbaa2313f9d4e9e48c89766a4f96d849fcd59a33c418075ec1fc50e",
+    "tools/setup_decider.py": "ea8fe1d028145dafccadf73366a52667ecde8f7df1def420127c27393e107c19",
+    "vendor/yomiyasu/LICENSE": "79d802f15bc8caf67f1a83c1bdbe214ccb41a0a0275f9046b329b89c65ee1fca",
+    "vendor/yomiyasu/references/audience.md": "406938162e6238dc08dc46fcd2160ea6a2731fdb60478429903b15577bd4dbf8",
+    "vendor/yomiyasu/references/doc-types/article.md": "e5009c496b4b4ac8974c16f2f15b0f8ce93620863dfe721803b01138db845716",
+    "vendor/yomiyasu/references/doc-types/essay.md": "0f937b0dc89094813f83cdc51bc89c1eb3c9dc99a6ab08302941825ac1f54646",
+    "vendor/yomiyasu/references/doc-types/formal.md": "61afdef04d810aee80d173daf675f8a75c9cde82db09fb0ed8fcedd1b362afad",
+    "vendor/yomiyasu/references/doc-types/incident.md": "d25282690b220e5d4fa2595228d282d65f7b03d8d4b325c30bf251b58a474b77",
+    "vendor/yomiyasu/references/doc-types/mail.md": "43c84865368c6e1e61c0ac1645583933092ddcaabb49b6ed4b6c4621e9ba2d4f",
+    "vendor/yomiyasu/references/doc-types/manual.md": "37971c4b7cf8159656a2435b30444a05692fbdffdd7dc3dd8e8f4ada90e8ef8f",
+    "vendor/yomiyasu/references/doc-types/minutes.md": "7869c10e72e0e4ce6ecb94833e84452beba7f8b676230908fe623deddc49b140",
+    "vendor/yomiyasu/references/doc-types/paper.md": "ed2957332ef12464d4bc43bc22ca2250229eca57f39b11597d2632fab020f12c",
+    "vendor/yomiyasu/references/doc-types/pr.md": "d7bb8a4ac7f5344abf66bb7dfe893480c67ea8d635078c5a8d2582264a21506b",
+    "vendor/yomiyasu/references/doc-types/promo.md": "f25c7b387077cc354a97ecd94580ce550a94cec34f28e2c11ed86dfaa71112bb",
+    "vendor/yomiyasu/references/doc-types/proposal.md": "2a8d8a557b33f2df51aedeed02ba5bb8ed623fcde55f6a42ff4b477920853731",
+    "vendor/yomiyasu/references/doc-types/slides.md": "6443d9b6e6d1782795b37a2e6edae65a439b0f23534aed885373a308262762fc",
+    "vendor/yomiyasu/references/domains/business.md": "7d5be30f2bac61b7f47849193f02eaecebd8b27ef5f00e75af12144c9ab061ea",
+    "vendor/yomiyasu/references/domains/essay.md": "aeeeb9f9c842d68fa0fcf2e956bd2f87c5f450bc820df931f3f94b903a8a8c7a",
+    "vendor/yomiyasu/references/domains/tech.md": "255b1bcbf42a0c7ea7f42c7293cd964e541d70f6f5079ebcbffc332ce6b7b0dd",
+    "vendor/yomiyasu/references/fact-recovery-details.md": "d845b843578c9f7cb452b7a776adf8b0c162d6a46078271c9cfc6c2311a3875d",
+    "vendor/yomiyasu/references/fact-recovery.md": "431eca7304c970570a1d04e81ad27f836dedf7b43cd876a9bb20e6ba7048bef8",
+    "vendor/yomiyasu/references/gemini-syntax.md": "156c2c97481b386c0674161f84ea5931dc79c84751f3b86539116d215f407143",
+    "vendor/yomiyasu/references/lists/fact-gaps.txt": "9511f320413e9b9cb970e32b19d238954e20387d8958c3a98a28608a065bfb86",
+    "vendor/yomiyasu/references/lists/feelings.txt": "5f71a66f5e2679de04ecd30395ab74ca61962297c22ef3f4efa5c8e625446166",
+    "vendor/yomiyasu/references/lists/hedges.txt": "ed666036f63f4705d2c129d3fd30e971018d50732bbef2c18081412a61ccd771",
+    "vendor/yomiyasu/references/lists/intensifiers.txt": "3e4829226d871ce10e4ae89c49ae218b6d9ed77cafcd6ddfd0fdb6cecd1fec2e",
+    "vendor/yomiyasu/references/lists/nominalization.txt": "2f685bbcd7dfc5ea871ff5655368195d471cea6ac4ff57e75a0648aadd466048",
+    "vendor/yomiyasu/references/persona.md": "3c1517aac4227411cabd7c462dc5fe833bb8015bd83c842c5b5fe14d566bbdf2",
+    "vendor/yomiyasu/references/rephrase-test.md": "6b6b857c0f09f94e07d5406890e10c270dd64cb3232dc3983b975c204b5ad8bf",
+    "vendor/yomiyasu/references/review-points.md": "4d0163afa982b877de01e366361a93cc60761f0a9fe11ff99d9b432e5634c7a2",
+    "vendor/yomiyasu/references/slop-catalog.md": "94a30e54fe272180e9483d9602e12039d457d17f0c6d930747c7357974641d57",
+    "vendor/yomiyasu/scripts/markdown_visibility.py": "3fb581980c3e4ee8a30dd9bbdc25a120de6f9e77c25bdf39b8d4718b0461bf8b",
+    "vendor/yomiyasu/scripts/yomiyasu_check.py": "844ba9abf031e01c130c99cf4faf8fb0090eb99f036ce5da7d8be1557b781f8c",
+    "vendor/yomiyasu/scripts/yomiyasu_diff.py": "c09399b0bece3f36a8f41d06a7bb3f2f542efe4913e29f0e6a12a23b239d9a78",
+    "vendor/yomiyasu/scripts/yomiyasu_hook.py": "507ac23bd27bf840b737a31d380cc9e3a15bdc578d73f10de3c49982723d3d66",
+    "vendor/yomiyasu/scripts/yomiyasu_lint.py": "9c657b9d0c5657271bb8cc4658814ba04175531f9907053911438c4dd6390161",
+    "vendor/yomiyasu/SKILL.md": "b3ca0bd8d1a479eb9789dca2f8e4cf22ad008f0fc8df0e922614ea9ec10aa7ae",
+    "vendor/yomiyasu/UNICODE-LICENSE.txt": "e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96",
+    "vendor/yomiyasu/UPSTREAM.json": "0b6ca3f0041a3c04ff5a5969dff07bfc0df90ae309b7df8ce07d940fb23314e7",
+    "web/app.js": "0deed5ea4cadf1868399ef1b3a480957e7ecd8bd93d46c778966f9a375a94402",
+    "web/index.html": "015431e9cfd7c6eca92057ca6cb846a43c8030e2233df5493bd1f8682daa5fc0",
+    "web/style.css": "c4f46682be6f1a58af62955cee8b0959cae4d45afbad58a8e9bca006039c302b"
+  },
+  "version": "0.2.5",
+  "codex": {
+    "version": "0.2.2",
+    "host": "Codex CLI",
+    "transport": "globally_registered_frozen_stdio_mcp",
+    "calls": [
+      "japanese_editor_profiles",
+      "japanese_editor_review_proposals",
+      "japanese_editor_finalize"
+    ],
+    "tool_errors": 0,
+    "configured_host_model": "gpt-6.1-sol",
+    "host_checkpoint_independently_verified": false,
+    "candidate_source": "test_author_supplied",
+    "review_stages": {
+      "rules": "executed",
+      "generation": "host_supplied",
+      "decider": "not_run"
+    },
+    "final_text": "保存してください。上限は3件です。",
+    "run_verify": "executed",
+    "final_sha256": "135de3d3624a010494b71881a0cb0ab76288deb088cd994f573f4387503eed8e",
+    "installed_cli_sha256": "e8cd3102e521acf23a1a3578a776fd85a2dbfedb1dabbb78e1050519f2ca5f6f",
+    "private_stream_sha256": "3cb21e2f3ef0fee6f9486e1fe1e2ad87065506316ff11dc68c035d378bc1ef46"
+  },
+  "self_documentation": {
+    "scope": "README 193-character paragraph; two test-author candidates; complete README run/verify",
+    "native_choices": [
+      "preserved",
+      "preserved"
+    ],
+    "candidate_source": "test_author_supplied",
+    "applied": true,
+    "full_readme_run_verify": "executed",
+    "final_readme_sha256": "056352c154a2ff7af4214df30ccc4fbf4d9e2a93d14136048974724b9cb81d20",
+    "meaning_or_language_quality_guarantee": false,
+    "evidence_version": "0.2.1",
+    "current_readme_run_verify": {
+      "run": "executed",
+      "verify": "executed",
+      "final_sha256": "1a4ae4eb979b370eabde329f1c8367762d14304117031f32a11b48af85bd015c",
+      "meaning_or_language_quality_guarantee": false,
+      "version": "0.2.5"
+    },
+    "current_documents_run_verify": {
+      "README.md": {
+        "run": "executed",
+        "verify": "executed",
+        "final_sha256": "1a4ae4eb979b370eabde329f1c8367762d14304117031f32a11b48af85bd015c",
+        "meaning_or_language_quality_guarantee": false
+      },
+      "docs/STATUS.md": {
+        "run": "executed",
+        "verify": "executed",
+        "final_sha256": "8212b81ea16aa80561c3991a97a0e6b05e252e0cb5a59729861907ae57346546",
+        "meaning_or_language_quality_guarantee": false
+      },
+      "docs/INSTALL.md": {
+        "run": "executed",
+        "verify": "executed",
+        "final_sha256": "d6fb38f782d9ae787b6585d3ff7539832bbefc1192d6b2324ebe40286bf7e6eb",
+        "meaning_or_language_quality_guarantee": false
+      },
+      "docs/DECIDER_RUNTIME.md": {
+        "run": "executed",
+        "verify": "executed",
+        "final_sha256": "3b752bad931d3919411373de0d496750c4ea7272a73257c8ef9b8556ef12262e",
+        "quality_guarantee": false
+      },
+      "docs/PROVIDERS.md": {
+        "run": "executed",
+        "verify": "executed",
+        "final_sha256": "211dabc2f4a3658eb6bb0fdc0fc3f3455561376ce6ebb8fe5365422e321e971b",
+        "meaning_or_language_quality_guarantee": false
+      },
+      "docs/PLUGINS.md": {
+        "run": "executed",
+        "verify": "executed",
+        "final_sha256": "9abff7c296732d4168f559a6eb90df3dad46915d5b0c419f2a2c669a43cb8689",
+        "meaning_or_language_quality_guarantee": false
+      },
+      "CONTRIBUTING.md": {
+        "run": "executed",
+        "verify": "executed",
+        "final_sha256": "e06e59c7921b8cc7fe0990e87966336045943e763e91f64e9663bb7ab9b30a7e",
+        "meaning_or_language_quality_guarantee": false
+      },
+      "SECURITY.md": {
+        "run": "executed",
+        "verify": "executed",
+        "final_sha256": "fbb865fef02bab92cc8bd7e50c69c8bb18a8555e633326c390e1924f6db5237b",
+        "meaning_or_language_quality_guarantee": false
+      },
+      "THIRD_PARTY_NOTICES.md": {
+        "run": "executed",
+        "verify": "executed",
+        "final_sha256": "355d094f3cad0dd35857b4c410bfd3d97f4f39a84c8cec3cb79627b3d625ae64",
+        "meaning_or_language_quality_guarantee": false
+      },
+      "docs/WINDOWS.md": {
+        "run": "executed",
+        "verify": "executed",
+        "final_sha256": "97718d7572127922fbda3488a9f9ba1e49ccc87ee9e35a6f5cc63732a4fac098",
+        "meaning_or_language_quality_guarantee": false
+      }
+    }
+  },
+  "platforms": {
+    "windows": {
+      "gui": "native_EdgeChromium_rules_check_executed",
+      "frozen_cli": "stdio_MCP_review_finalize_run_verify_CRLF_hash_executed",
+      "codex": "v0.2.5_registered; actual Codex host proof remains v0.2.2",
+      "per_user_install": "v0.2.5_installed",
+      "start_menu_shortcut": "v0.2.5_installed",
+      "unsigned": true,
+      "frozen_cli_receipt_sha256": "0338b96e1d452ef1316da393b42b50b75a5a452ac6efeb4ed50b7a227bf1f652",
+      "native_window_receipt_sha256": "720eb8b971273494318054bb4046769b8194546d6eaf369defb1d7e1bed0371e",
+      "native_recovery_receipt_sha256": "807470614d4a82adfb46220a25635b7c01d8d6a2a16f192cefcfcebd8d88dc16",
+      "version": "0.2.5",
+      "native_recovery_evidence_version": "0.2.1"
+    },
+    "macos": {
+      "implementation": "shared_Python_MCP_skill_entrypoint_OS_Keychain_and_resource_adapter",
+      "automated_tests": "mocked_on_Windows",
+      "actual_install_inference_keychain": "not_run",
+      "app_bundle": "not_built",
+      "mac24_preset": {
+        "status": "experimental",
+        "device": "cpu",
+        "precision": "bfloat16",
+        "max_length": 2048,
+        "minimum_total_ram_gib": 24,
+        "minimum_available_ram_gib": 11,
+        "macos_minimum": 14,
+        "python_architecture": "arm64",
+        "preflight_mock_tests": 21,
+        "read_only_check_only": true,
+        "native_mac_inference_verified": false,
+        "receipt_sha256": "15ffc5921faccb08496b0eafdb81f06eabe938ffbc008ee287e043ddb82f79ed"
+      }
+    }
+  },
+  "generators": {
+    "default_provider": "gemini",
+    "default_model": "gemini-3.8-flash-high",
+    "transport": "official_Antigravity_CLI",
+    "verified_cli_version": "1.4.0",
+    "authentication": "official_CLI_OS_keyring",
+    "gemini_api_key_used": false,
+    "app_reads_or_copies_OAuth_tokens": false,
+    "successful_synthetic_CLI_runs": 4,
+    "empty_before_generation_attempts_during_validation": 2,
+    "underlying_CLI_network_request_count": "not_measured",
+    "stdin_lifetime": "kept_open_until_terminal_event",
+    "automatic_provider_fallback": false,
+    "useG1Credits": false,
+    "sarashina_models": [
+      "sarashina3-mini",
+      "sarashina3-nano"
+    ],
+    "sarashina_original_max_characters": 1500,
+    "sarashina_live_requests": 0,
+    "sarashina_live_key_store_write": "not_run",
+    "live_frozen_pipeline": {
+      "version": "0.2.2",
+      "installed_windows_cli": true,
+      "synthetic_original": "この機能を利用することが可能です。保存件数の上限は3件です。",
+      "stages": {
+        "rules": "executed",
+        "generation": "executed",
+        "decider": "executed"
+      },
+      "elapsed_seconds": 125.587,
+      "generator": {
+        "requested_provider": "gemini",
+        "reported_provider": "gemini",
+        "requested_model": "gemini-3.8-flash-high",
+        "reported_model": "gemini-3.8-flash-high",
+        "transport": "antigravity-cli",
+        "identity_basis": "cli_stream_init_model",
+        "exact_checkpoint_verified": false,
+        "model_version_differs": false,
+        "cli_version": "1.4.0",
+        "tool_steps": 0
+      },
+      "candidate_count": 1,
+      "native_choices": [
+        "preserved"
+      ],
+      "accepted_count": 1,
+      "final": "この機能を利用できます。保存件数の上限は3件です。",
+      "check": "executed",
+      "verification": "executed",
+      "final_sha256": "d3ffc0c3540f8b739192cd18e9bba8e5483611e45d83de79c2f4e953b2c94bee",
+      "model_unloaded": true,
+      "analysis_receipt_sha256": "f27edd2da77303cbbfca8f7d155b8f3b6d5f8d015a747191501468fc288c9ef0"
+    },
+    "receipt_sha256": "39e1d0b3351fdec336e430c9794db1bc77d000fb3a6e6d7e7a098bbd2f04e86d"
+  },
+  "prior_codex_flash_proof": {
+    "version": "0.2.1",
+    "host": "Codex CLI",
+    "transport": "globally_registered_frozen_stdio_mcp",
+    "configured_host_model": "gpt-6.1-sol",
+    "host_checkpoint_independently_verified": false,
+    "calls": [
+      "japanese_editor_profiles",
+      "japanese_editor_review_proposals",
+      "japanese_editor_finalize"
+    ],
+    "tool_errors": 0,
+    "review_stages": {
+      "rules": "executed",
+      "generation": "host_supplied",
+      "decider": "executed"
+    },
+    "native_choices": [
+      "preserved",
+      "preserved"
+    ],
+    "native_latencies_ms": [
+      4143.1,
+      4054.7
+    ],
+    "scope": [
+      "document",
+      "document"
+    ],
+    "precision": "bfloat16",
+    "precision_override": true,
+    "run_verify": "executed",
+    "final_hash": "be43031bb05cf11f6ca3d0b272c90639638fba4efdce6dafcd345efddf115eeb",
+    "raw_unrelated_config_prefix_preserved": true,
+    "installed_cli_sha256": "bf2674f904db870f87cb8e1f1bd102910a5f8c2a2433ea24870d1461ee20fa18",
+    "private_stream_sha256": "69965c1e272f0d0b69e767aa793e89429dab08b3a95312891877d1e6e086749d"
+  },
+  "ui_v022": {
+    "status": "passed",
+    "version": "0.2.2",
+    "layout": {
+      "font": "\"Yu Gothic UI\", \"Hiragino Sans\", \"Noto Sans JP\", system-ui, sans-serif",
+      "outputFont": "\"Yu Gothic UI\", \"Hiragino Sans\", \"Noto Sans JP\", system-ui, sans-serif",
+      "resultWidth": 563.5,
+      "settingsClosed": true,
+      "setupPromptHidden": true,
+      "sideBySide": true,
+      "sourceWidth": 563.5
+    },
+    "rendered_japanese_platform_font": "Yu Gothic UI / YuGothicUI-Regular",
+    "design_consultation": "claude-opus-5-5; design only",
+    "offline_checks": {
+      "logic": 22,
+      "state": 34
+    },
+    "missing_configuration": {
+      "small_top_prompt": true,
+      "correction_opens_settings": true,
+      "generation_request_not_sent": true
+    },
+    "pending_copy_blocked": true,
+    "edited_source_invalidates_result": true,
+    "file_import_export": {
+      "status": "passed",
+      "utf16_emoji": true,
+      "original_crlf_retained_in_request": true,
+      "download_file_readback": "exact_bytes_match",
+      "final_sha256": "77a3ca5e5a11b12efea54942b835088015fa8e2bd999936def5f002d43fdbbdc",
+      "fixture_model_calls": 0
+    },
+    "live_pipeline": {
+      "stages": {
+        "rules": "executed",
+        "generation": "executed",
+        "decider": "executed"
+      },
+      "generator": {
+        "requested_provider": "gemini",
+        "reported_provider": "gemini",
+        "requested_model": "gemini-3.8-flash-high",
+        "reported_model": "gemini-3.8-flash-high",
+        "transport": "antigravity-cli",
+        "identity_basis": "cli_stream_init_model",
+        "exact_checkpoint_verified": false,
+        "model_version_differs": false,
+        "cli_version": "1.4.0",
+        "tool_steps": 0,
+        "output_field": "structured_output"
+      },
+      "native_choices": [
+        "preserved"
+      ],
+      "source_retained": true,
+      "adopted_count": 1,
+      "check": "executed",
+      "verification": "executed",
+      "download_file_readback": "exact_UTF8_bytes_match",
+      "final_sha256": "d3ffc0c3540f8b739192cd18e9bba8e5483611e45d83de79c2f4e953b2c94bee",
+      "installed_cli_sha256": "e8cd3102e521acf23a1a3578a776fd85a2dbfedb1dabbb78e1050519f2ca5f6f"
+    },
+    "receipts_sha256": {
+      "ui-live-analysis-v022.json": "5f3267be9089400f05c5b5fb7c2b088382c6fa8d352c0f4d2a4e88bcea6c6965",
+      "ui-live-export-v022.json": "73c53044b052a37aa7c9b35f024585eb83349552636d2313929130bd2a15d5c9",
+      "ui-crlf-download-v022.json": "23fd723766bab5925a953ae3568b8c0df045198ac21732de8175be15f61f1545"
+    }
+  },
+  "ui_v023": {
+    "status": "passed",
+    "version": "0.2.3",
+    "capture_surface": "actual localhost browser UI on Windows",
+    "gothic_two_pane": true,
+    "independent_generation_judgment_checkboxes": true,
+    "actual_off_request": {
+      "generate": false,
+      "judge": false,
+      "generation": "not_requested",
+      "decider": "not_run"
+    },
+    "automatic_reflection": {
+      "changes": 3,
+      "adoption_buttons": 0,
+      "direct_export_enabled": true,
+      "source_unchanged": true
+    },
+    "progress": {
+      "request_scoped": true,
+      "actual_api_counts": [
+        0,
+        1,
+        2
+      ],
+      "total": 3,
+      "positive_bar_frame_sha256": "48d0c9998fe3717964ddc9ff1a314b79f0d7705d56eb1487691cc4a60183b5a6",
+      "generation_indeterminate": true,
+      "decider_zero_indeterminate": true,
+      "nonzero_real_counts": true
+    },
+    "long_text": {
+      "source_characters": 8640,
+      "final_characters": 8624,
+      "stages": {
+        "rules": "executed",
+        "generation": "executed",
+        "decider": "executed"
+      },
+      "choices": [
+        "preserved",
+        "preserved",
+        "preserved"
+      ],
+      "scope": [
+        "excerpt",
+        "excerpt",
+        "excerpt"
+      ],
+      "successful_attempt_elapsed_seconds": 145.098,
+      "initial_CLI_empty_body_failure": true,
+      "same_original_and_settings_retried": true,
+      "source_sha256": "84996eb3690b9abbdf3d9f1b858d384659aa0cd209fec73946c1525fc845e8bf",
+      "final_sha256": "dd6f83d07370dc53cf1e1afbf1fd60e5e349aee1f7e3d576c02797f08d597e23",
+      "generator": {
+        "requested_provider": "gemini",
+        "reported_provider": "gemini",
+        "requested_model": "gemini-3.8-flash-high",
+        "reported_model": "gemini-3.8-flash-high",
+        "transport": "antigravity-cli",
+        "identity_basis": "cli_stream_init_model",
+        "exact_checkpoint_verified": false,
+        "model_version_differs": false,
+        "cli_version": "1.4.0",
+        "tool_steps": 0,
+        "output_field": "structured_output"
+      },
+      "decider": {
+        "model": "pplx-decider-flash-v1.2",
+        "revision": "6d771ad7b5ecff5e93b8fc7b90d4c5ccc341954d",
+        "backend": "local",
+        "device": "cpu",
+        "executed": 3,
+        "total": 3,
+        "precision": "bfloat16",
+        "precision_override": true,
+        "reference_path": "native_fast_false_cpu_bfloat16_override"
+      }
+    },
+    "export": {
+      "run": "executed",
+      "verify": "executed",
+      "saved_utf8_bytes_sha256_matches": true
+    },
+    "decider_unloaded_after_capture": true,
+    "scripted_native_window_rules_smoke": "passed",
+    "design_consultation": "claude-opus-5-5; design only; ninth consultation",
+    "quality_guarantee": false
+  },
+  "ui_v024": {
+    "status": "passed",
+    "version": "0.2.4",
+    "capture_surface": "actual localhost browser UI on Windows",
+    "gothic_two_pane": true,
+    "independent_generation_judgment_checkboxes": true,
+    "automatic_reflection": {
+      "changes": 4,
+      "adoption_buttons": 0,
+      "direct_export_enabled": true,
+      "source_unchanged": true
+    },
+    "progress": {
+      "request_scoped": true,
+      "generation_indeterminate": true,
+      "observed_actual_decider_counts": [
+        0,
+        3
+      ],
+      "total": 4,
+      "retry_attempt_ui": "Node regression verified; no retry occurred during the real novel run"
+    },
+    "long_text": {
+      "source_characters": 8640,
+      "final_characters": 8624,
+      "stages": {
+        "rules": "executed",
+        "generation": "executed",
+        "decider": "executed"
+      },
+      "choices": [
+        "preserved",
+        "preserved",
+        "preserved",
+        "preserved"
+      ],
+      "scope": [
+        "excerpt",
+        "excerpt",
+        "excerpt",
+        "excerpt"
+      ],
+      "elapsed_seconds": 198.68736,
+      "source_sha256": "84996eb3690b9abbdf3d9f1b858d384659aa0cd209fec73946c1525fc845e8bf",
+      "final_sha256": "0d7c0ae730bd5b706346ea4a50ae8fa1d12ed304feadbb7930694eb44e55fe46",
+      "generator": {
+        "requested_provider": "gemini",
+        "reported_provider": "gemini",
+        "requested_model": "gemini-3.8-flash-high",
+        "reported_model": "gemini-3.8-flash-high",
+        "transport": "antigravity-cli",
+        "identity_basis": "cli_stream_init_model",
+        "exact_checkpoint_verified": false,
+        "model_version_differs": false,
+        "cli_version": "1.4.0",
+        "tool_steps": 0,
+        "output_field": "structured_output",
+        "attempts": 1,
+        "automatic_retries": 0,
+        "attempt_error_codes": []
+      },
+      "decider": {
+        "model": "pplx-decider-flash-v1.2",
+        "revision": "6d771ad7b5ecff5e93b8fc7b90d4c5ccc341954d",
+        "backend": "local",
+        "device": "cpu",
+        "executed": 4,
+        "total": 4,
+        "precision": "bfloat16",
+        "precision_override": true,
+        "reference_path": "native_fast_false_cpu_bfloat16_override"
+      }
+    },
+    "export": {
+      "run": "executed",
+      "verify": "executed",
+      "saved_utf8_bytes_sha256_matches": true
+    },
+    "decider_unloaded_after_capture": true,
+    "final_screen_sha256": "80370f8cb7821607cf2253e5869f966d598bc2c63e2fa6caaccde71ca615be07",
+    "quality_guarantee": false
+  },
+  "gemini_automatic_retries": {
+    "max_attempts": 3,
+    "retry_delays_seconds": [
+      2,
+      5
+    ],
+    "retryable_error_codes": [
+      "cli_no_response",
+      "cli_timeout"
+    ],
+    "process_exit_confirmation_required": true,
+    "same_input_and_model": true,
+    "focused_mock_tests_passed": 27,
+    "receipt_sha256": "539a22263b435b91ba8b4345ffa73025048ca23c12e95841b30135dde7f72ee9",
+    "real_novel_attempts": 1,
+    "real_novel_automatic_retries": 0
+  },
+  "ui_v025": {
+    "status": "passed",
+    "version": "0.2.5",
+    "capture_surface": "actual local browser UI served by installed Windows CLI",
+    "source_unchanged": true,
+    "source_characters": 30,
+    "final_characters": 25,
+    "source_sha256": "d5c93a058dc4e970448ba3d8f0f811a5da1d00c75ccf494300ba2de906693092",
+    "final_sha256": "d3ffc0c3540f8b739192cd18e9bba8e5483611e45d83de79c2f4e953b2c94bee",
+    "generation": "Gemini 3.8 Flash High via configured Antigravity CLI",
+    "yomiyasu": {
+      "rules": "executed",
+      "generation_guidance": "included",
+      "version": "2.0.0",
+      "basis": "actual UI response summary"
+    },
+    "decider": {
+      "backend": "local",
+      "model": "pplx-decider-flash-v1.2",
+      "device": "cpu",
+      "precision": "bfloat16",
+      "decisions": 1,
+      "choice": "preserved",
+      "scope": "document",
+      "basis": "actual rendered decision card"
+    },
+    "automatically_reflected_edits": 1,
+    "adoption_buttons": 0,
+    "independent_toggles": true,
+    "automatic_retries": {
+      "observed_attempt": 2,
+      "resubmission_clicks": 0,
+      "event": "actual UI changed to 2/3 and then completed",
+      "final_attempt_count": "not independently captured from raw generation response"
+    },
+    "export": {
+      "ui_run_verify": "executed",
+      "downloaded_bytes_match": true,
+      "independent_API_run_verify": "executed"
+    },
+    "screenshots": {
+      "ui-v025-retry.png": "3f908c3cb3ab0a357270f1e4fe5fa1bc3dca8a5fd4d5c7d551e3da28ec25d9a7",
+      "ui-v025-final.png": "f7512424f4546aab69e0c66eb1b75b703bff9564f9cf21dfb430e8cff9c46767"
+    },
+    "quality_guarantee": false
+  },
+  "yomiyasu_v025": {
+    "version": "2.0.0",
+    "full_guide_bytes": 110419,
+    "guide_sha256": "b3ca0bd8d1a479eb9789dca2f8e4cf22ad008f0fc8df0e922614ea9ec10aa7ae",
+    "required_auxiliary_refs_connected": true,
+    "missing_required_material": "fail_closed",
+    "generation_off": "guidance_not_sent",
+    "rules": "executed_in_real_UI",
+    "upstream_files_unchanged": 36,
+    "run_verify": "executed_before_export",
+    "prose_quality_guarantee": false
+  },
+  "gemini_cli_compatibility": {
+    "supported_versions": [
+      "1.4.0",
+      "1.4.1"
+    ],
+    "future_versions": "rejected",
+    "invocation_command_and_version_captured_before_generation": true,
+    "real_windows_1_4_1": {
+      "status": "passed",
+      "generator": {
+        "requested_provider": "gemini",
+        "reported_provider": "gemini",
+        "requested_model": "gemini-3.8-flash-high",
+        "reported_model": "gemini-3.8-flash-high",
+        "transport": "antigravity-cli",
+        "identity_basis": "cli_stream_init_model",
+        "exact_checkpoint_verified": false,
+        "model_version_differs": false,
+        "cli_version": "1.4.1",
+        "tool_steps": 0,
+        "output_field": "structured_output",
+        "attempts": 1,
+        "automatic_retries": 0,
+        "attempt_error_codes": []
+      },
+      "yomiyasu": {
+        "version": "2.0.0",
+        "guide_sha256": "b3ca0bd8d1a479eb9789dca2f8e4cf22ad008f0fc8df0e922614ea9ec10aa7ae",
+        "guide_bytes": 110419,
+        "rules": "executed",
+        "generation_guidance": {
+          "status": "included",
+          "instruction_sha256": "e45c98862384fdef1dcf1de7376bebe365a7645609f981e65736d3ee722c0dc3",
+          "sources": [
+            {
+              "path": "SKILL.md",
+              "sha256": "b3ca0bd8d1a479eb9789dca2f8e4cf22ad008f0fc8df0e922614ea9ec10aa7ae",
+              "bytes": 110419
+            },
+            {
+              "path": "references/rephrase-test.md",
+              "sha256": "6b6b857c0f09f94e07d5406890e10c270dd64cb3232dc3983b975c204b5ad8bf",
+              "bytes": 8826
+            },
+            {
+              "path": "references/gemini-syntax.md",
+              "sha256": "156c2c97481b386c0674161f84ea5931dc79c84751f3b86539116d215f407143",
+              "bytes": 54611
+            },
+            {
+              "path": "references/doc-types/article.md",
+              "sha256": "e5009c496b4b4ac8974c16f2f15b0f8ce93620863dfe721803b01138db845716",
+              "bytes": 1338
+            },
+            {
+              "path": "references/domains/tech.md",
+              "sha256": "255b1bcbf42a0c7ea7f42c7293cd964e541d70f6f5079ebcbffc332ce6b7b0dd",
+              "bytes": 6130
+            }
+          ]
+        }
+      },
+      "edits": 1,
+      "decisions": [
+        "preserved"
+      ],
+      "run": "executed",
+      "verify": "executed",
+      "source_sha256": "d5c93a058dc4e970448ba3d8f0f811a5da1d00c75ccf494300ba2de906693092",
+      "final_sha256": "d3ffc0c3540f8b739192cd18e9bba8e5483611e45d83de79c2f4e953b2c94bee"
+    },
+    "mac_native_inference_verified": false
+  }
+}

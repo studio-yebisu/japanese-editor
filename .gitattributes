@@ -1,0 +1,5 @@
+* text=auto eol=lf
+# The pinned upstream manifest verifies the original bytes on every platform.
+vendor/yomiyasu/** -text
+*.png -text
+*.zip -text

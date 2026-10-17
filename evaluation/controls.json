@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "purpose": "単純な語の変化だけで意味変化と決めていないかを調べる合成対照。人手正解ではない。",
+  "cases": [
+    {"id":"number-format-same","profile":"article","before":"ログは十四日間保存します。","after":"ログは14日間保存します。","expected_label":"preserved","expected_label_origin":"creator_proposal_unreviewed","synthetic":true},
+    {"id":"negative-paraphrase-same","profile":"business","before":"この操作をしても、保存済みの記録は消えません。","after":"この操作をした後も、保存済みの記録は残ります。","expected_label":"preserved","expected_label_origin":"creator_proposal_unreviewed","synthetic":true},
+    {"id":"condition-reorder-same","profile":"article","before":"管理者の承認がある場合だけ、この機能を利用できます。","after":"この機能を利用できるのは、管理者の承認がある場合だけです。","expected_label":"preserved","expected_label_origin":"creator_proposal_unreviewed","synthetic":true},
+    {"id":"actor-reorder-same","profile":"business","before":"村上さんが、田中さんに資料を渡しました。","after":"田中さんに資料を渡したのは、村上さんです。","expected_label":"preserved","expected_label_origin":"creator_proposal_unreviewed","synthetic":true},
+    {"id":"possibility-paraphrase-same","profile":"article","before":"設定を変更すると、速度が改善する可能性があります。","after":"設定を変更すると、速度が改善するかもしれません。","expected_label":"preserved","expected_label_origin":"creator_proposal_unreviewed","synthetic":true},
+    {"id":"operation-order-changed","profile":"article","before":"設定を変更した後、再起動します。","after":"再起動した後、設定を変更します。","expected_label":"shifted","expected_label_origin":"creator_proposal_unreviewed","synthetic":true}
+  ]
+}

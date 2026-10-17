@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "purpose": "日本語の意味変化の判定を確認する合成入力。期待ラベルは作成者案で、人による正解判定ではない。実行記録はverification.jsonを参照。",
+  "question_id": "meaning_shift",
+  "label_choices": ["preserved", "shifted", "needs_review"],
+  "cases": [
+    {
+      "id": "number-change",
+      "phenomenon": "数値の変更",
+      "profile": "article",
+      "before": "ログは14日間保存し、その後削除します。",
+      "after": "ログは30日間保存し、その後削除します。",
+      "expected_label": "shifted",
+      "rationale": "保存期間が14日から30日に変わっている。",
+      "synthetic": true,
+      "expected_label_origin": "creator_proposal_unreviewed"
+    },
+    {
+      "id": "negation-loss",
+      "phenomenon": "否定の脱落",
+      "profile": "business",
+      "before": "この申請には、部長の承認は必要ありません。",
+      "after": "この申請には、部長の承認が必要です。",
+      "expected_label": "shifted",
+      "rationale": "不要としていた承認を必須に変えている。",
+      "synthetic": true,
+      "expected_label_origin": "creator_proposal_unreviewed"
+    },
+    {
+      "id": "conditional-scope",
+      "phenomenon": "条件と適用範囲",
+      "profile": "article",
+      "before": "通信に失敗した場合だけ、送信を再試行します。成功した場合は再試行しません。",
+      "after": "送信後は毎回、送信を再試行します。成功した場合も再試行します。",
+      "expected_label": "shifted",
+      "rationale": "失敗時だけの動作が、成功時を含む毎回の動作に変わっている。",
+      "synthetic": true,
+      "expected_label_origin": "creator_proposal_unreviewed"
+    },
+    {
+      "id": "certainty-strengthening",
+      "phenomenon": "確度の引き上げ",
+      "profile": "article",
+      "before": "この遅延は、画像の読み込みが原因かもしれません。",
+      "after": "この遅延の原因は画像の読み込みです。",
+      "expected_label": "shifted",
+      "rationale": "原因の可能性を、確定した原因として言い切っている。",
+      "synthetic": true,
+      "expected_label_origin": "creator_proposal_unreviewed"
+    },
+    {
+      "id": "invented-actor",
+      "phenomenon": "原文にない動作主",
+      "profile": "business",
+      "before": "更新後、通知が二重に送信されました。送信の経緯は調査中です。",
+      "after": "更新後、運用担当者が通知を二重に送信しました。送信の経緯は調査中です。",
+      "expected_label": "shifted",
+      "rationale": "送信した主体が未特定の原文に、運用担当者の行為を追加している。",
+      "synthetic": true,
+      "expected_label_origin": "creator_proposal_unreviewed"
+    },
+    {
+      "id": "actor-recipient-swap",
+      "phenomenon": "依頼者と相手の入れ替え",
+      "profile": "business",
+      "before": "青木さんが森さんに資料の確認を依頼しました。",
+      "after": "森さんが青木さんに資料の確認を依頼しました。",
+      "expected_label": "shifted",
+      "rationale": "依頼した人と依頼された人が逆になっている。",
+      "synthetic": true,
+      "expected_label_origin": "creator_proposal_unreviewed"
+    },
+    {
+      "id": "already-good-noop",
+      "phenomenon": "既に明確な文の維持",
+      "profile": "business",
+      "before": "会議は金曜日の10時に始まります。資料は木曜日までに共有してください。",
+      "after": "会議は金曜日の10時に始まります。資料は木曜日までに共有してください。",
+      "expected_label": "preserved",
+      "rationale": "候補が原文と同一で、日時や依頼の働きも変えていない。",
+      "synthetic": true,
+      "expected_label_origin": "creator_proposal_unreviewed"
+    },
+    {
+      "id": "technical-clear-rewrite",
+      "phenomenon": "技術説明の言い回し",
+      "profile": "article",
+      "before": "保存ボタンのクリックにより、入力内容のローカルファイルへの保存が行われます。",
+      "after": "保存ボタンをクリックすると、入力内容がローカルファイルに保存されます。",
+      "expected_label": "preserved",
+      "rationale": "操作と保存先を保ったまま、名詞が続く表現を動作の文へ直している。読みやすさの優劣は別途確認する。",
+      "synthetic": true,
+      "expected_label_origin": "creator_proposal_unreviewed"
+    },
+    {
+      "id": "fiction-metaphor-retained",
+      "phenomenon": "読み取れる比喩の保持",
+      "profile": "fiction",
+      "before": "窓の外で、雨は細い糸となって、夜の布を縫っていた。",
+      "after": "窓の外で、雨は細い糸となって夜の布を縫っていた。",
+      "expected_label": "preserved",
+      "rationale": "読点を一つ減らしているが、雨を糸に見立てる比喩と語りを残している。読点の好みは意味保持と分ける。",
+      "synthetic": true,
+      "expected_label_origin": "creator_proposal_unreviewed"
+    },
+    {
+      "id": "dialogue-dialect-erased",
+      "phenomenon": "台詞の方言と距離感",
+      "profile": "dialogue",
+      "before": "「そない急がんでもええやろ。うちは、ここで待っとくわ」",
+      "after": "「そんなに急がなくてもよいでしょう。私は、ここで待っています」",
+      "expected_label": "shifted",
+      "rationale": "大まかな内容が近くても、一人称、方言、語尾と人物の距離感を消しており、この用途で保護する語り口が変わる。",
+      "synthetic": true,
+      "expected_label_origin": "creator_proposal_unreviewed"
+    },
+    {
+      "id": "ambiguous-referent",
+      "phenomenon": "指示先が確定しない代名詞",
+      "profile": "blog",
+      "before": "編集者は著者に、彼の案を先に確認すると伝えた。",
+      "after": "編集者は著者に、著者の案を先に確認すると伝えた。",
+      "expected_label": "needs_review",
+      "rationale": "彼が編集者と著者のどちらを指すかは、与えた文だけでは確定できない。書き手の意図により判定が変わる。",
+      "synthetic": true,
+      "expected_label_origin": "creator_proposal_unreviewed"
+    },
+    {
+      "id": "auxiliary-kana",
+      "phenomenon": "補助動詞と形式名詞のかな表記",
+      "profile": "business",
+      "before": "入力欄を確認して下さい。操作の前に説明を読んでおく事を勧めます。",
+      "after": "入力欄を確認してください。操作の前に説明を読んでおくことを勧めます。",
+      "expected_label": "preserved",
+      "rationale": "下さいと形式名詞の事をかな表記にし、依頼、助言、順序の内容を保っている。",
+      "synthetic": true,
+      "expected_label_origin": "creator_proposal_unreviewed"
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="description" content="原文を残したまま日本語を校正し、変更箇所を左右で比べられるエディター。" />
+    <title>StudioYebisu 日本語校正</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#source">原文の入力へ</a>
+    <div class="app-shell">
+      <header class="masthead">
+        <h1 id="page-title">StudioYebisu <span>日本語校正</span></h1>
+        <div class="header-actions">
+          <button id="setup-prompt" type="button" class="setup-prompt" hidden>設定してください</button>
+          <button id="settings-open" type="button" class="settings-button" aria-haspopup="dialog" aria-controls="settings-dialog">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.6 3-.7 2.1-1.5.9-2.2-.5-2.4 4.1 1.5 1.6v1.7l-1.5 1.6 2.4 4.1 2.2-.5 1.5.9.7 2.1h4.8l.7-2.1 1.5-.9 2.2.5 2.4-4.1-1.5-1.6v-1.7l1.5-1.6-2.4-4.1-2.2.5-1.5-.9L14.4 3Z"/><circle cx="12" cy="12" r="3.2"/></svg>
+            <span>設定</span>
+          </button>
+        </div>
+      </header>
+
+      <main aria-labelledby="page-title">
+        <div class="editor-toolbar">
+          <div class="profile-controls">
+            <div class="compact-field"><label for="profile">用途</label><select id="profile" disabled><option value="">読み込み中</option></select></div>
+            <div class="compact-field strength-field"><label for="strength">強さ</label><select id="strength" disabled><option value="">読み込み中</option></select></div>
+          </div>
+          <div class="analysis-actions">
+            <div class="processing-options" aria-label="校正に使う機能">
+              <label class="processing-option"><input id="enable-generation" type="checkbox" checked aria-describedby="generation-transmission" /><span id="generation-option-label">Gemini校正</span><small id="generation-transmission">原文を送信</small></label>
+              <label class="processing-option"><input id="enable-decider" type="checkbox" checked /><span>Perplexityによる意味判定</span></label>
+            </div>
+            <button id="analyze-generate" type="button" class="button button-primary" disabled><span class="button-main">校正する</span><span class="button-detail sr-only">選択したサービスへ文章を送信</span></button>
+          </div>
+        </div>
+
+        <div id="error-box" class="error-box" role="alert" hidden>
+          <p id="error-message"></p>
+          <div class="error-actions"><button id="retry-config" type="button" class="text-button" hidden>設定を読み直す</button><button id="error-settings" type="button" class="text-button" hidden>設定を開く</button><button id="error-login" type="button" class="text-button" hidden>ログインを確認</button></div>
+        </div>
+        <div class="work-status" role="status" aria-live="polite" aria-atomic="true"><span id="status-text">設定を読み込んでいます。</span><span id="busy-note" hidden></span></div>
+        <div id="operation-progress" class="operation-progress" hidden>
+          <div id="progress-message" class="progress-message" role="status" aria-live="polite">処理しています。</div>
+          <progress id="progress-bar" class="progress-bar" aria-labelledby="progress-message" max="1"></progress>
+        </div>
+
+        <div class="workspace">
+          <section class="panel source-panel" aria-labelledby="source-title">
+            <div class="panel-heading"><h2 id="source-title">原文</h2><div class="pane-tools"><button id="load-sample" type="button" class="text-button">例文</button><label class="text-button import-label" for="open-text">開く<input id="open-text" type="file" accept=".txt,.md,text/plain,text/markdown" /></label></div></div>
+            <div class="editor-surface source-surface">
+              <div id="source-highlight" class="source-highlight text-surface" aria-hidden="true"></div>
+              <label for="source" class="sr-only">確認したい日本語の原文</label>
+              <textarea id="source" class="source-text text-surface" placeholder="文章を入力するか、貼り付けてください。" spellcheck="false" aria-describedby="source-help"></textarea>
+            </div>
+            <div class="pane-footer source-meta"><span id="source-help">原文はそのまま残ります</span><span id="character-count">0 字</span></div>
+          </section>
+
+          <section id="output-panel" class="panel output-panel" aria-labelledby="output-title">
+            <div class="panel-heading"><h2 id="output-title">校正後</h2><span id="changed-count" class="quiet-label"></span></div>
+            <p id="meaning-warning" class="meaning-warning" role="status" hidden></p>
+            <div class="editor-surface output-surface">
+              <div id="review-empty" class="empty-state">校正した文章がここに表示されます。</div>
+              <div id="output-preview" class="output-preview text-surface" role="textbox" aria-readonly="true" aria-label="校正した文章の全文" tabindex="0"></div>
+              <label for="output" class="sr-only">変更を反映した文章</label>
+              <textarea id="output" readonly spellcheck="false" tabindex="-1" hidden></textarea>
+            </div>
+            <div class="pane-footer output-actions">
+              <div class="export-actions"><button id="copy-result" type="button" class="button button-small button-secondary" disabled>コピー</button><button id="download-result" type="button" class="button button-small button-secondary" disabled>保存</button></div>
+            </div>
+            <div class="output-note"><p id="output-summary">校正後の文章をコピー・保存できます。</p><p id="export-note" class="export-note" hidden></p></div>
+          </section>
+        </div>
+        <div class="comparison-status"><span id="comparison-summary"></span></div>
+
+        <details id="review-details" class="review-details" aria-labelledby="review-title" hidden>
+          <summary><span id="review-title">変更の詳細</span><span id="review-count" class="quiet-label">まだ校正していません</span></summary>
+          <div id="review-results" class="review-results" hidden>
+            <div id="run-summary" class="run-summary"></div>
+            <section aria-labelledby="findings-title" class="review-section"><div class="review-section-heading"><h3 id="findings-title">気になる点</h3><span id="findings-count" class="count-badge">0</span></div><div id="findings-list" class="findings-list"></div></section>
+            <section aria-labelledby="edits-title" class="review-section">
+              <div class="review-section-heading"><h3 id="edits-title">変更したところ</h3><span id="edits-count" class="count-badge">0</span></div>
+              <p id="edits-guidance" class="section-description">変更は右の文章に反映済みです。理由と意味判定を確認できます。</p>
+              <div id="edits-list" class="edits-list"></div>
+            </section>
+            <section id="suggestions-section" aria-labelledby="suggestions-title" class="review-section" hidden><div class="review-section-heading"><h3 id="suggestions-title">構成の提案</h3><span id="suggestions-count" class="count-badge">0</span></div><p class="section-description">本文には自動で反映しません。</p><div id="suggestions-list"></div></section>
+            <section id="questions-section" aria-labelledby="questions-title" class="review-section" hidden><div class="review-section-heading"><h3 id="questions-title">意図を確認したいところ</h3><span id="questions-count" class="count-badge">0</span></div><div id="questions-list"></div></section>
+            <div id="run-notes" class="run-notes" hidden></div>
+          </div>
+        </details>
+      </main>
+      <footer class="footer"><span><a href="https://github.com/nanaism/yomiyasu" target="_blank" rel="noreferrer noopener">yomiyasu</a> · MIT / Unicode License V3</span></footer>
+    </div>
+
+    <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
+      <div class="dialog-heading"><h2 id="settings-title">設定</h2><button id="settings-close" type="button" class="settings-close" aria-label="設定を閉じる">×</button></div>
+      <div class="dialog-content">
+        <p id="settings-feedback" class="settings-feedback" role="status" aria-live="polite"></p>
+        <div id="connection-settings" class="connection-settings">
+          <section class="settings-section" aria-labelledby="provider-title">
+            <h3 id="provider-title">修正案を作るサービス</h3>
+            <div class="settings-grid"><div class="field-group"><label for="provider">サービス</label><select id="provider" disabled></select></div><div class="field-group"><label for="provider-model">モデル</label><select id="provider-model" disabled></select></div></div>
+            <p id="provider-notice" class="field-description"></p><p id="credential-status" class="field-description"></p>
+            <div id="gemini-login-settings" hidden><p>Google公式のAntigravity CLIを導入し、Googleアカウントでログインします。GeminiのAPIキーは不要です。</p><div class="settings-actions"><button id="login-gemini" class="button button-small button-secondary" type="button">Googleアカウントでログイン</button></div><p class="field-description">ログインは公式CLIとGoogleの画面で行います。</p></div>
+            <div id="api-key-settings" hidden><label for="api-key">SarashinaのAPIキー</label><input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="保存済みのキーは表示しません" /><button id="remove-api-key" class="text-button" type="button">保存したキーを削除</button><p class="field-description">Windowsの資格情報マネージャー、Macのキーチェーンに保存します。</p></div>
+            <div class="settings-actions"><button id="save-provider" class="button button-small button-secondary" type="button">設定を保存</button><a id="provider-setup" target="_blank" rel="noreferrer noopener">導入とログインの案内</a></div>
+            <p id="generation-notice" class="field-description">生成サービスを確認しています。</p>
+          </section>
+          <section class="settings-section" aria-labelledby="writing-settings-title">
+            <h3 id="writing-settings-title">文章の設定</h3><p id="profile-description" class="field-description">用途に合う読み方で文章を確認します。</p>
+            <label for="context">文体メモ・守りたい表現 <span class="optional-label">任意</span></label><textarea id="context" maxlength="2000" rows="3" placeholder="例：語り手のくだけた口調を残す。「ひと息つく」は変えない。" spellcheck="false" aria-describedby="context-help"></textarea><p id="context-help" class="field-description">2000字まで。文章と一緒に、選択したサービスへ送信します。</p>
+          </section>
+          <section class="settings-section" aria-labelledby="connection-title">
+            <h3 id="connection-title">接続状態</h3>
+            <div class="availability-row"><span>規則のチェック</span><span id="rules-stage" class="stage-badge">確認中</span></div><div class="availability-row"><span>修正案の生成</span><span id="generator-stage" class="stage-badge">確認中</span></div><div class="availability-row"><span>Decider の判断</span><span id="decider-stage" class="stage-badge stage-muted">確認中</span></div>
+            <p id="decider-note" class="field-description">接続状態を確認しています。</p><div class="settings-actions"><button id="refresh-decider" type="button" class="text-button" disabled>接続状態を更新</button><button id="release-decider" type="button" class="text-button" disabled>判定モデルのメモリを解放</button></div>
+          </section>
+          <section class="settings-section" aria-labelledby="integration-title"><h3 id="integration-title">Codexへの組み込み</h3><p>CodexやClaude Code自身に修正案を作ってもらう場合、追加のAPIキーは不要です。</p><div class="settings-actions"><button id="install-codex" type="button" class="button button-small button-secondary">このPCのCodexへ登録</button></div><p id="codex-status" class="field-description">登録状態を確認しています。</p></section>
+        </div>
+      </div>
+    </dialog>
+  </body>
+</html>
