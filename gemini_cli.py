@@ -175,7 +175,7 @@ def _stop(process):
 def _run(command, env, cwd, data):
     global _UNCERTAIN_PROCESS
     if _UNCERTAIN_PROCESS is not None:
-        raise GeminiCliError("cli_stop_failed", "前回の Gemini CLI の終了を確認できません。アプリを再起動する前にプロセスを確認してください。")
+        raise GeminiCliError("cli_stop_failed", "前回のAntigravity CLIの終了を確認できません。アプリを再起動する前にプロセスを確認してください。")
     from decider_runtime import _external_dll_search, _external_environment
     options = {"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {"start_new_session": True}
     try:
@@ -183,7 +183,7 @@ def _run(command, env, cwd, data):
             process = subprocess.Popen(command, cwd=cwd, env=_external_environment(env), shell=False,
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **options)
     except OSError:
-        raise GeminiCliError("cli_start_failed", "Gemini CLI を起動できませんでした。インストール状態を確認してください。") from None
+        raise GeminiCliError("cli_start_failed", "Antigravity CLI を起動できませんでした。インストール状態を確認してください。") from None
     # Each stream is drained concurrently, with a hard memory cap. No private
     # stdout/stderr is logged or returned by an error.
     results = {"stdout": bytearray(), "stderr": bytearray()}
@@ -237,19 +237,19 @@ def _run(command, env, cwd, data):
         input_done.set()
         if not _stop(process):
             _UNCERTAIN_PROCESS = process
-            raise GeminiCliError("cli_stop_failed", "Gemini CLI の終了を確認できません。重複実行を保留します。") from None
+            raise GeminiCliError("cli_stop_failed", "Antigravity CLI の終了を確認できません。重複実行を保留します。") from None
     input_done.set()
     for thread in [writer, *readers]:
         thread.join(timeout=2)
     if any(thread.is_alive() for thread in [writer, *readers]):
         _UNCERTAIN_PROCESS = process
-        raise GeminiCliError("cli_stop_failed", "Gemini CLI の入出力終了を確認できません。重複実行を保留します。")
+        raise GeminiCliError("cli_stop_failed", "Antigravity CLI の入出力終了を確認できません。重複実行を保留します。")
     if timed_out:
-        raise GeminiCliError("cli_timeout", "Gemini CLI の応答待ちが上限に達しました。")
+        raise GeminiCliError("cli_timeout", "Antigravity CLI の応答待ちが上限に達しました。")
     if oversized.is_set():
-        raise GeminiCliError("response_too_large", "Gemini CLI の応答が受信上限を超えています。原文は変更していません。")
+        raise GeminiCliError("response_too_large", "Antigravity CLI の応答が受信上限を超えています。原文は変更していません。")
     if process.returncode:
-        raise GeminiCliError("cli_failed", "Gemini CLI が完了しませんでした。Googleログイン、利用枠、指定モデルへのアクセスを確認してください。別モデルやAPIキーには切り替えていません。")
+        raise GeminiCliError("cli_failed", "Antigravity CLI が完了しませんでした。Googleログイン、利用枠、指定モデルへのアクセスを確認してください。別モデルやAPIキーには切り替えていません。")
     return bytes(results["stdout"])
 
 
@@ -315,7 +315,7 @@ def generate(payload,instructions,schema):
     error_codes = []
     try:
         if _UNCERTAIN_PROCESS is not None:
-            raise GeminiCliError("cli_stop_failed", "前回のGemini CLIの終了を確認できません。重複実行を保留します。")
+            raise GeminiCliError("cli_stop_failed", "前回のAntigravity CLIの終了を確認できません。重複実行を保留します。")
         installed = _installation(refresh=True)
         if not installed or installed["version"] not in SUPPORTED_CLI_VERSIONS or not installed["command"]:
             raise GeminiCliError("cli_unavailable", "Google公式Antigravity CLI 1.4.0または1.4.1を導入してください。APIキーは不要です。")
@@ -328,7 +328,7 @@ def generate(payload,instructions,schema):
                 # _run also enforces this gate. Check before creating a new
                 # profile so an unconfirmed old process never starts a retry.
                 if _UNCERTAIN_PROCESS is not None:
-                    raise GeminiCliError("cli_stop_failed", "前回のGemini CLIの終了を確認できません。重複実行を保留します。")
+                    raise GeminiCliError("cli_stop_failed", "前回のAntigravity CLIの終了を確認できません。重複実行を保留します。")
                 progress.report("generation", message="generation_retry" if attempt > 1 else "generation",
                                 attempt=attempt, max_attempts=MAX_ATTEMPTS)
                 with launch_context(installation=invocation) as (command,env,cwd):

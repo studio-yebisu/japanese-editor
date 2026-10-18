@@ -39,7 +39,7 @@ def _terminal_process(command, environment, cwd):
         launch.write_bytes(("#!/bin/zsh\ncd " + shlex.quote(str(cwd)) + "\nexec " + shlex.join(arguments) + "\n").encode("utf-8"))
         launch.chmod(0o700)
         return subprocess.Popen(["/usr/bin/open", "-W", "-a", "Terminal", str(launch)])
-    raise LoginError("この環境では、ターミナルで agy を起動してGoogleログインを行ってください。")
+    raise LoginError("この環境ではターミナルで agy を起動してGoogleログインを行ってください。")
 
 
 def launch():

@@ -1,6 +1,6 @@
 # Windows アプリと配布 ZIP
 
-主な組み込み方は、Windows / macOS 共通の MCP とスキルです。Windows の専用ウィンドウは同じエンジンを操作する追加の入口です。生成モデルや原文の扱いはブラウザ版と共通で、修正案を作る操作では選択した生成先へ文章を送ります。ルール検査はローカルで動きます。
+主な組み込み方はWindows / macOS 共通の MCP とスキルです。Windows の専用ウィンドウは同じエンジンを操作する追加の入口です。生成モデルや原文の扱いはブラウザ版と共通で、修正案を作る操作では選択した生成先へ文章を送ります。ルール検査はローカルで動きます。
 
 ## Windows で使う
 
@@ -8,7 +8,7 @@ Windows x64 の配布 ZIP を展開し、`StudioYebisuEditor.exe` を起動し�
 
 専用ウィンドウのタイトルは「StudioYebisu 日本語エディター」。pywebview の EdgeChromium を使うため、Microsoft の WebView2 Runtime が必要です。未導入なら起動時に案内を表示します。[Microsoft 公式ページ](https://developer.microsoft.com/microsoft-edge/webview2/)から利用者が導入します。アプリは Runtime やモデルを自動取得しません。既存の Microsoft Edge 本体と WebView2 Runtime は別の構成要素です。
 
-アプリは `127.0.0.1:8896` だけを使います。互換版で保存先も同じアプリが起動済みなら、そのサーバーを共有します。他のアプリや古い版が使っている場合は、相手を終了したり別ポートへ移ったりせず、利用者へ案内します。自分で起動したサーバーとモデルだけを終了時に停止し、共有先は停止しません。処理中なら新しい要求を止め、進行中の生成・判定の完了を待ってから終了します。
+アプリは `127.0.0.1:8896` だけを使います。互換性があり、保存先も同じ本アプリが起動済みなら、そのサーバーを共有します。他のアプリや古い版が使っている場合は、相手を終了したり別ポートへ移ったりせず、利用者へ案内します。自分で起動したサーバーとモデルだけを終了時に停止し、共有先は停止しません。処理中なら新しい要求を止め、進行中の生成・判定の完了を待ってから終了します。
 
 共有先のプロセスが予期せず終了した場合は、専用ウィンドウが同じポートでサービスを復旧します。開いている原稿や校正結果は保持します。`stop-service` で明示的に停止した場合は自動復旧せず、再開にはアプリを起動し直します。
 
@@ -63,7 +63,7 @@ python3 -m venv .local/desktop-venv
 
 この手順は macOS 実機で未実行です。Windows で測った CPU BF16 の Flash 速度・必要メモリを macOS の保証値として使いません。macOS の配布 `.app` を用意する場合は macOS ランナーで別にビルドし、起動、保存、MCP、終了時のプロセス保全を検証する必要があります。署名・公証は配布方針と証明書の準備後に扱います。
 
-macOS のローカル Flash は、`vm_stat` のページサイズと重複しない free / inactive / speculative ページから空き RAM の目安を取り、起動ガードを適用します。Windows / Linux と同じ固定コミット上限を取得できるとは扱わず、結果に `commit_check: not_available_on_macos` を残します。この計算はモックで検証した段階です。実際のモデル読み込みと CPU BF16 演算の対応は macOS 上で別途確認が必要です。
+macOS のローカル Flash は`vm_stat` のページサイズと重複しない free / inactive / speculative ページから空き RAM の目安を取り、起動ガードを適用します。Windows / Linux と同じ固定コミット上限を取得できるとは扱わず、結果に `commit_check: not_available_on_macos` を残します。この計算はモックで検証した段階です。実際のモデル読み込みと CPU BF16 演算の対応は macOS 上で別途確認が必要です。
 
 ## 0.2.2 で確認した範囲
 
@@ -91,4 +91,4 @@ macOS のローカル Flash は、`vm_stat` のページサイズと重複しな
 | Microsoft WebView2 SDK 1.0.3856.49 | pywebview 同梱 DLL の版を確認。[固定版 NuGet](https://www.nuget.org/packages/Microsoft.Web.WebView2/1.0.3856.49)の LICENSE / NOTICE を保持 |
 | proxy-tools 0.1.0 | PyPI metadata は MIT、ソース先頭と原典 LICENSE は BSD。両方の通知を保持。[固定した原典 LICENSE](https://github.com/jtushman/proxy_tools/blob/ccd35a569b95bec271a59890780c7821756c548a/LICENSE.txt) |
 
-Microsoft の [WebView2 配布資料](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution)は、Runtime の検出、利用者ごと・PC ごとの導入、Evergreen と Fixed Version の違いを説明しています。今回の軽い ZIP は利用者の Evergreen Runtime を使い、250 MB を超える Fixed Version Runtime を抱き合わせません。
+Microsoft の [WebView2 配布資料](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution)は、Runtime の検出、利用者ごと・PC ごとの導入、Evergreen と Fixed Version の違いを説明しています。この配布 ZIP は利用者の Evergreen Runtime を使い、250 MB を超える Fixed Version Runtime を抱き合わせません。

@@ -43,7 +43,7 @@ agy --version
 
 ターミナルからアプリのログイン起動を使う場合は、ソース版で `python -B app.py gemini-login`（macOS は `python3`）、Windows 配布版で `.\StudioYebisuEditorCLI.exe gemini-login` を実行します。この操作は公式 `agy` の対話画面を開きます。アプリへ Google のパスワードを入力する必要はありません。
 
-接続表示は、対応 CLI の検出と、実際の認証・モデル利用の結果を分けます。CLI を検出しただけでは、そのアカウントの認証や利用権を確認したことにはなりません。認証・利用枠・モデルへのアクセスは生成時に確認します。
+接続状態の表示では対応 CLI の検出と、実際の認証・モデル利用の結果を分けます。CLI を検出しただけでは、そのアカウントの認証や利用権を確認したことにはなりません。認証・利用枠・モデルへのアクセスは生成時に確認します。
 
 ## Google の利用枠・入力の扱い
 
@@ -77,10 +77,10 @@ Sarashina は API キーを設定します。保存キーを優先し、未保�
 
 Antigravity の通信や再試行は公式 CLI 自体の実装にも依存します。アプリは別サービスや API キー経由へ代替送信しません。成功した最終イベントの `structured_output`、または公式仕様の `response` 全体にあるJSONを、同じスキーマで検証します。本文からのJSONの抜き出しや壊れた形式の補修は行いません。[公式headless仕様](https://antigravity.google/docs/cli/headless/)
 
-CLI の診断全文には原文や認証情報が含まれ得るため、公開応答へそのまま含めません。
+CLI の診断全文には原文や認証情報が含まれる可能性があるため、公開応答へそのまま含めません。
 
 ## 確認済みの範囲
 
-2026年10月17日に公式資料を無料専用 treg 経由で確認しました。Antigravity CLI 接続の実装・実機ログイン・生成の現在地は [STATUS.md](STATUS.md) と [verification.json](../verification.json) を参照してください。以前の Gemini API アダプターのモック検査を、新しい CLI 接続の実生成の証拠へ置き換えません。
+2026年10月17日に公式資料を無料専用 treg 経由で確認しました。Antigravity CLI 接続の実装と、実機でのログイン・生成の確認状況は [STATUS.md](STATUS.md) と [verification.json](../verification.json) を参照してください。以前の Gemini API アダプターのモック検査を、新しい CLI 接続の実生成の証拠へ置き換えません。
 
 Sarashina の API 形式・モデル名・保存先・秘密情報の非公開・長文拒否・途中出力拒否は、ネットワークと OS ストアを置き換えて検査した範囲です。実際の Sarashina API への校正リクエストや、実キーの登録は行っていません。Gemini の生成は公式 `agy` を使います。ブラウザーのトークンを取り出す処理はありません。

@@ -14,13 +14,13 @@ python -B _internal/editor/tools/setup_decider.py --device cpu --cpu-dtype bfloa
 
 ## macOS・Apple Silicon（実験段階）
 
-Mac向け `.app`・署名・公証はまだ用意していません。Python 3.12以降でソースのアプリフォルダーを開き、まず次を実行します。生成サービスとMCPの設定は上記の各文書に従います。
+Mac向け `.app`・署名・公証はまだ用意していません。Python 3.12以降を用意し、ソースのアプリフォルダーで次を実行します。生成サービスとMCPの設定は上記の各文書に従います。
 
 ```sh
 python3 -B app.py serve
 ```
 
-[http://127.0.0.1:8896](http://127.0.0.1:8896) を開きます。Perplexityによる意味判定をオフにすれば、Deciderを取得せずに規則点検と設定した生成サービスを使う構成にできます。
+[http://127.0.0.1:8896](http://127.0.0.1:8896) を開きます。Deciderの意味判定をオフにすれば、Deciderを取得せずに、規則の点検と設定済みの生成サービスを使えます。
 
 総メモリ24GBのApple Silicon Mac向けに、ローカルDeciderの `mac24` プリセットを用意しています。macOS 14以降、arm64 Python 3.12〜3.14（3.14.1を除く）、`uv` が対象です。CPU BF16・文脈2048・CPU threads 8で実行し、MPSは使いません。**Mac実機の推論は未検証**です。
 
@@ -32,4 +32,4 @@ python3 -B tools/setup_decider.py --preset mac24 --check-only
 python3 -B tools/setup_decider.py --preset mac24
 ```
 
-`ready_to_setup` は導入の事前条件だけの結果です。総RAM 24 GiB以上と、現在の空きRAMの目安11 GiB以上を別々に確認します。演算対応・推論成功・速度は保証しません。Intel MacやRosettaのx86_64 Pythonはこのプリセットの対象外です。既存設定は保持し、プリセットの値へ変更しません。詳しい条件と未検証範囲は [DECIDER_RUNTIME.md](DECIDER_RUNTIME.md) を参照してください。
+`ready_to_setup` は、導入前の条件だけを確認した結果です。総RAM 24 GiB以上と、現在の空きRAMの目安11 GiB以上を別々に確認します。演算対応・推論成功・速度は保証しません。Intel MacやRosettaのx86_64 Pythonはこのプリセットの対象外です。既存設定は保持し、プリセットの値へ変更しません。詳しい条件と未検証範囲は [DECIDER_RUNTIME.md](DECIDER_RUNTIME.md) を参照してください。

@@ -171,7 +171,7 @@ def _precision_identity(cfg):
 def _validate_precision(output, cfg):
     expected = _precision_identity(cfg)
     if (expected["precision_override"] or "precision" in output) and any(output.get(key) != value for key, value in expected.items()):
-        raise DeciderRuntimeError("identity_mismatch", "指定した精度・読み込み方式の実行を確認できませんでした。")
+        raise DeciderRuntimeError("identity_mismatch", "指定した精度と読み込み方式での実行を確認できませんでした。")
 
 
 def _safe_error(error):

@@ -41,7 +41,7 @@ PROVIDERS = {
         "label": "Claude（既存 CLI）", "default_model": "claude-opus-5-5",
         "models": ("claude-opus-5-5",), "transport": "claude-cli", "max_text_chars": 12000,
         "auth_method": "existing_cli", "env": (), "setup_url": "https://code.claude.com/docs/en/setup",
-        "notice": "既存の Claude Code の認証と利用枠で文章を送信します。生成処理は既存の Claude アダプターが担当します。",
+        "notice": "既存のClaude Codeの認証と利用枠で文章を送信し、修正案を作ります。",
     },
 }
 
@@ -114,7 +114,7 @@ def save_settings(payload):
 
 def _windows_api():
     if os.name != "nt":
-        raise ProviderSettingsError("credential_store_unavailable", "APIキーの保存は Windows 資格情報マネージャーを使います。この環境では環境変数を指定してください。")
+        raise ProviderSettingsError("credential_store_unavailable", "APIキーの保存にはWindows資格情報マネージャーを使います。この環境では環境変数を指定してください。")
 
     class Credential(ctypes.Structure):
         _fields_ = [("Flags", wintypes.DWORD), ("Type", wintypes.DWORD),

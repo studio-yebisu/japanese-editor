@@ -42,12 +42,12 @@ def service_identity(port=PORT):
                 or value.get("protocol_version") != 1):
             raise DesktopError("8896番ポートの応答を、このアプリとして確認できません。使用中のアプリを確認してください。")
         if value.get("data_id") != data_id():
-            raise DesktopError("保存先が異なる同アプリが8896番ポートを使用しています。使用中のアプリを確認してください。")
+            raise DesktopError("保存先の異なるこのアプリが8896番ポートを使用しています。使用中のアプリを確認してください。")
         if value.get("closing"):
             raise DesktopError("共有サービスを終了しています。処理が終わってから、もう一度起動してください。")
         return value
     except urllib.error.HTTPError as exc:
-        raise DesktopError("8896番ポートは別のアプリ、または古い版が使用しています。先に使用中のアプリを確認してください。") from exc
+        raise DesktopError("別のアプリ、またはこのアプリの古いバージョンが8896番ポートを使用しています。先に使用中のアプリを確認してください。") from exc
     except urllib.error.URLError as exc:
         # A refused connection means we may bind; a timeout is not permission to
         # replace or terminate a listener that could still be handling a task.
@@ -365,7 +365,7 @@ def main(argv=None):
     if args.smoke_test_output:
         args.smoke_test_output = args.smoke_test_output.expanduser().resolve()
     if sys.platform not in ("win32", "darwin"):
-        raise SystemExit("この入口は Windows / macOS 向けです。ブラウザ版は app.py serve を使用してください。")
+        raise SystemExit("この起動方法はWindows / macOS向けです。ブラウザー版は app.py serve を使用してください。")
     session = None
     try:
         session = ServiceSession()
@@ -396,7 +396,7 @@ def main(argv=None):
             smoke_output.parent.mkdir(parents=True, exist_ok=True)
             smoke_output.write_text(json.dumps({"status":"error", "error":str(exc), "cloud_calls":0, "model_calls":0}, ensure_ascii=False, indent=2)+"\n", "utf-8")
         else:
-            show_error(f"起動を完了できませんでした。\n\n{exc}")
+            show_error(f"起動できませんでした。\n\n{exc}")
         return 1
     finally:
         if session is not None:
