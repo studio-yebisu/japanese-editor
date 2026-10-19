@@ -1,6 +1,6 @@
 # 開発への参加
 
-StudioYebisu 日本語エディターは、原文を保持しながら変更を検討するためのツールです。修正候補の数を増やすことより、意味・確度・文体を変えず、意図が不明な箇所を保留できることを優先します。[公開リポジトリ](https://github.com/studio-yebisu/japanese-editor)の[Issues](https://github.com/studio-yebisu/japanese-editor/issues)で不具合や改善案を受け付けます。脆弱性や認証情報に関わる報告は、[SECURITY.md](SECURITY.md)の方法を使ってください。
+Yomiyasu Studioは原文を保持しながら変更を検討するためのツールです。修正候補の数を増やすことより、意味・確度・文体を変えず、意図が不明な箇所を保留できることを優先します。[公開リポジトリ](https://github.com/studio-yebisu/yomiyasu-studio)の[Issues](https://github.com/studio-yebisu/yomiyasu-studio/issues)で不具合や改善案を受け付けます。脆弱性や認証情報に関わる報告は、[SECURITY.md](SECURITY.md)の方法を使ってください。
 
 ## ローカルで確かめる
 

@@ -101,7 +101,7 @@ def mcp():
             if method == "initialize":
                 result = {"protocolVersion": params.get("protocolVersion", "2024-11-05"),
                           "capabilities": {"tools": {"listChanged": False}},
-                          "serverInfo": {"name": "yebisu-japanese-editor", "version": "0.2.5"},
+                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.6"},
                           "instructions": "日本語の校正は用途・強さを選び、ホスト自身が修正候補を作りreview_proposalsで比較する。採用案だけをfinalizeへ渡し返ったtextを最終稿にする。未実行の判定を成功と扱わない。小説・台詞の作風を保つ。generate=trueは外部送信を伴うため通常のホスト校正では不要。"}
             elif method == "ping":
                 result = {}
@@ -152,7 +152,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(403, {"error": "ローカルホストから開いてください。"})
         path = urlparse(self.path).path
         if path == "/api/health":
-            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.5", "data_id": data_id(), "closing": self.server.closing})
+            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.6", "data_id": data_id(), "closing": self.server.closing})
         if path == "/api/providers":
             return self.send(200, provider_settings.public_config())
         if path == "/api/integrations/codex":
@@ -337,7 +337,7 @@ def main():
         sys.argv = [str(directory / name), *sys.argv[3:]]
         runpy.run_path(str(directory / name), run_name="__main__")
         return
-    parser = argparse.ArgumentParser(description="用途を切り替える日本語校正プロトタイプ")
+    parser = argparse.ArgumentParser(description="Yomiyasu Studio — 用途と作風に合わせる日本語校正")
     sub = parser.add_subparsers(dest="command", required=True)
     web = sub.add_parser("serve", help="ローカル画面を開くためのサーバー")
     web.add_argument("--port", type=int, default=8896)
@@ -363,7 +363,7 @@ def main():
         mcp()
     elif args.command == "serve":
         server = create_server(args.port)
-        print(f"日本語校正: http://127.0.0.1:{server.server_port}\n終了は Ctrl+C", flush=True)
+        print(f"Yomiyasu Studio: http://127.0.0.1:{server.server_port}\n終了は Ctrl+C", flush=True)
         try:
             server.serve_forever()
         except KeyboardInterrupt:

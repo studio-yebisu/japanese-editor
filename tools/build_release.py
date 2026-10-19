@@ -10,7 +10,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_ROOT = ROOT / ".local/build"
-VERSION = "0.2.5"
+VERSION = "0.2.6"
 SOURCE_FILES = ("app.py", "desktop.py", "engine.py", "decider.py", "decider_runtime.py", "runtime_paths.py", "progress.py",
                 "generators.py", "gemini_cli.py", "cli_login.py", "provider_settings.py", "mac_credentials.py", "service_runtime.py", "integrations.py",
                 "install.py", "install.ps1", "install.sh", "plugin.json",
@@ -53,7 +53,7 @@ def source_files():
 
 def binary_files(directory):
     directory = directory.resolve()
-    if not (directory / "StudioYebisuEditor.exe").is_file() or not (directory / "StudioYebisuEditorCLI.exe").is_file():
+    if not (directory / "YomiyasuStudio.exe").is_file() or not (directory / "YomiyasuStudioCLI.exe").is_file():
         raise ValueError("Both GUI and CLI executables are required")
     for path in sorted(directory.rglob("*")):
         if not path.is_file():
@@ -90,9 +90,9 @@ def main(argv=None):
     parser.add_argument("--source-only", action="store_true")
     args = parser.parse_args(argv)
     output = BUILD_ROOT / "releases"
-    result = [create_zip(output / f"StudioYebisuEditor-source-{VERSION}.zip", source_files(), f"StudioYebisuEditor-source-{VERSION}")]
+    result = [create_zip(output / f"YomiyasuStudio-source-{VERSION}.zip", source_files(), f"YomiyasuStudio-source-{VERSION}")]
     if not args.source_only:
-        result.append(create_zip(output / f"StudioYebisuEditor-windows-x64-{VERSION}.zip", binary_files(BUILD_ROOT / "dist/StudioYebisuEditor"), "StudioYebisuEditor"))
+        result.append(create_zip(output / f"YomiyasuStudio-windows-x64-{VERSION}.zip", binary_files(BUILD_ROOT / "dist/YomiyasuStudio"), "YomiyasuStudio"))
     (output / "SHA256.json").write_text(json.dumps(result, ensure_ascii=False, indent=2)+"\n", "utf-8")
     print(json.dumps({"directory": str(output), "artifacts": result}, ensure_ascii=False, indent=2))
 

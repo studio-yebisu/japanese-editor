@@ -1,10 +1,10 @@
-# 導入
+# Yomiyasu Studioの導入
 
 Windowsの配布版と、macOSのソース実行では準備が異なります。認証と生成サービスの設定は [PROVIDERS.md](PROVIDERS.md)、Codex・Claudeへの組込みは [PLUGINS.md](PLUGINS.md)、確認済みの範囲は [STATUS.md](STATUS.md) にあります。
 
 ## Windows
 
-Windows用ZIPを展開し、`StudioYebisuEditor.exe` を起動します。モデルや認証情報は配布物に含めません。Perplexity Deciderのローカル判定を使う場合は、別途Pythonと `uv` を用意し、展開したフォルダーで次を実行します。固定モデル約9.10GBと専用依存を取得します。
+Windows用ZIPを展開し、`YomiyasuStudio.exe` を起動します。モデルや認証情報は配布物に含めません。Perplexity Deciderのローカル判定を使う場合は、別途Pythonと `uv` を用意し、展開したフォルダーで次を実行します。固定モデル約9.10GBと専用依存を取得します。
 
 ```powershell
 python -B _internal/editor/tools/setup_decider.py --device cpu --cpu-dtype bfloat16 --max-length 2048

@@ -3,7 +3,7 @@ name: japanese-editor
 description: 用途に合わせて日本語の修正候補を作り、原文との比較と採否を支援する。解説、ブログ、仕事の文章、小説、台詞に使う。既存文の校正が対象で、新しい事実や物語を足す執筆には使わない。
 ---
 
-# 用途を切り替える日本語校正
+# Yomiyasu Studioで用途を切り替える日本語校正
 
 このパッケージの [yomiyasu 2.0.0](../../vendor/yomiyasu/SKILL.md) を判断規則として使う。別に導入した同種スキルと規則を重ねて競合させない。引用した規則とスクリプトには [MIT](../../vendor/yomiyasu/LICENSE) と [Unicode notice](../../vendor/yomiyasu/UNICODE-LICENSE.txt) が適用される。
 
@@ -26,5 +26,7 @@ description: 用途に合わせて日本語の修正候補を作り、原文と�
 判定の対象は修正を一件だけ原文へ適用した候補。`scope=excerpt` は前後の抜粋であり、全文や複数案を合わせた最終稿の意味保持を保証しない。ユーザーが意味を変える編集を依頼した場合は、その目的と照らして扱う。判定ラベルを自動採用・自動拒否の命令として扱わない。
 
 `japanese_editor_prepare_decider` は、外部実装向けに要求JSONを準備するだけで送信しない。通常の校正では`review_proposals`を使う。
+
+既存の登録と互換性を保つため、MCP名 `yebisu-japanese-editor` と個人スキル名 `studio-yebisu-japanese-editor` は維持する。ソース内の `skills/japanese-editor/` も変更しない。
 
 MCPが未登録なら [README](../../README.md) の導入方法を案内する。導入を依頼された場合はその範囲で登録する。グローバルな自動編集フックはこのスキルの対象外とする。

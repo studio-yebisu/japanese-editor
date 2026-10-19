@@ -135,7 +135,7 @@ class ReleaseBoundaryTests(unittest.TestCase):
     def test_binary_tree_refuses_a_private_file(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            for name in ("StudioYebisuEditor.exe", "StudioYebisuEditorCLI.exe", ".env"):
+            for name in ("YomiyasuStudio.exe", "YomiyasuStudioCLI.exe", ".env"):
                 (root / name).write_bytes(b"synthetic")
             with self.assertRaises(ValueError):
                 list(release.binary_files(root))

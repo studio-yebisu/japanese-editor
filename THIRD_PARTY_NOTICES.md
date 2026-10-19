@@ -1,6 +1,8 @@
 # 第三者のコード・モデル・通知
 
-StudioYebisu 日本語エディターの独自コードと独自ドキュメントは [MIT License](LICENSE)、Copyright (c) 2026 StudioYebisu です。以下の外部部品の著作権・ライセンスを、このMITへ置き換えません。
+Yomiyasu Studioの独自コードと独自ドキュメントは [MIT License](LICENSE)、Copyright (c) 2026 StudioYebisu です。以下の外部部品の著作権・ライセンスを、このMITへ置き換えません。
+
+Yomiyasu StudioはStudioYebisuが制作する独立したアプリです。nanaism/yomiyasuの公式製品ではなく、原典著者による承認・品質保証を示しません。
 
 ## 同梱する yomiyasu
 

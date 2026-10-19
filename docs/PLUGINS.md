@@ -1,4 +1,4 @@
-# Codex / Claude / MCP への組み込み
+# Yomiyasu StudioをCodex / Claude / MCPへ組み込む
 
 WindowsとmacOSで共通のPythonエンジンを使います。主に、ホスト自身のモデルで修正案を作り、MCPで原文との対応とローカル判定を確認します。通常のホスト校正に、GeminiやSarashinaを追加で呼ぶ必要はありません。MCP・スキルと、容量の大きなFlashモデルは別々に導入します。Flashモデルの導入は任意です。
 
@@ -18,13 +18,15 @@ python -B install.py
 python3 -B install.py
 ```
 
-Windows専用アプリの「このPCのCodexへ登録」からも同じ登録処理を使えます。stdio MCP用の実行ファイルは `StudioYebisuEditorCLI.exe` です。GUI用の `StudioYebisuEditor.exe` をMCPのコマンドへ指定しないでください。
+Windows専用アプリの「このPCのCodexへ登録」からも同じ登録処理を使えます。stdio MCP用の実行ファイルは `YomiyasuStudioCLI.exe` です。GUI用の `YomiyasuStudio.exe` をMCPのコマンドへ指定しないでください。
 
 登録処理は次を行います。
 
 1. Codex設定を利用者領域へバックアップします。
 2. 一時領域でCodexの `mcp add` に登録形式を確認し、このアプリの項目だけを既存設定へ加えます。他の設定とコメントを保持します。ソース版では現在のPythonとアプリの絶対パスを使います。
 3. `~/.agents/skills/studio-yebisu-japanese-editor/` へ、スキルと参照するyomiyasu原典・通知・アプリ資料をコピーします。別の作業フォルダーからも参照できる構成です。
+
+既存の登録と互換性を保つため、MCP名 `yebisu-japanese-editor` と個人スキル名 `studio-yebisu-japanese-editor` は維持します。ソース内の `skills/japanese-editor/` も同じ名前です。
 
 同名の別サーバーや、利用者が変更した導入済みスキルは上書きしません。他のMCP設定やエージェントの自動編集フックをまとめて変更しません。登録後は新しいCodexセッションで利用します。ソースの場所やPythonを移した場合は再登録してください。
 
@@ -38,7 +40,7 @@ CodexのMCP設定は通常 `~/.codex/config.toml`（`CODEX_HOME`指定時はそ�
 python -B app.py mcp-config
 ```
 
-macOSは `python3`、Windowsバイナリは `StudioYebisuEditorCLI.exe mcp-config` を使います。出力された `command` / `args` を、利用するMCPホストのstdio設定へ登録してください。アプリ内の場所を例示した架空の絶対パスへ置き換える必要はありません。
+macOSは `python3`、Windowsバイナリは `YomiyasuStudioCLI.exe mcp-config` を使います。出力された `command` / `args` を、利用するMCPホストのstdio設定へ登録してください。アプリ内の場所を例示した架空の絶対パスへ置き換える必要はありません。
 
 Claude Code用の `.claude-plugin/plugin.json` と `skills/japanese-editor/SKILL.md` も同梱します。プラグインの読み込みとMCPの登録は別です。ホストの現在のプラグイン・MCP設定方法に従い、両方を有効にします。Claude Codeからは、一時的なMCP設定で候補レビューと最終稿作成を実行済みです。常時登録や別OSでの実行は、[STATUS.md](STATUS.md) の確認範囲を参照してください。
 

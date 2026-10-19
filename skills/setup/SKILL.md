@@ -1,9 +1,9 @@
 ---
 name: studio-yebisu-editor-setup
-description: StudioYebisu日本語エディターのMCPとスキルをローカルのCodexへ登録する。APIの利用先や任意のローカル判定を設定するときにも使う。
+description: Yomiyasu StudioのMCPとスキルをローカルのCodexへ登録する。APIの利用先や任意のローカル判定を設定するときにも使う。
 ---
 
-このプラグインのルートにある`install.py`を使う。Windowsでは`python install.py`、Macでは`python3 install.py`。Python 3.12以降が必要。`--print-config`は設定を表示するだけ。登録時はこのアプリのMCPだけを追加し、既存設定をこのPC内へバックアップする。
+Yomiyasu Studioの登録にはこのプラグインのルートにある`install.py`を使う。Windowsでは`python install.py`、Macでは`python3 install.py`。Python 3.12以降が必要。`--print-config`は設定を表示するだけ。登録時はこのアプリのMCPだけを追加し、既存設定をこのPC内へバックアップする。
 
 登録後、新しいホストの会話で`japanese_editor_profiles`を呼び出す。ホスト自身が修正案を作る通常の校正では、外部生成サービスのAPIキーは不要。原文を`review_proposals`へ、採用案だけを`finalize`へ渡す。
 

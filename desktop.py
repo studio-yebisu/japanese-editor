@@ -15,7 +15,7 @@ import urllib.request
 from runtime_paths import PERSISTENT_ROOT
 from service_runtime import data_id
 
-TITLE = "StudioYebisu 日本語エディター"
+TITLE = "Yomiyasu Studio"
 PORT = 8896
 URL = f"http://127.0.0.1:{PORT}"
 APPLICATION = "studio-yebisu-japanese-editor"

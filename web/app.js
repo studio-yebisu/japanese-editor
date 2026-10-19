@@ -929,7 +929,7 @@
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = "StudioYebisu校正結果.txt";
+        link.download = "YomiyasuStudio校正結果.txt";
         document.body.append(link);
         link.click();
         link.remove();

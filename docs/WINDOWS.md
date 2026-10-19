@@ -4,15 +4,15 @@
 
 ## Windows で使う
 
-Windows x64 の配布 ZIP を展開し、`StudioYebisuEditor.exe` を起動します。インストーラーや管理者権限は必要ありません。GUI と同じフォルダの `StudioYebisuEditorCLI.exe` と `_internal/` を一緒に置いてください。exe 一つだけを移すと動きません。モデル、認証キー、ユーザーの原稿は ZIP に含めません。
+Windows x64 の配布 ZIP を展開し、`YomiyasuStudio.exe` を起動します。インストーラーや管理者権限は必要ありません。GUI と同じフォルダの `YomiyasuStudioCLI.exe` と `_internal/` を一緒に置いてください。exe 一つだけを移すと動きません。モデル、認証キー、ユーザーの原稿は ZIP に含めません。
 
-専用ウィンドウのタイトルは「StudioYebisu 日本語エディター」。pywebview の EdgeChromium を使うため、Microsoft の WebView2 Runtime が必要です。未導入なら起動時に案内を表示します。[Microsoft 公式ページ](https://developer.microsoft.com/microsoft-edge/webview2/)から利用者が導入します。アプリは Runtime やモデルを自動取得しません。既存の Microsoft Edge 本体と WebView2 Runtime は別の構成要素です。
+専用ウィンドウのタイトルは「Yomiyasu Studio」。pywebview の EdgeChromium を使うため、Microsoft の WebView2 Runtime が必要です。未導入なら起動時に案内を表示します。[Microsoft 公式ページ](https://developer.microsoft.com/microsoft-edge/webview2/)から利用者が導入します。アプリは Runtime やモデルを自動取得しません。既存の Microsoft Edge 本体と WebView2 Runtime は別の構成要素です。
 
 アプリは `127.0.0.1:8896` だけを使います。互換性があり、保存先も同じ本アプリが起動済みなら、そのサーバーを共有します。他のアプリや古い版が使っている場合は、相手を終了したり別ポートへ移ったりせず、利用者へ案内します。自分で起動したサーバーとモデルだけを終了時に停止し、共有先は停止しません。処理中なら新しい要求を止め、進行中の生成・判定の完了を待ってから終了します。
 
 共有先のプロセスが予期せず終了した場合は、専用ウィンドウが同じポートでサービスを復旧します。開いている原稿や校正結果は保持します。`stop-service` で明示的に停止した場合は自動復旧せず、再開にはアプリを起動し直します。
 
-ウィンドウの寸法、WebView2 の設定、接続設定はユーザー領域 `%LOCALAPPDATA%\StudioYebisu\JapaneseEditor\` に保存します。配布フォルダへ個人設定を書きません。開いている原稿は自動保存せず、終了時に確認します。原稿を残す場合は、出力のコピーかテキスト保存を使ってください。
+ウィンドウの寸法、WebView2 の設定、接続設定はユーザー領域 `%LOCALAPPDATA%\StudioYebisu\JapaneseEditor\` に保存します。配布フォルダへ個人設定を書きません。改名後も旧版の設定を引き継ぐため、保存先は従来のパスを維持します。開いている原稿は自動保存せず、終了時に確認します。原稿を残す場合は、出力のコピーかテキスト保存を使ってください。
 
 MSIX などによる保存先の仮想化がある環境では、起動元によってユーザー領域の実体が異なる場合があります。その環境で GUI と Codex を共有する場合は、両方へ同じ絶対パスの `YEBISU_EDITOR_DATA_DIR` を指定してください。保存先が違うサービスへ原稿を送ることはありません。
 
@@ -21,10 +21,10 @@ Flash を使う場合は [DECIDER_RUNTIME.md](DECIDER_RUNTIME.md) の専用環�
 CLI はターミナルや MCP ホストから使います。
 
 ```powershell
-.\StudioYebisuEditorCLI.exe profiles
-.\StudioYebisuEditorCLI.exe gemini-login
-.\StudioYebisuEditorCLI.exe mcp-config
-.\StudioYebisuEditorCLI.exe mcp
+.\YomiyasuStudioCLI.exe profiles
+.\YomiyasuStudioCLI.exe gemini-login
+.\YomiyasuStudioCLI.exe mcp-config
+.\YomiyasuStudioCLI.exe mcp
 ```
 
 `mcp-config` が返す絶対パスの CLI を登録します。GUI 用 exe を stdio MCP の command にしないでください。保存先を変えた場合は、設定を出力し直します。
@@ -39,7 +39,7 @@ python -B tools/build_windows.py --smoke-cli --smoke-gui
 python -B tools/build_release.py
 ```
 
-`.local/build/.venv` に固定したビルド依存だけを導入します。ComfyUI や通常の Python 環境は変更しません。出力は `.local/build/dist/StudioYebisuEditor/`、配布 ZIP と SHA-256 は `.local/build/releases/` です。ビルド中は、依存パッケージと固定した小さなライセンス原本を取得します。モデルの取得や推論は行いません。
+`.local/build/.venv` に固定したビルド依存だけを導入します。ComfyUI や通常の Python 環境は変更しません。出力は `.local/build/dist/YomiyasuStudio/`、配布 ZIP と SHA-256 は `.local/build/releases/` です。ビルド中は、依存パッケージと固定した小さなライセンス原本を取得します。モデルの取得や推論は行いません。
 
 `--smoke-recovery` は8896が空いている場合に限り、検証用に起動した共有サービスの消失、GUIによる復旧、原稿とDOMの保持、明示停止後の復旧抑制を確かめます。既存サービスは終了しません。
 
