@@ -10,8 +10,8 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_ROOT = ROOT / ".local/build"
-VERSION = "0.2.7"
-SOURCE_FILES = ("app.py", "desktop.py", "engine.py", "decider.py", "decider_runtime.py", "rpc_auth.py", "runtime_paths.py", "progress.py",
+VERSION = "0.2.8"
+SOURCE_FILES = ("app.py", "desktop.py", "engine.py", "decider.py", "decider_runtime.py", "decider_errors.py", "rpc_auth.py", "runtime_paths.py", "progress.py",
                 "generators.py", "gemini_cli.py", "cli_login.py", "provider_settings.py", "mac_credentials.py", "service_runtime.py", "integrations.py",
                 "install.py", "install.ps1", "install.sh", "plugin.json",
                 "profiles.json", "LICENSE", "README.md", "NOTICES.md", "THIRD_PARTY_NOTICES.md",

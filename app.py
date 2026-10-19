@@ -89,15 +89,34 @@ def execute_tool(name, arguments):
     raise EditorError("不明なツールです。")
 
 
+MCP_MAX_LINE_BYTES = 512_000
+
+
+def _bounded_mcp_lines(stream):
+    """Yield complete bounded lines, or None once per discarded oversized line."""
+    while True:
+        line = stream.readline(MCP_MAX_LINE_BYTES + 1)
+        if not line:
+            return
+        if len(line) > MCP_MAX_LINE_BYTES:
+            # Keep each allocation bounded while resynchronizing at the next
+            # newline. An oversized final line can end at EOF without a newline.
+            while line and not line.endswith(b"\n"):
+                line = stream.readline(MCP_MAX_LINE_BYTES + 1)
+            yield None
+        else:
+            yield line
+
+
 def mcp():
     from service_runtime import ensure_service
     if os.environ.get("YEBISU_EDITOR_NO_AUTOSTART") != "1":
         ensure_service()
     # MCP stdio transport is UTF-8 newline-delimited JSON-RPC, no stdout logs.
-    for line in sys.stdin.buffer:
+    for line in _bounded_mcp_lines(sys.stdin.buffer):
         request_id = None
         try:
-            if len(line) > 512000:
+            if line is None:
                 raise EditorError("入力サイズの上限を超えています。")
             request = json.loads(line)
             request_id = request.get("id")
@@ -113,7 +132,7 @@ def mcp():
                 validate_unicode_input(params)
                 result = {"protocolVersion": params.get("protocolVersion", "2024-11-05"),
                           "capabilities": {"tools": {"listChanged": False}},
-                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.7"},
+                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.8"},
                           "instructions": "日本語の校正は用途・強さを選び、ホスト自身が修正候補を作りreview_proposalsで比較する。採用案だけをfinalizeへ渡し返ったtextを最終稿にする。未実行の判定を成功と扱わない。小説・台詞の作風を保つ。generate=trueは外部送信を伴うため通常のホスト校正では不要。"}
             elif method == "ping":
                 result = {}
@@ -134,7 +153,8 @@ def mcp():
                 continue
             response = {"jsonrpc": "2.0", "id": request_id, "result": result}
         except (EditorError, ValueError, AttributeError, TypeError) as exc:
-            response = {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32602, "message": "Invalid request"}}
+            message = "入力サイズの上限（512,000バイト）を超えています。" if line is None else "Invalid request"
+            response = {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32602, "message": message}}
         sys.stdout.buffer.write((json.dumps(response, ensure_ascii=False)+"\n").encode("utf-8"))
         sys.stdout.buffer.flush()
 
@@ -268,7 +288,7 @@ class Handler(BaseHTTPRequestHandler):
             except (rpc_auth.AuthenticationError, ValueError):
                 return self.reject(401, "共有サービスの認証要求を確認できません。")
         if path == "/api/health":
-            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.7", "data_id": data_id(), "closing": self.server.closing})
+            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.8", "data_id": data_id(), "closing": self.server.closing})
         if path == "/api/providers":
             return self.send(200, provider_settings.public_config())
         if path == "/api/integrations/codex":
