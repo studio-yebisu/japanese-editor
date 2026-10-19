@@ -26,6 +26,7 @@ if str(ROOT) not in sys.path:
 import decider
 import decider_runtime
 import engine
+import rpc_auth
 
 
 IDENTITY = {
@@ -716,6 +717,12 @@ class HttpBoundaryTests(unittest.TestCase):
             handler.headers["Origin"] = origin
         handler.rfile = io.BytesIO(raw)
         handler.server = SimpleNamespace(server_port=8896)
+        handler.connection = mock.Mock()
+        handler.connection.getsockname.return_value = ("127.0.0.1", 8896)
+        if path in ("/api/decider/decide", "/api/decider/stop"):
+            _challenge, handler._rpc_session = rpc_auth.issue_challenge("a" * 64, 8896, secret=bytes(range(32)))
+            for key, value in rpc_auth.request_headers(handler._rpc_session, "POST", path, raw).items():
+                handler.headers[key] = value
         handler.semaphore = threading.BoundedSemaphore(1)
         handler.send = mock.Mock()
         return handler
@@ -741,6 +748,7 @@ class HttpBoundaryTests(unittest.TestCase):
 
     def test_raw_status_uses_local_runtime_without_shared_service_recursion(self):
         handler = self.handler("/api/decider/status", {})
+        del handler.headers["Content-Length"]
         with mock.patch.object(decider_runtime, "local_status", return_value={"status": "busy"}) as local:
             with mock.patch.object(decider_runtime, "status", side_effect=AssertionError("recursive status call")) as shared:
                 handler.do_GET()

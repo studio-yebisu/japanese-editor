@@ -24,6 +24,36 @@ class EditorError(ValueError):
     pass
 
 
+_UNICODE_FIELD_LABELS = {
+    "text": "原文", "context": "文体メモ", "final": "最終稿",
+    "before": "修正前の文章", "after": "修正後の文章",
+    "reason": "修正理由", "rule": "規則名", "quote": "引用文",
+    "question": "確認事項", "suggestion": "構成提案",
+    "provider": "生成サービス名", "model": "モデル名",
+}
+
+
+def validate_unicode_input(value, label="入力"):
+    """Reject non-scalar strings before encoding, I/O, or model execution.
+
+    JSON permits escaped lone surrogates, but neither UTF-8 files nor our
+    UTF-16 edit anchors can encode them. Do not silently replace or normalize
+    the manuscript, and do not include rejected content in an error message.
+    """
+    if isinstance(value, str):
+        try:
+            value.encode("utf-8")
+        except UnicodeEncodeError:
+            raise EditorError(f"{label}に不正なUnicode文字（未対サロゲート）が含まれています。該当箇所を入力し直してください。") from None
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            validate_unicode_input(key, label)
+            validate_unicode_input(item, _UNICODE_FIELD_LABELS.get(key, label))
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            validate_unicode_input(item, label)
+
+
 def config():
     from decider import availability
     decider = availability()
@@ -31,7 +61,7 @@ def config():
     providers = provider_settings.public_config()
     selected = next((item for item in providers["providers"] if item["id"] == providers["provider"]), {})
     return {
-        "version": "0.2.6", "max_text": MAX_TEXT,
+        "version": "0.2.7", "max_text": MAX_TEXT,
         "profiles": CONFIG["profiles"], "strengths": CONFIG["strengths"],
         "stages": {"rules": "ready" if (VENDOR / "scripts/yomiyasu_lint.py").is_file() else "unavailable",
                    "generator": "available" if selected.get("available") else "unavailable",
@@ -41,6 +71,7 @@ def config():
 
 
 def digest(text):
+    validate_unicode_input(text)
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
@@ -52,6 +83,7 @@ def _pick(items, value, label):
 
 
 def _utf16(text):
+    validate_unicode_input(text)
     return len(text.encode("utf-16-le")) // 2
 
 
@@ -89,6 +121,8 @@ def _protected_ranges(text):
 
 def validate_edits(text, raw_edits):
     """Require exact unique anchors and independent, non-overlapping patches."""
+    validate_unicode_input(text, "原文")
+    validate_unicode_input(raw_edits, "修正案")
     if not isinstance(raw_edits, list) or len(raw_edits) > 50:
         raise EditorError("修正案は50件以下の配列で指定してください。")
     edits, notes, occupied = [], [], []
@@ -131,6 +165,8 @@ def validate_edits(text, raw_edits):
 
 def apply_edits(text, edits):
     """Apply only patches whose UTF-16 anchors still match the original."""
+    validate_unicode_input(text, "原文")
+    validate_unicode_input(edits, "修正案")
     encoded = text.encode("utf-16-le")
     previous = len(encoded) // 2 + 1
     for edit in sorted(edits, key=lambda item: item["start"], reverse=True):
@@ -149,6 +185,7 @@ def apply_edits(text, edits):
 
 
 def lint(text, profile):
+    validate_unicode_input(text, "原文")
     script = VENDOR / "scripts" / "yomiyasu_lint.py"
     if not script.is_file():
         raise EditorError("同梱のyomiyasu検査器が見つかりません。")
@@ -277,6 +314,7 @@ def _claude_proposal(text, context, instruction):
 
 
 def generate(text, profile, strength, context, provider=None, model=None):
+    validate_unicode_input({"text": text, "context": context, "provider": provider, "model": model})
     import provider_settings
     import generators
     try:
@@ -297,6 +335,9 @@ def generate(text, profile, strength, context, provider=None, model=None):
             models = [identity["reported_model"]]
     except (provider_settings.ProviderSettingsError, generators.GenerationError) as exc:
         raise EditorError(str(exc)) from None
+    validate_unicode_input(proposal, "生成した修正案")
+    validate_unicode_input(identity, "生成サービスの応答")
+    validate_unicode_input(models, "生成サービスの応答")
     if not isinstance(proposal, dict) or not isinstance(proposal.get("questions"), list):
         raise EditorError("生成した修正案の形式が不正です。")
     questions = []
@@ -317,6 +358,7 @@ def generate(text, profile, strength, context, provider=None, model=None):
 def analyze(payload):
     if not isinstance(payload, dict):
         raise EditorError("入力はJSONオブジェクトで指定してください。")
+    validate_unicode_input(payload)
     text = payload.get("text", "")
     context = payload.get("context", "")
     if not isinstance(text, str) or not text.strip() or len(text) > MAX_TEXT:
@@ -331,7 +373,7 @@ def analyze(payload):
     strength = _pick(CONFIG["strengths"], payload.get("strength", "natural"), "強さ")
     progress.report("rules")
     findings = lint(text, profile)
-    output = {"version": "0.2.6", "source_hash": digest(text), "offset_encoding": "utf-16",
+    output = {"version": "0.2.7", "source_hash": digest(text), "offset_encoding": "utf-16",
               "profile": profile["id"], "strength": strength["id"], "findings": findings,
               "edits": [], "questions": [], "suggestions": [], "stages": {"rules": "executed", "generation": "not_requested", "decider": "not_run"},
               "notes": ["指摘は見直し候補です。指摘の有無で文章の品質や意味保持は判定できません。"],
@@ -360,6 +402,7 @@ def review_proposals(payload):
     """Host-model proposals use the same patch validation without a nested LLM."""
     if not isinstance(payload, dict):
         raise EditorError("修正候補はJSONオブジェクトで指定してください。")
+    validate_unicode_input(payload)
     clean = dict(payload)
     clean["generate"] = False
     output = analyze(clean)
@@ -376,6 +419,9 @@ def review_proposals(payload):
 
 def finalize_proposals(payload):
     """Bind a host's accepted proposals to the exact final bytes we check."""
+    if not isinstance(payload, dict):
+        raise EditorError("修正候補はJSONオブジェクトで指定してください。")
+    validate_unicode_input(payload)
     reviewed = review_proposals({**payload, "judge": False})
     if len(reviewed["edits"]) != len(payload["edits"]):
         raise EditorError("保留または無変更の案があります。採用する有効な案だけを渡してください。")
@@ -387,9 +433,10 @@ def finalize_proposals(payload):
 
 def check_final(source, final, profile_id="article"):
     """Use the upstream unified run/verify contract for an export candidate."""
-    progress.report("checking", completed=0, total=2)
     if not isinstance(source, str) or not isinstance(final, str) or max(len(source), len(final)) > MAX_TEXT:
         raise EditorError("出力点検の文字数が上限を超えています。")
+    validate_unicode_input({"text": source, "final": final, "profile": profile_id})
+    progress.report("checking", completed=0, total=2)
     profile = _pick(CONFIG["profiles"], profile_id, "用途")
     script = VENDOR / "scripts/yomiyasu_check.py"
     with tempfile.TemporaryDirectory(prefix="yebisu-final-") as directory:

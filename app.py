@@ -2,25 +2,28 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
+import socket
 import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 if getattr(sys, "frozen", False):
     sys.dont_write_bytecode = True
 
-from engine import EditorError, ROOT, CONFIG, analyze, check_final, config, finalize_proposals, review_proposals
+from engine import EditorError, ROOT, CONFIG, analyze, check_final, config, finalize_proposals, review_proposals, validate_unicode_input
 from runtime_paths import cli_command, FROZEN
 from decider import prepare as prepare_decider
 import decider_runtime
 import provider_settings
 import integrations
 import progress
+import rpc_auth
 from service_runtime import data_id
 
 TOOLS = [
@@ -65,6 +68,9 @@ for tool in TOOLS:
 
 
 def execute_tool(name, arguments):
+    validate_unicode_input(arguments)
+    if not isinstance(arguments, dict):
+        raise EditorError("入力はJSONオブジェクトで指定してください。")
     if name in {"japanese_editor_profiles", "japanese_editor_analyze", "japanese_editor_review_proposals"} and os.environ.get("YEBISU_EDITOR_NO_AUTOSTART") != "1":
         from service_runtime import ensure_service
         ensure_service()
@@ -95,13 +101,19 @@ def mcp():
                 raise EditorError("入力サイズの上限を超えています。")
             request = json.loads(line)
             request_id = request.get("id")
+            try:
+                validate_unicode_input(request_id)
+            except EditorError:
+                request_id = None
+                raise ValueError("Invalid request id") from None
             method, params = request.get("method"), request.get("params", {})
             if request_id is None:
                 continue
             if method == "initialize":
+                validate_unicode_input(params)
                 result = {"protocolVersion": params.get("protocolVersion", "2024-11-05"),
                           "capabilities": {"tools": {"listChanged": False}},
-                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.6"},
+                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.7"},
                           "instructions": "日本語の校正は用途・強さを選び、ホスト自身が修正候補を作りreview_proposalsで比較する。採用案だけをfinalizeへ渡し返ったtextを最終稿にする。未実行の判定を成功と扱わない。小説・台詞の作風を保つ。generate=trueは外部送信を伴うため通常のホスト校正では不要。"}
             elif method == "ping":
                 result = {}
@@ -121,23 +133,106 @@ def mcp():
                 sys.stdout.buffer.flush()
                 continue
             response = {"jsonrpc": "2.0", "id": request_id, "result": result}
-        except (ValueError, AttributeError, TypeError) as exc:
+        except (EditorError, ValueError, AttributeError, TypeError) as exc:
             response = {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32602, "message": "Invalid request"}}
         sys.stdout.buffer.write((json.dumps(response, ensure_ascii=False)+"\n").encode("utf-8"))
         sys.stdout.buffer.flush()
 
 
+class RequestReadError(EditorError):
+    def __init__(self, message, status=400):
+        super().__init__(message)
+        self.http_status = status
+
+
+class DeadlineSocketReader(io.RawIOBase):
+    """A total request-input deadline, including clients that keep dripping bytes."""
+    def __init__(self, handler):
+        self.handler = handler
+
+    def readable(self):
+        return True
+
+    def readinto(self, buffer):
+        handler = self.handler
+        deadline = handler._request_deadline
+        remaining = handler.timeout if deadline is None else deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("Request input deadline exceeded")
+        handler.connection.settimeout(min(handler.timeout, remaining))
+        return handler.connection.recv_into(buffer)
+
+
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+    timeout = 30
     semaphore = threading.BoundedSemaphore(1)
+
+    def setup(self):
+        super().setup()
+        self.rfile.close()
+        self._request_deadline = None
+        self.rfile = io.BufferedReader(DeadlineSocketReader(self))
+
+    def handle_one_request(self):
+        self._request_deadline = time.monotonic() + self.timeout
+        try:
+            super().handle_one_request()
+        except (ConnectionError, OSError):
+            self.close_connection = True
+
+    def _input_complete(self):
+        self._request_deadline = None
+        if hasattr(self, "connection"):
+            self.connection.settimeout(self.timeout)
+
+    def _read_body(self, length):
+        try:
+            raw = self.rfile.read(length)
+        except (TimeoutError, OSError):
+            self.close_connection = True
+            raise RequestReadError("入力の受信が時間内に完了しませんでした。", 408) from None
+        self._input_complete()
+        if len(raw) != length:
+            self.close_connection = True
+            raise RequestReadError("入力の本文が最後まで届きませんでした。")
+        return raw
+
+    def _read_json(self, length):
+        return self._decode_json(self._read_body(length))
+
+    def _decode_json(self, raw):
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except UnicodeError:
+            raise EditorError("入力はUTF-8のJSONで送信してください。") from None
+        validate_unicode_input(payload)
+        if not isinstance(payload, dict):
+            raise EditorError("入力はJSONオブジェクトで指定してください。")
+        return payload
+
+    def reject(self, status, message):
+        # An unread POST body must not become another HTTP/1.1 request.
+        self.close_connection = True
+        return self.send(status, {"error": message})
 
     def log_message(self, *_):
         pass
 
     def send(self, status, payload, content_type="application/json; charset=utf-8"):
         data = payload if isinstance(payload, bytes) else json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        context = getattr(self, "_rpc_context", None)
+        signed_headers = rpc_auth.response_headers(context, status, data) if context else {}
+        if context:
+            self.close_connection = True
+            self._rpc_context = None
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(data)))
+        if getattr(self, "close_connection", False):
+            self.send_header("Connection", "close")
+        for key, value in signed_headers.items():
+            self.send_header(key, value)
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Security-Policy", "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'")
@@ -148,16 +243,42 @@ class Handler(BaseHTTPRequestHandler):
         return self.headers.get("Host") in {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
 
     def do_GET(self):
+        self._input_complete()
         if not self.valid_host():
-            return self.send(403, {"error": "ローカルホストから開いてください。"})
-        path = urlparse(self.path).path
+            return self.reject(403, "ローカルホストから開いてください。")
+        lengths = self.headers.get_all("Content-Length", [])
+        if self.headers.get("Transfer-Encoding") is not None or len(lengths) > 1 or (lengths and lengths[0].strip() != "0"):
+            return self.reject(400, "GETリクエストに本文を含めないでください。")
+        parsed = urlparse(self.path)
+        path = parsed.path
+        if path == rpc_auth.CHALLENGE_PATH:
+            try:
+                query = parse_qs(parsed.query, strict_parsing=True)
+                if set(query) != {"nonce"} or len(query["nonce"]) != 1:
+                    raise rpc_auth.AuthenticationError("共有サービスの認証要求が不正です。")
+                # A keep-alive connection can outlive the listener. Never turn
+                # an old accepted socket into a proof oracle after its port is
+                # released and acquired by another process. The lifecycle lock
+                # orders proof issuance before shutdown/listener close.
+                with self.server._lifecycle_lock:
+                    if self.server.closing or self.server._closed.is_set():
+                        return self.reject(503, "共有サービスは終了処理中です。アプリを再起動してください。")
+                    challenge, self._rpc_session = rpc_auth.issue_challenge(query["nonce"][0], self.connection.getsockname()[1])
+                    return self.send(200, challenge)
+            except (rpc_auth.AuthenticationError, ValueError):
+                return self.reject(401, "共有サービスの認証要求を確認できません。")
         if path == "/api/health":
-            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.6", "data_id": data_id(), "closing": self.server.closing})
+            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.7", "data_id": data_id(), "closing": self.server.closing})
         if path == "/api/providers":
             return self.send(200, provider_settings.public_config())
         if path == "/api/integrations/codex":
             return self.send(200, integrations.status())
         if path == "/api/decider/status":
+            if self.headers.get(rpc_auth.REQUEST_HEADER) is not None:
+                try:
+                    self._rpc_context = rpc_auth.verify_request(getattr(self, "_rpc_session", None), "GET", self.path, b"", self.headers)
+                except rpc_auth.AuthenticationError as exc:
+                    return self.reject(401, str(exc))
             return self.send(200, decider_runtime.local_status())
         if path == "/api/config":
             return self.send(200, config())
@@ -181,28 +302,28 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if not self.valid_host():
-            return self.send(403, {"error": "ローカルホストから開いてください。"})
+            return self.reject(403, "ローカルホストから開いてください。")
         origin = self.headers.get("Origin")
         if origin and origin not in {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}:
-            return self.send(403, {"error": "この画面から操作してください。"})
+            return self.reject(403, "この画面から操作してください。")
         route = urlparse(self.path).path
         if route not in ("/api/analyze", "/api/export", "/api/judge", "/api/decider/decide", "/api/decider/stop", "/api/settings", "/api/integrations/codex", "/api/service/stop", "/api/gemini/login"):
-            return self.send(404, {"error": "見つかりません。"})
+            return self.reject(404, "見つかりません。")
         if self.headers.get_content_type() != "application/json":
-            return self.send(415, {"error": "JSONで入力してください。"})
+            return self.reject(415, "JSONで入力してください。")
+        if self.headers.get("Transfer-Encoding") is not None or len(self.headers.get_all("Content-Length", [])) != 1:
+            return self.reject(400, "入力サイズを一つのContent-Lengthで指定してください。")
         try:
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
-            return self.send(400, {"error": "入力サイズが不正です。"})
+            return self.reject(400, "入力サイズが不正です。")
         if not 0 < length <= 256000:
-            return self.send(413, {"error": "入力サイズの上限を超えています。"})
+            return self.reject(413, "入力サイズの上限を超えています。")
         if getattr(self.server, "closing", False) and not route.startswith("/api/decider/"):
-            return self.send(503, {"error": "終了処理中です。現在の点検が終わるまで待っています。"})
+            return self.reject(503, "終了処理中です。現在の点検が終わるまで待っています。")
         if route in ("/api/settings", "/api/integrations/codex", "/api/service/stop", "/api/gemini/login"):
             try:
-                payload = json.loads(self.rfile.read(length))
-                if not isinstance(payload, dict):
-                    raise EditorError("入力はJSONオブジェクトで指定してください。")
+                payload = self._read_json(length)
                 if route == "/api/settings":
                     if set(payload) - {"provider", "model", "api_key", "remove_key"}:
                         raise EditorError("生成設定の形式を確認してください。")
@@ -240,14 +361,16 @@ class Handler(BaseHTTPRequestHandler):
                 threading.Thread(target=finish_service, daemon=True).start()
                 return
             except (EditorError, provider_settings.ProviderSettingsError, integrations.IntegrationError, ValueError) as exc:
-                return self.send(400, {"error": str(exc)})
+                return self.send(getattr(exc, "http_status", 400), {"error": str(exc)})
         # Raw local worker requests bypass the analysis semaphore: an analysis
         # in this server can call the shared inference service on another thread.
         if route.startswith("/api/decider/"):
             try:
-                payload = json.loads(self.rfile.read(length))
-                if not isinstance(payload, dict):
-                    raise EditorError("入力はJSONオブジェクトで指定してください。")
+                if getattr(self, "_rpc_session", None) is None:
+                    raise rpc_auth.AuthenticationError("共有サービスの認証が必要です。")
+                raw = self._read_body(length)
+                self._rpc_context = rpc_auth.verify_request(self._rpc_session, "POST", self.path, raw, self.headers)
+                payload = self._decode_json(raw)
                 if route == "/api/decider/stop":
                     decider_runtime.local_stop()
                     return self.send(200, {"status": "stopped"})
@@ -259,19 +382,19 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, result)
             except decider_runtime.DeciderRuntimeError as exc:
                 return self.send(503, {"error": exc.as_dict()})
+            except rpc_auth.AuthenticationError as exc:
+                return self.reject(401, str(exc))
             except (EditorError, json.JSONDecodeError) as exc:
-                return self.send(400, {"error": str(exc)})
+                return self.send(getattr(exc, "http_status", 400), {"error": str(exc)})
         try:
             request_id = progress.validate_id(self.headers.get("X-Yebisu-Request-Id"))
         except progress.ProgressError as exc:
-            return self.send(exc.status, {"error": str(exc)})
+            return self.reject(exc.status, str(exc))
         if not self.semaphore.acquire(blocking=False):
-            return self.send(409, {"error": "別の点検を実行中です。完了後に操作してください。"})
+            return self.reject(409, "別の点検を実行中です。完了後に操作してください。")
         try:
             with progress.operation(request_id, "checking" if route == "/api/export" else "rules"):
-                payload = json.loads(self.rfile.read(length))
-                if not isinstance(payload, dict):
-                    raise EditorError("入力はJSONオブジェクトで指定してください。")
+                payload = self._read_json(length)
                 if route == "/api/analyze":
                     result = analyze(payload)
                 elif route == "/api/judge":
@@ -282,7 +405,7 @@ class Handler(BaseHTTPRequestHandler):
         except progress.ProgressError as exc:
             self.send(exc.status, {"error": str(exc)})
         except (EditorError, json.JSONDecodeError) as exc:
-            self.send(400, {"error": str(exc)})
+            self.send(getattr(exc, "http_status", 400), {"error": str(exc)})
         except Exception:
             self.send(500, {"error": "処理を完了できませんでした。原文を残したまま再実行してください。"})
         finally:
@@ -291,13 +414,51 @@ class Handler(BaseHTTPRequestHandler):
 
 class EditorServer(ThreadingHTTPServer):
     daemon_threads = True
+    allow_reuse_address = os.name != "nt"
+    allow_reuse_port = False
+    max_connections = 32
+    request_queue_size = 16
 
     def __init__(self, port):
+        self._lifecycle_lock = threading.RLock()
+        self._connections = set()
+        self._closed = threading.Event()
+        self.closing = False
+        self._connection_slots = threading.BoundedSemaphore(self.max_connections)
         super().__init__(("127.0.0.1", port), Handler)
         self.native_activity = time.monotonic()
-        self.closing = False
-        self._closed = threading.Event()
         threading.Thread(target=self._idle_models, daemon=True).start()
+
+    def server_bind(self):
+        if os.name == "nt":
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+    def process_request(self, request, client_address):
+        if not self._connection_slots.acquire(blocking=False):
+            self.shutdown_request(request)
+            return
+        with self._lifecycle_lock:
+            if self.closing or self._closed.is_set():
+                self._connection_slots.release()
+                self.shutdown_request(request)
+                return
+            self._connections.add(request)
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            with self._lifecycle_lock:
+                self._connections.discard(request)
+            self._connection_slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            with self._lifecycle_lock:
+                self._connections.discard(request)
+            self._connection_slots.release()
 
     def _idle_models(self):
         while not self._closed.wait(30):
@@ -308,9 +469,31 @@ class EditorServer(ThreadingHTTPServer):
                 except decider_runtime.DeciderRuntimeError:
                     pass
 
+    def _begin_shutdown(self):
+        with self._lifecycle_lock:
+            self.closing = True
+            self._closed.set()
+
+    def shutdown(self):
+        # Stop issuing proofs before serve_forever exits, while retaining
+        # existing authenticated RPC sockets until server_close is requested.
+        self._begin_shutdown()
+        super().shutdown()
+
     def server_close(self):
-        self._closed.set()
+        # Disable proof issuance before releasing the listener's port. Closing
+        # accepted sockets also removes stale keep-alive connections on BSD/macOS
+        # where those sockets can coexist with a newly bound listener.
+        self._begin_shutdown()
         super().server_close()
+        with self._lifecycle_lock:
+            connections = tuple(self._connections)
+        for connection in connections:
+            try:
+                connection.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            connection.close()
 
 
 def create_server(port=8896):
@@ -420,12 +603,16 @@ def main():
                           "env": integrations.server_environment()}}}
             elif args.command in ("review", "prepare-decider"):
                 payload = json.loads(sys.stdin.buffer.read().decode("utf-8"))
+                validate_unicode_input(payload)
                 result = (review_proposals(payload) if args.command == "review" else prepare_decider(payload))
             else:
                 result = analyze({"text": sys.stdin.buffer.read().decode("utf-8"), "profile": args.profile,
                     "strength": args.strength, "context": args.context, "generate": args.generate,
                     "provider": args.provider, "model": args.model})
             sys.stdout.buffer.write((json.dumps(result, ensure_ascii=False, indent=2)+"\n").encode("utf-8"))
+        except UnicodeError:
+            sys.stderr.write("入力に不正なUnicode文字が含まれています。該当箇所を入力し直してください。\n")
+            raise SystemExit(1) from None
         except (EditorError, json.JSONDecodeError, integrations.IntegrationError) as exc:
             sys.stderr.write(str(exc)+"\n")
             raise SystemExit(1)

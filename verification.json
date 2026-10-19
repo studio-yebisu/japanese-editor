@@ -1058,5 +1058,37 @@
     ],
     "mac_native_verified": false,
     "note": "Earlier version records remain historical evidence; model inference was not repeated for this rebrand."
+  },
+  "yomiyasu_studio_v027": {
+    "date": "2026-10-19",
+    "version": "0.2.7",
+    "issues": [
+      3,
+      4,
+      5
+    ],
+    "checks": {
+      "windows_python_tests_run": 274,
+      "windows_python_tests_passed": 273,
+      "windows_python_tests_skipped": 1,
+      "windows_skip_reason": "POSIX file owner/mode test",
+      "web_ui_tests_passed": 19,
+      "wsl_linux_rpc_auth_tests_passed": 23,
+      "wsl_linux_http_boundary_tests_passed": 11,
+      "frozen_cli_mcp_run_verify": "passed",
+      "frozen_gui_edgechromium": "passed",
+      "frozen_client_to_frozen_server_authenticated_status_and_stop": "passed",
+      "current_user_dpapi_and_key_reuse": "passed",
+      "forged_listener_received_manuscript_posts": 0,
+      "closed_listener_proof_oracle": "rejected",
+      "cloud_calls": 0,
+      "model_calls": 0
+    },
+    "mac_native_verified": false,
+    "limits": [
+      "HMAC does not encrypt traffic.",
+      "Malicious processes running as the same OS user, administrators and OS network manipulation are outside this boundary."
+    ],
+    "note": "Synthetic requests only. Model inference and macOS native execution were not repeated for this patch."
   }
 }

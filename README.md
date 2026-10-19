@@ -6,12 +6,14 @@ Yomiyasu Studioは日本語の文章を整え、どこを変えたか左右で�
 
 [最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/latest)
 
-| 使う環境 | v0.2.6のダウンロード | 提供状況 |
+| 使う環境 | v0.2.7のダウンロード | 提供状況 |
 | --- | --- | --- |
-| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.6/YomiyasuStudio-windows-x64-0.2.6.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
-| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.6/YomiyasuStudio-source-0.2.6.zip) | Pythonで起動する実験版。Mac実機は未検証 |
+| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.7/YomiyasuStudio-windows-x64-0.2.7.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
+| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.7/YomiyasuStudio-source-0.2.7.zip) | Pythonで起動する実験版。Mac実機は未検証 |
 
-生成とローカル意味判定の実推論はv0.2.5で確認しています。v0.2.6を含む版ごとの検証内容は [STATUS.md](docs/STATUS.md) を参照してください。
+生成とローカル意味判定の実推論はv0.2.5で確認しています。v0.2.7を含む版ごとの検証内容は [STATUS.md](docs/STATUS.md) を参照してください。
+
+v0.2.7では入力エラーの案内と受信待機の制限を改善し、ローカルDeciderの共有通信に認証を加えました。**旧版からはアプリと共有サービスの両方を更新し、サービスを起動し直してください。** MCPも新版へ登録し直して、新しい会話で使います。旧サービスの認証方式へ自動で戻すことはありません。[更新と接続の案内](docs/PLUGINS.md#共有サービスの更新)
 
 ![小説の校正例。実画面の一部。左の原文に赤い取り消し線、右の校正後に緑の変更箇所を表示。](https://raw.githubusercontent.com/studio-yebisu/yomiyasu-studio/main/docs/assets/editor.png)
 
@@ -36,7 +38,7 @@ Mac用の `.app` はまだ用意していません。ブラウザーで使うソ
 3. 「ターミナル」を開きます。ダウンロード先が通常の「ダウンロード」フォルダーなら、次を1行ずつ実行します。
 
 ```sh
-cd "$HOME/Downloads/YomiyasuStudio-source-0.2.6"
+cd "$HOME/Downloads/YomiyasuStudio-source-0.2.7"
 python3 --version
 python3 -B app.py serve
 ```
@@ -170,6 +172,8 @@ python3 -B tools/setup_decider.py --preset mac24
 | Google認証後も使えない | ブラウザーとCLI両方の完了を確認します。ブラウザーが開かなければ、CLIの案内にある認証URLを自分で開いて手順を続けます。その後「接続状態を更新」を押します |
 | `127.0.0.1:8896` が開かない・使用中と出る | Macはサーバー用ターミナルを確認します。既に本アプリが起動していればその画面を使います。別アプリや旧版が使用中の場合は表示された案内に従います |
 | Deciderの資源不足・未接続 | 空きRAMと導入先を確認します。準備できるまでは意味判定をオフにできます。総RAMの容量だけでは起動を判断できません |
+| 不正なUnicode文字と表示される | 原文・文体メモ・修正案などの該当箇所を入力し直します。入力を自動で別の文字に置き換えることはありません |
+| 共有サービスを認証できない | アプリと共有サービスの両方をv0.2.7以降へ更新し、旧サービスを終了して起動し直します。認証できない共有先へ原文・候補は送りません |
 
 実行確認の範囲は [STATUS.md](docs/STATUS.md)、詳細な導入は [INSTALL.md](docs/INSTALL.md)、Windows固有の案内は [WINDOWS.md](docs/WINDOWS.md)を参照してください。
 
