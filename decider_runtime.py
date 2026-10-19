@@ -24,6 +24,7 @@ import time
 import uuid
 from urllib.parse import urlsplit
 import rpc_auth
+from decider_errors import RECOVERABLE_CODES as RECOVERABLE_REQUEST_ERRORS, public_error
 from runtime_paths import RESOURCE_ROOT, PERSISTENT_ROOT
 
 ROOT = RESOURCE_ROOT
@@ -33,7 +34,6 @@ MODEL = "pplx-decider-flash-v1.2"
 REVISION = "6d771ad7b5ecff5e93b8fc7b90d4c5ccc341954d"
 MAX_REQUEST_BYTES = 256_000
 CPU_BFLOAT16_MODE = "native_fast_false_cpu_bfloat16_override"
-RECOVERABLE_REQUEST_ERRORS = frozenset({"request_too_long", "invalid_request", "cuda_out_of_memory"})
 _DLL_LAUNCH_LOCK = threading.RLock()
 
 
@@ -105,14 +105,13 @@ def _external_dll_search():
 
 class DeciderRuntimeError(RuntimeError):
     def __init__(self, code, message, details=None, *, recoverable=False):
-        super().__init__(message)
-        self.code = code
-        self.message = message
-        self.details = details or {}
-        self.recoverable = recoverable is True
+        safe = public_error({"code": code, "details": details, "recoverable": recoverable})
+        super().__init__(safe["message"])
+        self.code, self.message = safe["code"], safe["message"]
+        self.details, self.recoverable = safe["details"], safe["recoverable"]
 
     def as_dict(self):
-        return {"code": self.code, "message": self.message, "details": self.details, "recoverable": self.recoverable}
+        return public_error({"code": self.code, "details": self.details, "recoverable": self.recoverable})
 
 
 def _seconds(value, default, label):
@@ -175,16 +174,14 @@ def _validate_precision(output, cfg):
 
 
 def _safe_error(error):
-    code = error.get("code", "runtime_error") if isinstance(error, dict) else "runtime_error"
-    messages = {"not_configured": "ローカルDeciderの設定がありません。", "disabled": "ローカルDeciderは無効です。",
-                "insufficient_memory": "空きメモリが不足しているため、モデルを読み込んでいません。",
-                "service_unavailable": "共有Deciderサービスに接続できません。", "timeout": "Deciderの応答が時間内に届きませんでした。",
-                "service_authentication_failed": "共有Deciderサービスを認証できません。アプリと共有サービスを同じバージョンに更新してください。",
-                "worker_stop_failed": "判定プロセスの停止を確認できません。重複起動を防ぐため再読み込みを保留しています。",
-                "request_too_long": "入力がモデルのトークン上限を超えています。文章を短くして再実行してください。",
-                "invalid_request": "Deciderへの要求形式を確認してください。",
-                "missing_runtime": "専用環境またはモデルファイルが見つかりません。", "invalid_config": "Deciderの設定を確認してください。"}
-    return {"code": code, "message": messages.get(code, "Deciderの処理を完了できませんでした。")}
+    return public_error(error)
+
+
+def _remaining(deadline, *, recoverable=False):
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise DeciderRuntimeError("timeout", "", recoverable=recoverable)
+    return remaining
 
 
 class DeciderRuntime:
@@ -279,11 +276,15 @@ class DeciderRuntime:
             raise DeciderRuntimeError("protocol_error", "ローカルDeciderの応答形式が不正です。")
         return message
 
-    def _start(self, cfg):
+    def _start(self, cfg, deadline=None):
         signature = json.dumps(cfg, sort_keys=True)
         if self._process is not None and self._process.poll() is None and self._signature == signature and self._ready:
             return
+        if deadline is not None:
+            _remaining(deadline, recoverable=True)
         self.stop()
+        if deadline is not None:
+            _remaining(deadline, recoverable=True)
         if not WORKER_PATH.is_file():
             raise DeciderRuntimeError("missing_runtime", "Deciderワーカーが見つかりません。")
         self._phase = "loading"
@@ -293,8 +294,12 @@ class DeciderRuntime:
                            TOKENIZERS_PARALLELISM="false", PYTHONIOENCODING="utf-8", PYTHONDONTWRITEBYTECODE="1")
         environment = _external_environment(environment)
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+        if deadline is not None:
+            _remaining(deadline, recoverable=True)
         try:
             with _external_dll_search():
+                if deadline is not None:
+                    _remaining(deadline, recoverable=True)
                 self._process = subprocess.Popen(
                     [cfg["python"], "-B", "-u", str(WORKER_PATH), "--config", str(self.config_path)],
                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -309,9 +314,12 @@ class DeciderRuntime:
         self._signature = signature
         threading.Thread(target=self._read_stdout, args=(self._process, self._messages, self._stdout_closed), daemon=True).start()
         threading.Thread(target=self._read_stderr, args=(self._process,), daemon=True).start()
-        ready = self._receive(cfg["startup_timeout_seconds"])
+        seconds = cfg["startup_timeout_seconds"]
+        if deadline is not None:
+            seconds = min(seconds, _remaining(deadline))
+        ready = self._receive(seconds)
         if ready.get("event") != "ready" or ready.get("ok") is not True:
-            error = ready.get("error", {})
+            error = public_error(ready.get("error", {"code": "startup_error"}))
             if (ready.get("event") == "startup_error" and ready.get("ok") is False
                     and ready.get("model") == MODEL and ready.get("revision") == REVISION
                     and ready.get("device") == cfg["device"]
@@ -320,7 +328,7 @@ class DeciderRuntime:
                 # guard error. The exact process and its protocol EOF together
                 # can prove graceful exit without a racy PID-based taskkill.
                 self._startup_rejection = (self._process, self._stdout_closed)
-            raise DeciderRuntimeError(error.get("code", "startup_error"), error.get("message", "Deciderの起動に失敗しました。"), error.get("details"))
+            raise DeciderRuntimeError(error["code"], "", error["details"])
         if ready.get("model") != MODEL or ready.get("revision") != REVISION or ready.get("device") != cfg["device"]:
             raise DeciderRuntimeError("identity_mismatch", "要求したモデル・版・デバイスと起動結果が一致しません。")
         _validate_precision(ready, cfg)
@@ -329,7 +337,41 @@ class DeciderRuntime:
         self._phase = "ready"
         self._cache_status(cfg)
 
+    def _send(self, envelope, deadline):
+        """A blocked worker stdin must not make the request deadline unbounded.
+
+        A timeout is fatal to this request's worker: the caller stops the owned
+        process before another request may reuse it, also unblocking its writer.
+        """
+        _remaining(deadline)
+        process = self._process
+        completed = queue.Queue(maxsize=1)
+
+        def write():
+            try:
+                _remaining(deadline)
+                process.stdin.write(envelope)
+                process.stdin.flush()
+                completed.put(None)
+            except (OSError, ValueError, DeciderRuntimeError) as exc:
+                completed.put(exc)
+
+        try:
+            threading.Thread(target=write, daemon=True).start()
+        except RuntimeError as exc:
+            raise DeciderRuntimeError("worker_io_error", "") from exc
+        try:
+            error = completed.get(timeout=_remaining(deadline))
+        except queue.Empty as exc:
+            raise DeciderRuntimeError("timeout", "") from exc
+        if isinstance(error, DeciderRuntimeError):
+            raise error
+        if error is not None:
+            raise DeciderRuntimeError("worker_io_error", "") from error
+
     def decide(self, request, timeout=None):
+        begun = time.monotonic()
+        explicit_seconds = _seconds(timeout, 1, "推論待ち時間") if timeout is not None else None
         if not isinstance(request, dict):
             raise DeciderRuntimeError("invalid_request", "Deciderへの要求はJSONオブジェクトで指定してください。", recoverable=True)
         try:
@@ -338,32 +380,38 @@ class DeciderRuntime:
                 raise ValueError("request too large")
         except (ValueError, TypeError, UnicodeError) as exc:
             raise DeciderRuntimeError("invalid_request", "Deciderへの要求が大きすぎるか、JSONとして扱えません。", recoverable=True) from exc
-        with self._lock:
+        # Explicit timeouts start before serialization, configuration and lock
+        # acquisition. With no explicit timeout retain the configured startup +
+        # inference allowance, but give lock waiting that same finite budget.
+        cfg = _configuration(self.config_path) if explicit_seconds is None else None
+        seconds = explicit_seconds if explicit_seconds is not None else cfg["startup_timeout_seconds"] + cfg["request_timeout_seconds"]
+        deadline = begun + seconds
+        if not self._lock.acquire(timeout=_remaining(deadline, recoverable=True)):
+            # This request never acquired ownership: do not stop or mutate the
+            # other request's model, status, process, or pending inference.
+            raise DeciderRuntimeError("timeout", "", recoverable=True)
+        try:
             try:
-                cfg = _configuration(self.config_path)
-                seconds = _seconds(timeout, cfg["request_timeout_seconds"], "推論待ち時間")
-                begun = time.monotonic()
-                self._start(cfg)
-                if timeout is not None:
-                    seconds = min(cfg["request_timeout_seconds"], seconds-(time.monotonic()-begun))
-                    if seconds <= 0:
-                        raise DeciderRuntimeError("timeout", "今回の判定時間の上限に達しました。")
+                cfg = _configuration(self.config_path) if cfg is None else cfg
+                _remaining(deadline, recoverable=True)
+                previous_process = self._process
+                self._start(cfg, deadline=deadline)
+                _remaining(deadline, recoverable=self._process is previous_process and self._ready is not None)
+                inference_deadline = min(deadline, time.monotonic() + cfg["request_timeout_seconds"])
                 self._phase = "busy"
                 self._cache_status(cfg)
                 request_id = uuid.uuid4().hex
-                self._process.stdin.write('{"id":' + json.dumps(request_id) + ',"request":' + serialized + '}\n')
-                self._process.stdin.flush()
-                response = self._receive(seconds)
+                self._send('{"id":' + json.dumps(request_id) + ',"request":' + serialized + '}\n', inference_deadline)
+                response = self._receive(_remaining(inference_deadline))
                 if response.get("id") != request_id:
                     raise DeciderRuntimeError("protocol_error", "Deciderの要求と応答のIDが一致しません。")
                 if response.get("model") != MODEL or response.get("revision") != REVISION or response.get("device") != cfg["device"]:
                     raise DeciderRuntimeError("identity_mismatch", "Deciderの応答モデル・版・デバイスが一致しません。")
                 _validate_precision(response, cfg)
                 if response.get("ok") is not True:
-                    error = response.get("error", {})
-                    code = error.get("code", "inference_error")
-                    raise DeciderRuntimeError(code, error.get("message", "Deciderの推論が完了しませんでした。"), error.get("details"),
-                                              recoverable=code in RECOVERABLE_REQUEST_ERRORS and error.get("recoverable") is True)
+                    error = public_error(response.get("error", {"code": "inference_error"}))
+                    raise DeciderRuntimeError(error["code"], "", error["details"],
+                                              recoverable=error["code"] in RECOVERABLE_REQUEST_ERRORS and error["recoverable"])
                 self._last_error = None
                 self._phase = "ready"
                 self._cache_status(cfg)
@@ -381,6 +429,8 @@ class DeciderRuntime:
                 else:
                     self._cleanup_after_error(exc)
                 raise
+        finally:
+            self._lock.release()
 
     def _cleanup_after_error(self, trigger):
         try:
@@ -555,6 +605,9 @@ def _remote(service, path, payload=None, timeout=3):
         output = json.loads(raw)
         if not isinstance(output, dict):
             raise ValueError("response is not an object")
+        for key in ("error", "last_error"):
+            if key in output:
+                output[key] = public_error(output[key])
         if status_code == 200:
             return output
         error = output.get("error")
@@ -611,10 +664,9 @@ def decide(request, timeout=None):
         raise DeciderRuntimeError("identity_mismatch", "共有Deciderサービスのモデルまたは版が一致しません。")
     _validate_precision(output, service)
     if output.get("ok") is not True:
-        error = output.get("error", {})
-        code = error.get("code", "inference_error")
-        raise DeciderRuntimeError(code, error.get("message", "Deciderの推論が完了しませんでした。"), error.get("details"),
-                                  recoverable=code in RECOVERABLE_REQUEST_ERRORS and error.get("recoverable") is True)
+        error = public_error(output.get("error", {"code": "inference_error"}))
+        raise DeciderRuntimeError(error["code"], "", error["details"],
+                                  recoverable=error["code"] in RECOVERABLE_REQUEST_ERRORS and error["recoverable"])
     return output
 
 

@@ -82,6 +82,21 @@ class HttpBoundaryTests(unittest.TestCase):
                 self.wait_slots(4)
         self.assertEqual(self.request("GET", "/api/health")[0], 200)
 
+    def test_body_limit_accepts_exact_maximum_and_rejects_empty_or_negative_lengths(self):
+        prefix, suffix = b'{"text":"', b'"}'
+        raw = prefix + b"x" * (256000 - len(prefix) - len(suffix)) + suffix
+        self.assertEqual(len(raw), 256000)
+        with patch.object(app, "analyze", return_value={"ok": True}) as analyze:
+            self.assertEqual(self.request("POST", "/api/analyze", raw,
+                {"Content-Type": "application/json; charset=utf-8"}), (200, {"ok": True}))
+            analyze.assert_called_once()
+            analyze.reset_mock()
+            for length in ("0", "-1"):
+                with self.subTest(length=length):
+                    self.assertEqual(self.request("POST", "/api/analyze", b"",
+                        {"Content-Type": "application/json", "Content-Length": length})[0], 413)
+            analyze.assert_not_called()
+
     def test_incomplete_body_expires_without_invoking_engine(self):
         with patch.object(app, "analyze") as analyze:
             client = self.connect()

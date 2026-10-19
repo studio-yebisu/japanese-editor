@@ -49,7 +49,7 @@ def _installation(*, refresh=False):
     global _INSTALLATION_CACHE
     with _INSTALLATION_LOCK:
         timestamp, cached = _INSTALLATION_CACHE
-        if not refresh and time.monotonic()-timestamp < 30:
+        if not refresh and timestamp > 0 and time.monotonic()-timestamp < 30:
             return cached
         candidates = []
         found = shutil.which("agy")

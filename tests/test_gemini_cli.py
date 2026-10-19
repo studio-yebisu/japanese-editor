@@ -32,8 +32,11 @@ class CapabilityAndIsolationTests(unittest.TestCase):
     def test_fixed_native_shim_is_resolved_without_executing_shell(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory); native=root/"agy.exe"; native.touch()
+            native.chmod(0o755)
             shim=root/"agy.cmd"; shim.write_text('@"'+str(native)+'" %*', "utf-8")
-            with patch.object(cli, "_INSTALLATION_CACHE", (0,None)), patch.object(cli.shutil, "which", return_value=str(shim)), \
+            # Zero means uninitialized, including the first 30 seconds after boot.
+            with patch.object(cli, "_INSTALLATION_CACHE", (0,None)), patch.object(cli.time, "monotonic", return_value=5), \
+                 patch.object(cli.shutil, "which", return_value=str(shim)), \
                  patch.object(cli.subprocess, "run", return_value=Mock(returncode=0, stdout=b"1.4.0\n")) as probe:
                 self.assertEqual(cli.resolve_command(), [str(native.resolve())])
                 self.assertEqual(cli.login_command(), cli.resolve_command())

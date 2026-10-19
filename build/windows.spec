@@ -16,7 +16,7 @@ for name in ('web', 'vendor', 'skills', '.claude-plugin', 'evaluation'):
             raise ValueError(f'Resource escapes the application: {path}')
         resources.append((str(path), 'editor/'+path.parent.relative_to(root).as_posix()))
 resources += [(str(root / 'docs' / name), 'editor/docs') for name in PUBLIC_DOCS if (root / 'docs' / name).is_file()]
-resources += [(str(root / name), 'editor') for name in ('profiles.json', 'LICENSE', 'README.md', 'runtime_paths.py')]
+resources += [(str(root / name), 'editor') for name in ('profiles.json', 'LICENSE', 'README.md', 'runtime_paths.py', 'decider_errors.py')]
 resources += [(str(root / name), 'editor') for name in ('verification.json', 'plugin.json', 'THIRD_PARTY_NOTICES.md', 'CONTRIBUTING.md', 'SECURITY.md') if (root / name).is_file()]
 resources += [(str(root / 'tools' / name), 'editor/tools') for name in ('decider_worker.py', 'setup_decider.py', 'download_decider.py')]
 notices = generated / 'third_party_licenses'

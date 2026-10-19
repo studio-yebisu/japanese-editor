@@ -555,6 +555,9 @@ class FrozenExternalLaunchTests(unittest.TestCase):
         api = self.fake_api()
         self.patch_api(api)
         bundle, outside = ROOT / "tests/fixture-bundle", ROOT / "tests/fixture-system"
+        # Mock the Windows launch branch without changing the test host's
+        # concrete filesystem path type on Linux/macOS.
+        host_path = type(bundle)
 
         def kill(arguments, **kwargs):
             self.assertEqual(arguments, ["taskkill", "/PID", "24680", "/T", "/F"])
@@ -562,7 +565,8 @@ class FrozenExternalLaunchTests(unittest.TestCase):
             self.assertEqual(api.SetDllDirectoryW.call_args_list, [mock.call(None)])
             return SimpleNamespace(returncode=0)
 
-        with mock.patch.object(decider_runtime.os, "name", "nt"), \
+        with mock.patch.object(decider_runtime, "Path", host_path), \
+             mock.patch.object(decider_runtime.os, "name", "nt"), \
              mock.patch.dict(decider_runtime.os.environ, {"PATH": decider_runtime.os.pathsep.join([str(bundle), str(outside)])}, clear=True), \
              mock.patch.object(decider_runtime.sys, "_MEIPASS", str(bundle), create=True), \
              mock.patch.object(decider_runtime.subprocess, "run", side_effect=kill):
@@ -597,7 +601,8 @@ class StartupRejectionExitTests(unittest.TestCase):
         with self.assertRaises(decider_runtime.DeciderRuntimeError) as error:
             runtime.decide({"state": "fixture", "questions": {}})
         self.assertEqual(error.exception.code, "insufficient_memory")
-        self.assertEqual(str(error.exception), "fixture commit guard")
+        self.assertEqual(str(error.exception), "空きメモリが不足しているため、モデルを読み込んでいません。")
+        self.assertNotIn("fixture", json.dumps(error.exception.as_dict()))
         self.taskkill.assert_not_called()
         process.wait.assert_called_once_with(timeout=2)
         process.stdin.write.assert_not_called()

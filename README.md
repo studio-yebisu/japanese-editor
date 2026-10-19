@@ -6,14 +6,14 @@ Yomiyasu Studioは日本語の文章を整え、どこを変えたか左右で�
 
 [最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/latest)
 
-| 使う環境 | v0.2.7のダウンロード | 提供状況 |
+| 使う環境 | v0.2.8のダウンロード | 提供状況 |
 | --- | --- | --- |
-| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.7/YomiyasuStudio-windows-x64-0.2.7.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
-| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.7/YomiyasuStudio-source-0.2.7.zip) | Pythonで起動する実験版。Mac実機は未検証 |
+| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.8/YomiyasuStudio-windows-x64-0.2.8.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
+| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.8/YomiyasuStudio-source-0.2.8.zip) | Pythonで起動する実験版。Mac実機は未検証 |
 
-生成とローカル意味判定の実推論はv0.2.5で確認しています。v0.2.7を含む版ごとの検証内容は [STATUS.md](docs/STATUS.md) を参照してください。
+生成とローカル意味判定の実推論はv0.2.5で確認しています。v0.2.8を含む版ごとの検証内容は [STATUS.md](docs/STATUS.md) を参照してください。
 
-v0.2.7では入力エラーの案内と受信待機の制限を改善し、ローカルDeciderの共有通信に認証を加えました。**旧版からはアプリと共有サービスの両方を更新し、サービスを起動し直してください。** MCPも新版へ登録し直して、新しい会話で使います。旧サービスの認証方式へ自動で戻すことはありません。[更新と接続の案内](docs/PLUGINS.md#共有サービスの更新)
+v0.2.8では巨大なMCP入力の読み込みと、Deciderの待ち時間・エラー表示を改善しました。ローカルDeciderの共有通信には認証を使います。**旧版からはアプリと共有サービスの両方を更新し、サービスを起動し直してください。** MCPも新版へ登録し直して、新しい会話で使います。旧サービスの認証方式へ自動で戻すことはありません。[更新と接続の案内](docs/PLUGINS.md#共有サービスの更新)
 
 ![小説の校正例。実画面の一部。左の原文に赤い取り消し線、右の校正後に緑の変更箇所を表示。](https://raw.githubusercontent.com/studio-yebisu/yomiyasu-studio/main/docs/assets/editor.png)
 
@@ -38,7 +38,7 @@ Mac用の `.app` はまだ用意していません。ブラウザーで使うソ
 3. 「ターミナル」を開きます。ダウンロード先が通常の「ダウンロード」フォルダーなら、次を1行ずつ実行します。
 
 ```sh
-cd "$HOME/Downloads/YomiyasuStudio-source-0.2.7"
+cd "$HOME/Downloads/YomiyasuStudio-source-0.2.8"
 python3 --version
 python3 -B app.py serve
 ```

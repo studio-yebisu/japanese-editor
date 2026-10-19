@@ -18,6 +18,11 @@ import sys
 import time
 from unittest.mock import patch
 
+# The dedicated worker Python also uses the distributed, standard-library-only
+# public error policy. It must not import the UI runtime or model dependencies.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from decider_errors import public_error
+
 MODEL = "pplx-decider-flash-v1.2"
 REVISION = "6d771ad7b5ecff5e93b8fc7b90d4c5ccc341954d"
 MANIFEST_SHA256 = "b92d6898a1a0cebeec8573c3ba34cfbb810a2920fc49da60097f3a8e2de24ebc"
@@ -256,14 +261,13 @@ def validate_request(request):
 def classify_request_error(exc, request_error_type, length_error_type, torch_module, config):
     """Only known per-request rejections may reuse the loaded model safely."""
     if isinstance(exc, length_error_type):
-        return {"code": "request_too_long", "message": "入力がモデルのトークン上限を超えています。文章を短くしてください。",
-                "details": {"max_length": config["max_length"], "exception_type": "LengthError"}, "recoverable": True}
+        return public_error({"code": "request_too_long",
+                "details": {"max_length": config["max_length"], "exception_type": "LengthError"}, "recoverable": True})
     if isinstance(exc, (request_error_type, json.JSONDecodeError, UnicodeDecodeError)):
-        return {"code": "invalid_request", "message": "Deciderへの要求形式が不正です。",
-                "details": {"exception_type": type(exc).__name__}, "recoverable": True}
+        return public_error({"code": "invalid_request",
+                "details": {"exception_type": type(exc).__name__}, "recoverable": True})
     if isinstance(exc, WorkerError):
-        return {"code": exc.code, "message": exc.message, "details": exc.details,
-                "recoverable": exc.code == "invalid_request"}
+        return public_error({"code": exc.code, "details": exc.details, "recoverable": exc.code == "invalid_request"})
     cuda_oom = getattr(getattr(torch_module, "cuda", None), "OutOfMemoryError", None)
     if config["device"] != "cpu" and isinstance(cuda_oom, type) and isinstance(exc, cuda_oom):
         recoverable = True
@@ -275,10 +279,15 @@ def classify_request_error(exc, request_error_type, length_error_type, torch_mod
             torch_module.cuda.empty_cache()
         except Exception:
             recoverable = False
-        return {"code": "cuda_out_of_memory", "message": "推論用のVRAMが不足しました。文章を短くして再実行してください。",
-                "details": {"exception_type": type(exc).__name__}, "recoverable": recoverable}
-    return {"code": "inference_error", "message": "Deciderの推論を完了できませんでした。",
-            "details": {"exception_type": type(exc).__name__}, "recoverable": False}
+        return public_error({"code": "cuda_out_of_memory", "details": {"exception_type": type(exc).__name__}, "recoverable": recoverable})
+    return public_error({"code": "inference_error", "details": {"exception_type": type(exc).__name__}, "recoverable": False})
+
+
+def startup_error(exc):
+    """No exception string, arbitrary code, path, argv or key crosses stdout."""
+    details = dict(exc.details) if isinstance(exc, WorkerError) and isinstance(exc.details, dict) else {}
+    details.setdefault("exception_type", type(exc).__name__)
+    return public_error({"code": exc.code if isinstance(exc, WorkerError) else "startup_error", "details": details})
 
 
 def main():
@@ -319,10 +328,7 @@ def main():
         emit({"event": "ready", "ok": True, **identity, "load_latency_ms": round((time.perf_counter() - started) * 1000, 1),
               "max_length": config["max_length"], "resources": resources})
     except Exception as exc:
-        code = exc.code if isinstance(exc, WorkerError) else "startup_error"
-        message = exc.message if isinstance(exc, WorkerError) else str(exc)[:2000]
-        details = exc.details if isinstance(exc, WorkerError) else {"exception_type": type(exc).__name__}
-        emit({"event": "startup_error", "ok": False, **identity, "error": {"code": code, "message": message, "details": details}})
+        emit({"event": "startup_error", "ok": False, **identity, "error": startup_error(exc)})
         return 1
 
     while True:

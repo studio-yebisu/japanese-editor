@@ -83,14 +83,18 @@ class GeminiSetupTests(unittest.TestCase):
             write.assert_not_called()
 
     def test_windows_login_opens_exact_command_in_interactive_console(self):
-        with patch.object(cli_login.sys, "platform", "win32"), patch.object(cli_login.subprocess, "Popen") as start:
+        # Keep the Windows flag explicit when the fixture runs on POSIX.
+        new_console_flag = 0x10
+        with patch.object(cli_login.sys, "platform", "win32"), \
+             patch.object(cli_login.subprocess, "CREATE_NEW_CONSOLE", new_console_flag, create=True), \
+             patch.object(cli_login.subprocess, "Popen") as start:
             cli_login._terminal_process(["agy.exe"], {"HOME":"fake"}, "login-work")
         arguments = start.call_args.args[0]
         self.assertTrue(arguments[0].endswith("powershell.exe"))
         self.assertEqual(arguments[1:4], ["-NoProfile", "-NoExit", "-Command"])
         self.assertEqual(arguments[4], "& 'agy.exe'")
         self.assertEqual(start.call_args.kwargs, {"cwd":"login-work", "env":{"HOME":"fake"},
-                          "creationflags":cli_login.subprocess.CREATE_NEW_CONSOLE})
+                          "creationflags":new_console_flag})
 
     def test_macos_launcher_does_not_persist_inherited_credentials(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(cli_login.sys, "platform", "darwin"), \
