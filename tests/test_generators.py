@@ -1,5 +1,5 @@
 """No network, real keys, real credential-store access, or model calls."""
-from contextlib import ExitStack
+from contextlib import ExitStack, nullcontext
 import ctypes
 import io
 import json
@@ -57,7 +57,7 @@ class IsolatedSettings(unittest.TestCase):
         public = settings.public_config()
         self.assertEqual((public["provider"], public["model"]), ("sarashina", "sarashina3-mini"))
         self.assertEqual(public["providers"][0]["id"], "sarashina")
-        self.assertEqual(public["providers"][0]["max_text_chars"], 12000)
+        self.assertEqual(public["providers"][0]["max_text_chars"], 2000)
         self.assertFalse(any(item["available"] for item in public["providers"]))
         self.assertFalse(self.path.exists())
 
@@ -246,18 +246,18 @@ class AdapterTests(unittest.TestCase):
 
     def test_sarashina_explicit_text_limit_never_truncates(self):
         with self.assertRaises(generators.GenerationError) as error:
-            self.call(provider="sarashina", source="あ" * 12001)
+            self.call(provider="sarashina", source="あ" * 2001)
         self.assertEqual(error.exception.code, "input_too_long")
         self.post.assert_not_called()
         self.key.assert_not_called()
         self.post.return_value = response("sarashina", "sarashina3-nano")
-        output = self.call(provider="sarashina", model="sarashina3-nano", source="あ" * 12000)
+        output = self.call(provider="sarashina", model="sarashina3-nano", source="あ" * 2000)
         endpoint, body, _, provider = self.post.call_args.args
         self.assertEqual((endpoint, provider), (generators.SARASHINA_ENDPOINT, "sarashina"))
         self.assertEqual(body["model"], "sarashina3-nano")
         self.assertEqual(body["max_completion_tokens"], 8000)
         self.assertTrue(body["response_format"]["json_schema"]["strict"])
-        self.assertEqual(len(json.loads(body["messages"][1]["content"])["source"]), 12000)
+        self.assertEqual(len(json.loads(body["messages"][1]["content"])["source"]), 2000)
         self.assertEqual(output["identity"]["reported_model"], "sarashina3-nano")
 
     def test_unconfigured_or_explicit_claude_never_falls_back(self):
@@ -280,6 +280,10 @@ class AdapterTests(unittest.TestCase):
 
 
 class TransportTests(unittest.TestCase):
+    def setUp(self):
+        # Transport fixtures never sleep or use a real account allowance.
+        self.enterContext(patch.object(generators, "_sarashina_slot", side_effect=nullcontext))
+
     def test_fixed_https_header_auth_no_proxy_no_redirect_no_key_in_url(self):
         fake_response = Mock()
         fake_response.__enter__ = Mock(return_value=fake_response)

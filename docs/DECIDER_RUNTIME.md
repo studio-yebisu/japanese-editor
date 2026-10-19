@@ -27,13 +27,27 @@ Python 3.12 以降と `uv` が必要です。アプリのディレクトリで�
 python -B tools/setup_decider.py --device cpu --cpu-dtype bfloat16 --max-length 2048
 ```
 
-Windowsの配布ZIPでは、展開したフォルダーで次を使います。任意のローカル判定環境を作る場合だけ、別途Pythonとuvが必要です。
+Windowsの配布ZIPでは、展開したフォルダーで次を使います。Sarashinaの校正にはこのローカル判定環境が必須です。別途Pythonとuvを用意してください。生成をオフにした規則点検では取得不要です。
 
 ```powershell
 python -B _internal/editor/tools/setup_decider.py --device cpu --cpu-dtype bfloat16 --max-length 2048
 ```
 
 上表の保管先へ `.venv`、固定 SHA のモデルフォルダ、`config.json` を作ります。macOSでは `python3` に読み替えます。原典の LICENSE / NOTICE と取得物のハッシュを保持し、起動時にも照合します。通常のアプリ用 Python に torch を入れる必要はありません。`YEBISU_EDITOR_DATA_DIR` で保管先を変更できます。既存環境のモデルパスは設定の絶対パスを引き続き使えます。
+
+### 取得前のディスク点検
+
+Windows・Macとも、setupコマンドは取得を始める前にディスクの空きを確認します。同じコマンドに `--check-only` を付けると、取得・インストール・書込みなしで数値だけを確認できます。Windows配布版の例:
+
+```powershell
+python -B _internal/editor/tools/setup_decider.py --device cpu --cpu-dtype bfloat16 --max-length 2048 --check-only
+```
+
+新規導入では、モデル・専用環境・uvキャッシュ・一時領域が同じディスクにある場合、**追加の空き30 GiB以上**を導入時の目安として要求します。内訳は、約9.10GBの固定モデルを収める9 GiB、分割取得データと組立中ファイルの共存に備える9 GiB、専用依存4 GiB・uvキャッシュ6 GiB・一時領域2 GiBです。取得済みの標準配置が固定manifestと全ファイルのサイズに一致すれば、モデル再利用候補として追加分を12 GiBへ減らします。重みのハッシュは取得処理で改めて照合し、再取得が必要なら取得前に容量を再確認します。
+
+これは余裕を含む導入予算で、正確なインストール容量や成功の保証ではありません。依存パッケージ・既存キャッシュ・一時ファイルの増加により、さらに容量が必要になる場合があります。保存先、`UV_CACHE_DIR`（未指定ならuvの標準キャッシュ先）、OSの一時領域が別ディスクの場合は、それぞれの必要分を別に確認します。空き容量を取得できない場合も、取得を開始せず理由を表示します。
+
+JSONの `disk.status` は `sufficient` / `insufficient` / `unknown`、`disk.required_bytes` は追加容量の合計です。`disk.volumes` にディスクごとの `available_bytes`・`required_bytes`・用途を示します。同じ一枚のディスクの場合だけ、`disk.available_bytes` にその空きを入れます。`inventory_scope` が示すとおり、点検は新規の標準配置が対象です。既存設定の別の絶対パスを調べるものではなく、`model_files_present: false` や依存一覧が空でも、既存環境の故障とは扱いません。
 
 初回ロード前に、次の空き容量を確認します。BF16 では Windows のコミット可能メモリも同じ量だけ必要です。ページファイルを含むコミット上限と、物理 RAM の空きは別々に確認します。
 

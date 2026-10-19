@@ -99,6 +99,9 @@ class ProviderIntegrationTests(unittest.TestCase):
         self.assertEqual((payload["provider"], payload["model"]), ("sarashina", "sarashina3-nano"))
         self.assertEqual(output["generator"]["reported_provider"], "sarashina")
         self.assertEqual(output["generator_model"], "sarashina3-nano")
+        self.assertEqual(payload["source"], TEXT)
+        self.assertEqual(output["generator"]["segmentation"], {"strategy": "paragraph_sentence", "chunk_total": 1,
+                         "max_chunk_characters": 2000, "adjacent_text_sent": False})
         self.claude.assert_not_called()
 
     def test_explicit_claude_keeps_existing_adapter_and_model_receipt(self):

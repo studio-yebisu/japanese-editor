@@ -4,16 +4,16 @@ Yomiyasu Studioは日本語の文章を整え、どこを変えたか左右で�
 
 ## ダウンロード
 
-[最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/latest)
+[最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/tag/v0.2.10)
 
-| 使う環境 | v0.2.9のダウンロード | 提供状況 |
+| 使う環境 | v0.2.10のダウンロード | 提供状況 |
 | --- | --- | --- |
-| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.9/YomiyasuStudio-windows-x64-0.2.9.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
-| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.9/YomiyasuStudio-source-0.2.9.zip) | Pythonで起動する実験版。Mac実機は未検証 |
+| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.10/YomiyasuStudio-windows-x64-0.2.10.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
+| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.10/YomiyasuStudio-source-0.2.10.zip) | Pythonで起動する実験版。Mac実機は未検証 |
 
-Sarashina APIとローカルDeciderを使う標準構成の実推論をWindowsで確認しています。v0.2.9を含む版ごとの検証内容は [STATUS.md](docs/STATUS.md) を参照してください。
+Sarashina APIとローカルDeciderの実推論はv0.2.9でWindows上の確認記録があります。今回の段落分割・演出・導入案内の変更は静的確認のみで、実API・推論・画面の実行試験は行っていません。版ごとの確認内容は [STATUS.md](docs/STATUS.md) を参照してください。
 
-v0.2.9では初回の生成先をSarashinaに変更し、Sarashina生成にローカルDeciderの意味判定を必須にしました。既存のGemini・Claude等の保存設定は保持します。ローカルDeciderの共有通信には認証を使います。**旧版からはアプリと共有サービスの両方を更新し、サービスを起動し直してください。** MCPも新版へ登録し直して、新しい会話で使います。旧サービスの認証方式へ自動で戻すことはありません。[更新と接続の案内](docs/PLUGINS.md#共有サービスの更新)
+Sarashinaを初回の生成先とし、ローカルDeciderの意味判定を必須にしています。今回、APIキー取得の案内と必要なPC条件を設定画面に追加し、長文を1回2,000字以内に分ける処理と、意味判定中に候補の位置を示す赤ペンの演出を加えました。既存の生成先とキーは保持します。**旧版からはアプリと共有サービスの両方を更新し、サービスを起動し直してください。** MCPも新版へ登録し直して、新しい会話で使います。[更新と接続の案内](docs/PLUGINS.md#共有サービスの更新)
 
 ![小説の校正例。実画面の一部。左の原文に赤い取り消し線、右の校正後に緑の変更箇所を表示。](https://raw.githubusercontent.com/studio-yebisu/yomiyasu-studio/main/docs/assets/editor.png)
 
@@ -38,7 +38,7 @@ Mac用の `.app` はまだ用意していません。ブラウザーで使うソ
 3. 「ターミナル」を開きます。ダウンロード先が通常の「ダウンロード」フォルダーなら、次を1行ずつ実行します。
 
 ```sh
-cd "$HOME/Downloads/YomiyasuStudio-source-0.2.9"
+cd "$HOME/Downloads/YomiyasuStudio-source-0.2.10"
 python3 --version
 python3 -B app.py serve
 ```
@@ -51,7 +51,7 @@ python3 -B app.py serve
 
 ## 標準構成の準備
 
-1. [Sarashina公式サービス](https://sarashina.ai/)へ登録し、自分のAPIキーを発行します。現在は無料ベータです。日本国内向けの提供条件、回数制限、入出力の利用条件があります。[利用条件の案内](docs/PROVIDERS.md#sarashina-の利用条件)
+1. [SarashinaのAPIキー画面](https://chat.sarashina.ai/dashboard/api-keys)へアクセスし、Googleアカウントで登録・ログインします。「API Keys」で新しいキーを作成してコピーします。現在は無料ベータで、地域・回数・入出力の利用条件があります。[公式の取得手順](https://docs.sarashina.ai/introduction#1-api-キーの取得) / [利用条件の案内](docs/PROVIDERS.md#sarashina-の利用条件)
 2. アプリ右上の「設定」で「Sarashina」を選び、モデルを `sarashina3-mini` にしてAPIキーを保存します。キーはWindowsの資格情報マネージャー、Macのキーチェーンで管理します。チャットやGitHubへキーを貼らないでください。
 3. [Windows・MacのDecider導入手順](docs/INSTALL.md)に従い、固定したFlashモデル約9.10GBと専用環境を準備します。これは利用者のPCで動き、PerplexityのAPIキーは不要です。CPU BF16・短い文脈の構成では空きRAM約11GiBが必要です。Mac実機は未検証です。
 4. 「接続状態を更新」を押し、生成と意味判定の設定を確認します。Sarashinaの校正では生成と意味判定をセットで使います。
@@ -109,7 +109,9 @@ Sarashina校正では意味判定を外せません。GeminiやClaudeを選ぶ�
 
 入力した原文や元のファイルを自動で上書きしません。保存前にYomiyasuの全文点検と保存本文の照合を行います。意味の変化が疑われる箇所・判断保留・未判定は別に表示します。判定済みでも、意味保持や文章品質の保証にはなりません。長文の意味判定は変更付近の抜粋が対象です。
 
-本文はどの生成先でも12,000字までです。小説や台詞では、比喩・省略・反復・方言・語尾などを残す方針で校正します。
+入力全体は12,000字までです。Sarashinaはコードで段落・文末を探し、1回2,000字以内に分けて順番に送信します。分割の判断にAPIやAIは使いません。改行や原文はそのまま残し、すべての生成が成功してから修正を統合します。安全に分けられない長い一文やコード等は、途中で切らず短縮の案内を出します。この区切り方だけで意味保持や品質を保証するものではありません。
+
+Gemini・Claudeは全体を一度に扱います。小説や台詞では、比喩・省略・反復・方言・語尾などを残す方針で校正します。
 
 ## Codexに組み込む
 
@@ -135,7 +137,7 @@ python3 -B install.py
 
 通常はCodex自身が修正案を作るため、追加のGemini設定や生成用APIキーは不要です。準備済みなら、ローカルDeciderも候補の意味判定に使います。[Claude Code・手動MCP登録など](docs/PLUGINS.md)
 
-## ローカルの意味判定を追加する（任意）
+## ローカルの意味判定を準備する（Sarashinaでは必須）
 
 Decider Flashは用意した原文と修正案を比較する判断モデルです。使う場合だけ、約 **9.10GBの固定モデル**と専用環境を別途取得します。Pythonと、環境の準備に使う `uv` が必要です。[Python公式](https://www.python.org/downloads/)と [uv公式の導入手順](https://docs.astral.sh/uv/getting-started/installation/)を参照し、Python 3.13とuvを用意してください。
 

@@ -11,6 +11,7 @@ import tempfile
 from pathlib import Path
 from runtime_paths import RESOURCE_ROOT, vendor_command, hidden_process
 import progress
+import segmentation
 
 ROOT = RESOURCE_ROOT
 VENDOR = ROOT / "vendor" / "yomiyasu"
@@ -61,7 +62,7 @@ def config():
     providers = provider_settings.public_config()
     selected = next((item for item in providers["providers"] if item["id"] == providers["provider"]), {})
     return {
-        "version": "0.2.9", "max_text": MAX_TEXT,
+        "version": "0.2.10", "max_text": MAX_TEXT,
         "profiles": CONFIG["profiles"], "strengths": CONFIG["strengths"],
         "stages": {"rules": "ready" if (VENDOR / "scripts/yomiyasu_lint.py").is_file() else "unavailable",
                    "generator": "available" if selected.get("available") else "unavailable",
@@ -316,9 +317,9 @@ def _claude_proposal(text, context, instruction):
 def _generation_selection(provider=None, model=None):
     import generators
     preferences = {}
-    if provider:
+    if provider is not None:
         preferences["provider"] = provider
-    if model:
+    if model is not None:
         preferences["model"] = model
     try:
         return generators.resolve_selection(preferences)
@@ -326,29 +327,12 @@ def _generation_selection(provider=None, model=None):
         raise EditorError(str(exc)) from None
 
 
-def generate(text, profile, strength, context, provider=None, model=None):
-    validate_unicode_input({"text": text, "context": context, "provider": provider, "model": model})
-    import provider_settings
-    import generators
-    try:
-        provider, model, _metadata = _generation_selection(provider, model)
-        instruction, guidance = _generation_bundle(profile, strength)
-        if provider == "claude":
-            proposal, models = _claude_proposal(text, context, instruction)
-            identity = {"requested_provider": "claude", "reported_provider": "claude",
-                        "requested_model": MODEL, "reported_model": models[0], "transport": "claude-cli",
-                        "identity_basis": "CLI modelUsage", "exact_checkpoint_verified": False}
-        else:
-            generated = generators.generate({"source": text, "style_notes": context, "provider": provider, "model": model}, instruction, GENERATOR_SCHEMA)
-            proposal, identity = generated["proposal"], generated["identity"]
-            models = [identity["reported_model"]]
-    except (provider_settings.ProviderSettingsError, generators.GenerationError) as exc:
-        raise EditorError(str(exc)) from None
+def _validated_generation_proposal(text, proposal, strength, strict_limits=False):
     validate_unicode_input(proposal, "生成した修正案")
-    validate_unicode_input(identity, "生成サービスの応答")
-    validate_unicode_input(models, "生成サービスの応答")
     if not isinstance(proposal, dict) or not isinstance(proposal.get("questions"), list):
         raise EditorError("生成した修正案の形式が不正です。")
+    if strict_limits and len(proposal["questions"]) > 30:
+        raise EditorError("確認事項がアプリの上限を超えています。文章を分けて再実行してください。途中の修正案は採用していません。")
     questions = []
     for question in proposal["questions"][:30]:
         if not isinstance(question, dict) or not all(isinstance(question.get(k), str) for k in ("quote", "question")):
@@ -357,10 +341,117 @@ def generate(text, profile, strength, context, provider=None, model=None):
     edits, notes = validate_edits(text, proposal.get("edits"))
     suggestions = []
     if strength["id"] == "structure":
-        for item in proposal.get("suggestions", [])[:10]:
+        proposed_suggestions = proposal.get("suggestions", [])
+        if not isinstance(proposed_suggestions, list):
+            raise EditorError("構成提案の形式が不正です。")
+        if strict_limits and len(proposed_suggestions) > 10:
+            raise EditorError("構成提案がアプリの上限を超えています。文章を分けて再実行してください。途中の修正案は採用していません。")
+        for item in proposed_suggestions[:10]:
             if not isinstance(item, dict) or not all(isinstance(item.get(k), str) for k in ("quote", "suggestion")):
                 raise EditorError("構成提案の形式が不正です。")
             suggestions.append({"quote": item["quote"][:2000], "suggestion": item["suggestion"][:2000]})
+    return edits, questions, notes, suggestions
+
+
+def _sarashina_generation(text, strength, context, model, instruction, guidance, maximum):
+    import generators
+
+    protected = _protected_ranges(text)
+    maximum = min(maximum, segmentation.SARASHINA_CHUNK_CHARACTERS)
+    try:
+        ranges = segmentation.source_ranges(text, maximum=maximum, protected=protected)
+    except segmentation.SegmentationError as exc:
+        raise EditorError(str(exc)) from None
+    # Whitespace-only ranges need no generation and remain in the untouched
+    # original. All edits are patches; never join rewritten chunk strings.
+    parts = [part for part in ranges if text[part["start"]:part["end"]].strip()]
+    if not parts:
+        raise EditorError("確認する原文を入力してください。")
+    utf16_offsets = [0]
+    for character in text:
+        utf16_offsets.append(utf16_offsets[-1] + (2 if ord(character) > 0xFFFF else 1))
+    protected_utf16 = [(utf16_offsets[left], utf16_offsets[right]) for left, right in protected]
+    edits, questions, notes, suggestions = [], [], [], []
+    first_identity = None
+    total = len(parts)
+    for index, part in enumerate(parts, 1):
+        source = text[part["start"]:part["end"]]
+        style_notes = context
+        if total > 1:
+            style_notes += (f"\n\nアプリによる文章分割: 全{total}部分のうち第{index}部分です。"
+                            "前後の部分の本文は送信していません。見えていない文脈を推測して補わず、"
+                            "この原文内だけで確実に直せる箇所を提案してください。文脈が足りない場合は本文を保ちquestionsに出してください。")
+        progress.report("generation", message="generation_chunk", completed=index-1, total=total,
+                        chunk_index=index, chunk_total=total)
+        try:
+            generated = generators.generate({"source": source, "style_notes": style_notes,
+                                             "provider": "sarashina", "model": model}, instruction, GENERATOR_SCHEMA)
+        except generators.GenerationError as exc:
+            if total == 1:
+                raise
+            raise generators.GenerationError(exc.code, f"第{index}/{total}部分の生成を完了できませんでした。{exc} 途中の修正案は採用していません。原文は残っています。") from None
+        proposal, identity = generated["proposal"], generated["identity"]
+        validate_unicode_input(identity, "生成サービスの応答")
+        if (not isinstance(identity, dict) or any(identity.get(key) != expected for key, expected in (
+                ("requested_provider", "sarashina"), ("reported_provider", "sarashina"),
+                ("requested_model", model), ("reported_model", model)))):
+            raise EditorError("分割した文章の生成モデルを確認できません。途中の修正案は採用していません。")
+        if first_identity is None:
+            first_identity = dict(identity)
+        elif identity != first_identity:
+            raise EditorError("分割した文章の生成サービス情報が一致しません。途中の修正案は採用していません。")
+        local_edits, local_questions, local_notes, local_suggestions = _validated_generation_proposal(source, proposal, strength, strict_limits=True)
+        base = utf16_offsets[part["start"]]
+        for edit in local_edits:
+            mapped = {**edit, "start": base + edit["start"], "end": base + edit["end"]}
+            if any(mapped["start"] < right and left < mapped["end"] for left, right in protected_utf16):
+                raise EditorError("原文全体で保護されたコードやURLに修正案が重なっています。途中の修正案は採用していません。")
+            edits.append(mapped)
+        questions.extend(local_questions)
+        suggestions.extend(local_suggestions)
+        notes.extend(local_notes)
+        if len(edits) > 50:
+            raise EditorError("修正案が文章全体で50件を超えました。文章を分けて再実行してください。途中の修正案は採用していません。")
+        if len(questions) > 30 or len(suggestions) > 10:
+            raise EditorError("確認事項または構成提案が文章全体の上限を超えました。文章を分けて再実行してください。途中の修正案は採用していません。")
+        progress.report("generation", message="generation_chunk", completed=index, total=total,
+                        chunk_index=index, chunk_total=total)
+    edits.sort(key=lambda edit: edit["start"])
+    for index, edit in enumerate(edits, 1):
+        edit["id"] = f"e{index}"
+    # Validate exact full-source UTF-16 anchors and non-overlap without the
+    # global uniqueness assumption: identical prose may occur in two chunks.
+    apply_edits(text, edits)
+    identity = {**first_identity, "segmentation": {"strategy": "paragraph_sentence", "chunk_total": total,
+                "max_chunk_characters": maximum, "adjacent_text_sent": False}}
+    if total > 1:
+        notes.append(f"原文を{total}部分に分けて校正しました。前後の部分の本文は追加送信していないため、分割境界をまたぐ文脈は生成時に確認していません。")
+    return edits, questions, notes, [model], suggestions, identity, guidance
+
+
+def generate(text, profile, strength, context, provider=None, model=None):
+    validate_unicode_input({"text": text, "context": context, "provider": provider, "model": model})
+    import provider_settings
+    import generators
+    try:
+        provider, model, metadata = _generation_selection(provider, model)
+        instruction, guidance = _generation_bundle(profile, strength)
+        if provider == "claude":
+            proposal, models = _claude_proposal(text, context, instruction)
+            identity = {"requested_provider": "claude", "reported_provider": "claude",
+                        "requested_model": MODEL, "reported_model": models[0], "transport": "claude-cli",
+                        "identity_basis": "CLI modelUsage", "exact_checkpoint_verified": False}
+        elif provider == "sarashina":
+            return _sarashina_generation(text, strength, context, model, instruction, guidance, metadata["max_text_chars"])
+        else:
+            generated = generators.generate({"source": text, "style_notes": context, "provider": provider, "model": model}, instruction, GENERATOR_SCHEMA)
+            proposal, identity = generated["proposal"], generated["identity"]
+            models = [identity["reported_model"]]
+    except (provider_settings.ProviderSettingsError, generators.GenerationError) as exc:
+        raise EditorError(str(exc)) from None
+    validate_unicode_input(identity, "生成サービスの応答")
+    validate_unicode_input(models, "生成サービスの応答")
+    edits, questions, notes, suggestions = _validated_generation_proposal(text, proposal, strength)
     return edits, questions, notes, models, suggestions, identity, guidance
 
 
@@ -397,7 +488,7 @@ def analyze(payload):
     strength = _pick(CONFIG["strengths"], payload.get("strength", "natural"), "強さ")
     progress.report("rules")
     findings = lint(text, profile)
-    output = {"version": "0.2.9", "source_hash": digest(text), "offset_encoding": "utf-16",
+    output = {"version": "0.2.10", "source_hash": digest(text), "offset_encoding": "utf-16",
               "profile": profile["id"], "strength": strength["id"], "findings": findings,
               "edits": [], "questions": [], "suggestions": [], "stages": {"rules": "executed", "generation": "not_requested", "decider": "not_run"},
               "notes": ["指摘は見直し候補です。指摘の有無で文章の品質や意味保持は判定できません。"],

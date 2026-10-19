@@ -2,7 +2,7 @@
 from __future__ import annotations
 import time
 
-from engine import CONFIG, EditorError, _pick, apply_edits, validate_edits
+from engine import CONFIG, EditorError, _pick, apply_edits, digest, validate_edits
 import decider_runtime
 import progress
 
@@ -89,6 +89,33 @@ def availability():
             "error": state.get("error") or state.get("last_error")}
 
 
+def _motion_for_edits(text, edits):
+    """Derive scalar-safe UTF-16 changed spans; retain no source text."""
+    encoded = text.encode("utf-16-le")
+    if len(text) > 12000 or len(encoded) // 2 > progress.MAX_MOTION_OFFSET or len(edits) > progress.MAX_MOTION_EDITS:
+        raise EditorError("修正箇所の進捗情報が上限を超えています。")
+    spans = []
+    for index, edit in enumerate(edits):
+        before, after = edit["before"], edit["after"]
+        start, end = edit["start"], edit["end"]
+        if (type(start) is not int or type(end) is not int or not 0 <= start <= end <= len(encoded) // 2
+                or encoded[start*2:end*2].decode("utf-16-le") != before):
+            raise EditorError("修正箇所の進捗情報が原文に一致しません。")
+        prefix = 0
+        while prefix < min(len(before), len(after)) and before[prefix] == after[prefix]:
+            prefix += 1
+        tail = 0
+        while (tail < len(before) - prefix and tail < len(after) - prefix
+                and before[len(before) - tail - 1] == after[len(after) - tail - 1]):
+            tail += 1
+        # Python compares Unicode scalars; JS changedSpan performs the same
+        # trim in UTF-16 and backs off when a shared surrogate would be split.
+        changed_start = start + len(before[:prefix].encode("utf-16-le")) // 2
+        changed_end = start + len(before[:len(before)-tail].encode("utf-16-le")) // 2
+        spans.append({"index": index, "start": changed_start, "end": changed_end, "status": "pending"})
+    return {"source_hash": digest(text), "offset_encoding": "utf-16", "edits": spans}
+
+
 def attach(output, text):
     """Preserve all proposals on errors; never turn an unrun check into a pass."""
     if not output["edits"]:
@@ -98,12 +125,25 @@ def attach(output, text):
         return output
     total = len(output["edits"])
     progress.report("decider", completed=0, total=total)
+    motion = _motion_for_edits(text, output["edits"]) if progress.tracking() else None
+
+    def update_motion(index=None, status=None, choice=None):
+        if motion is None:
+            return
+        if index is not None:
+            motion["edits"][index]["status"] = status
+            if choice is not None:
+                motion["edits"][index]["choice"] = choice
+        progress.report_motion(motion)
+
+    update_motion()
     info = availability()
     if not info["available"]:
         output["stages"]["decider"] = "unavailable"
-        for edit in output["edits"]:
+        for index, edit in enumerate(output["edits"]):
             edit["decision"] = {"status": "not_run", "backend": "local", "model": info["model"],
                                 "revision": info["revision"], "error": info.get("error")}
+            update_motion(index, "not_run")
         output["notes"].append("ローカルDeciderを利用できないため、候補の判定は未実行です。")
         progress.report("decider", completed=0, total=total, message="decider_unfinished")
         return output
@@ -112,7 +152,7 @@ def attach(output, text):
     deadline = time.monotonic() + JUDGMENT_BUDGET_SECONDS
     failure = None
     had_errors = False
-    for edit in output["edits"]:
+    for index, edit in enumerate(output["edits"]):
         remaining = deadline-time.monotonic()
         if failure is None and remaining <= 0:
             failure = {"code": "deadline", "message": "今回の判定時間の上限に達しました。残りの候補は未判定です。"}
@@ -121,6 +161,7 @@ def attach(output, text):
         if failure is not None:
             edit["decision"] = {"status": "not_run", "backend": "local", "model": info["model"],
                                 "revision": info["revision"], "error": failure}
+            update_motion(index, "not_run")
             continue
         try:
             original, candidate, context = context_for_edit(text, edit, maximum=600 if info.get("max_length", 8192) <= 2048 else 2200)
@@ -132,8 +173,10 @@ def attach(output, text):
             had_errors = True
             edit["decision"] = {"status": "error", "backend": "local", "model": info["model"],
                                 "revision": info["revision"], "error": {"code": "invalid_input", "message": str(exc)}}
+            update_motion(index, "error")
             continue
         try:
+            update_motion(index, "checking")
             response = decider_runtime.decide(request, timeout=remaining)
             result = response.get("result") if isinstance(response, dict) else None
             answers = result.get("answers") if isinstance(result, dict) else None
@@ -147,6 +190,7 @@ def attach(output, text):
                                 "model": response["model"], "revision": response["revision"],
                                 "device": response["device"], "latency_ms": response.get("latency_ms"),
                                 **{key: response[key] for key in ("precision", "precision_override", "reference_path") if key in response}, **context}
+            update_motion(index, "executed", choice)
             successes += 1
         except decider_runtime.DeciderRuntimeError as exc:
             had_errors = True
@@ -155,6 +199,7 @@ def attach(output, text):
                 failure = current_error
             edit["decision"] = {"status": "error", "backend": "local", "model": info["model"],
                                 "revision": info["revision"], "error": current_error}
+            update_motion(index, "error")
         finally:
             # Count actual runtime attempts, including errors; deadlines and
             # candidates never sent to the runtime do not advance the counter.

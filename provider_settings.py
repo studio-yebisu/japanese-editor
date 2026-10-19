@@ -26,9 +26,10 @@ _LOCK = threading.RLock()
 PROVIDERS = {
     "sarashina": {
         "label": "Sarashina", "default_model": "sarashina3-mini",
-        "models": ("sarashina3-mini", "sarashina3-nano"), "transport": "sarashina-api", "max_text_chars": 12000,
-        "auth_method": "api_key", "env": ("SARASHINA_API_KEY",), "setup_url": "https://sarashina.ai/",
-        "notice": "原文12,000字まで。文章と校正方針を Sarashina API に送信します。修正候補はローカルのDeciderで意味の変化を確認します。利用規約第11条は入出力の学習等への利用を定めています。有償プランのオプトアウトは別途設定が必要です。",
+        "models": ("sarashina3-mini", "sarashina3-nano"), "transport": "sarashina-api", "max_text_chars": 2000,
+        "max_document_chars": 12000, "chunking": "paragraphs",
+        "auth_method": "api_key", "env": ("SARASHINA_API_KEY",), "setup_url": "https://chat.sarashina.ai/dashboard/api-keys",
+        "notice": "入力全体12,000字まで。段落・文末で1回2,000字以内に分け、文章と校正方針をSarashina APIに順番に送ります。分割の判断にAIは使いません。修正候補はローカルDeciderで意味の変化を確認します。利用規約第11条は入出力の学習等への利用を定めています。",
     },
     "gemini": {
         "label": "Gemini 3.8 Flash（Antigravity CLI）", "default_model": "gemini-3.8-flash-high",
@@ -264,7 +265,8 @@ def public_config():
         model = selected["model"] if selected["provider"] == provider else metadata["default_model"]
         items.append({"id": provider, "label": metadata["label"], "model": model,
                       "models": list(metadata["models"]), "transport": metadata["transport"],
-                      "max_text_chars": metadata["max_text_chars"], "setup_url": metadata["setup_url"], "auth_method": metadata["auth_method"],
+                      "max_text_chars": metadata["max_text_chars"], "max_document_chars": metadata.get("max_document_chars", metadata["max_text_chars"]),
+                      "chunking": metadata.get("chunking"), "setup_url": metadata["setup_url"], "auth_method": metadata["auth_method"],
                       "notice": metadata["notice"], "available": status["configured"], **status})
     native = os.name == "nt" or (sys.platform == "darwin" and mac_credentials.available())
     store = {"available": native,

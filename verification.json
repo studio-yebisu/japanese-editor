@@ -1,6 +1,6 @@
 {
-  "stage": "release_prepared_and_locally_verified",
-  "verified_on": "2026-10-18",
+  "stage": "implementation_and_static_review_only",
+  "verified_on": "2026-10-19",
   "spec_consultations": [
     {
       "requested": "claude-opus-5-5",
@@ -108,6 +108,15 @@
       ],
       "scope": "Sarashina-first workflow and mandatory local PPDD specification consultation only; not source audit or quality approval",
       "receipt_sha256": "208a0d57ed40db2e62f2cd84a84b7e1d50d34b969241be5f315b67cbc3078a7a",
+      "receipt_published": false
+    },
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "Paragraph splitting, real-state motion and onboarding specification consultation only; not source audit or runtime/quality approval. Advice was checked against existing text-preservation contracts.",
+      "receipt_sha256": "4ba10c3f16a291da9c5ca67d6bb33cbc6631534674ac69f578b807e061d7156a",
       "receipt_published": false
     }
   ],
@@ -1262,6 +1271,39 @@
       "ui_copy_after_run_verify": true,
       "kept_3_and_14_days": true,
       "screenshot_sha256": "91aea5426308967444fb21e8b5a23046aebf56004155fde1e4f4b513aa15947a"
+    }
+  },
+  "yomiyasu_studio_v0210": {
+    "date": "2026-10-19",
+    "version": "0.2.10",
+    "status": "implementation_and_static_review_only",
+    "sarashina_document_characters": 12000,
+    "sarashina_per_request_characters": 2000,
+    "segmentation": "deterministic local paragraph/newline/sentence boundaries; no API/model for splitting",
+    "partial_generation_applied": false,
+    "motion_metadata": "source hash, UTF-16 geometry and actual judgment state only; no manuscript/candidate/reason text",
+    "onboarding": "official API-key console steps when unconfigured; existing key presence retained; PPDD requirements and CLI setup link",
+    "disk_setup_budget_gib": {
+      "new_standard_layout": 30,
+      "model_reuse_candidate": 12,
+      "guarantee": false
+    },
+    "checks": {
+      "test_suites": "not_run_at_user_request",
+      "external_generation_calls": 0,
+      "model_inference_calls": 0,
+      "visual_runtime_review": "not_run_at_user_request",
+      "mac_native": "not_run",
+      "python_ast": "parsed_14_changed_modules",
+      "javascript_syntax": "node_check_passed",
+      "independent_source_review": "no_blocking_issue_found"
+    },
+    "note": "Earlier version results are historical and do not verify this version. Static checks do not prove runtime or visual quality.",
+    "packaging": {
+      "windows_x64": "built",
+      "local_install_and_codex": "updated",
+      "owned_service_health_version": "0.2.10",
+      "feature_runtime_tests": "not_run_at_user_request"
     }
   }
 }

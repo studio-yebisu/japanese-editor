@@ -1,17 +1,24 @@
 """Explicit Gemini CLI or official Sarashina API; never switch providers."""
 from __future__ import annotations
 
+from contextlib import contextmanager
 import json
+import threading
+import time
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 import provider_settings
 import gemini_cli
+import progress
 
 MAX_RESPONSE_BYTES = 2_000_000
 MAX_REQUEST_BYTES = 1_000_000
 TIMEOUT_SECONDS = 180
 SARASHINA_ENDPOINT = "https://api.sarashina.ai/v1/chat/completions"
+SARASHINA_INTERVAL_SECONDS = 10.0
+_SARASHINA_LOCK = threading.Lock()
+_SARASHINA_NEXT_REQUEST_AT = 0.0
 
 
 class GenerationError(ValueError):
@@ -23,6 +30,39 @@ class GenerationError(ValueError):
 class _NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, *_args, **_kwargs):
         return None
+
+
+@contextmanager
+def _sarashina_slot():
+    """One request at a time, then a ten-second application-wide cooldown.
+
+    This prevents our own split requests from using mini's six-RPM allowance
+    in a burst. Other apps can still consume the account allowance; HTTP 429
+    remains an explicit failure, with no retry or provider/model fallback.
+    """
+    global _SARASHINA_NEXT_REQUEST_AT
+    waiting = not _SARASHINA_LOCK.acquire(blocking=False)
+    if waiting:
+        progress.report("generation", message="generation_chunk_wait")
+        _SARASHINA_LOCK.acquire()
+    try:
+        remaining = _SARASHINA_NEXT_REQUEST_AT - time.monotonic()
+        if remaining > 0:
+            waiting = True
+            progress.report("generation", message="generation_chunk_wait")
+            while remaining > 0:
+                time.sleep(remaining)
+                remaining = _SARASHINA_NEXT_REQUEST_AT - time.monotonic()
+        if waiting:
+            progress.report("generation", message="generation_chunk")
+        try:
+            yield
+        finally:
+            # Start cooldown after the actual attempt has ended, including an
+            # HTTP/network failure. Never count a failed request as a success.
+            _SARASHINA_NEXT_REQUEST_AT = time.monotonic() + SARASHINA_INTERVAL_SECONDS
+    finally:
+        _SARASHINA_LOCK.release()
 
 
 def _post_json(endpoint, body, key, provider):
@@ -42,8 +82,9 @@ def _post_json(endpoint, body, key, provider):
     # switch. API error bodies may echo private text, so they are never surfaced.
     opener = build_opener(ProxyHandler({}), _NoRedirect())
     try:
-        with opener.open(request, timeout=TIMEOUT_SECONDS) as response:
-            raw = response.read(MAX_RESPONSE_BYTES + 1)
+        with _sarashina_slot():
+            with opener.open(request, timeout=TIMEOUT_SECONDS) as response:
+                raw = response.read(MAX_RESPONSE_BYTES + 1)
         if len(raw) > MAX_RESPONSE_BYTES:
             raise GenerationError("response_too_large", "生成結果がアプリの受信上限を超えています。原文は変更していません。")
         data = json.loads(raw)

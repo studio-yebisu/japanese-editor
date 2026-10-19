@@ -27,6 +27,8 @@ class SetupDeciderTests(unittest.TestCase):
         stack.enter_context(patch.object(setup.worker, "available_ram", return_value=available * setup.worker.GIB))
         stack.enter_context(patch.object(setup.worker, "available_commit", return_value=40 * setup.worker.GIB))
         stack.enter_context(patch.object(setup.shutil, "which", return_value="/test/uv"))
+        stack.enter_context(patch.object(setup.shutil, "disk_usage", return_value=Mock(
+            total=100 * setup.worker.GIB, used=20 * setup.worker.GIB, free=80 * setup.worker.GIB)))
         return stack
 
     def report(self, private, *arguments):
@@ -232,6 +234,94 @@ class SetupDeciderTests(unittest.TestCase):
             with self.subTest(text=text), patch.object(setup.subprocess, "run", return_value=Mock(stdout=text)):
                 with self.assertRaises(ValueError):
                     setup.macos_total_ram()
+
+    def test_disk_budget_groups_shared_filesystem_and_has_boundary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            private = Path(directory)
+            for available, expected in ((30, "sufficient"), (29, "insufficient")):
+                with self.subTest(available=available), patch.object(setup, "_existing_disk_location", return_value=private), \
+                        patch.object(setup.shutil, "disk_usage", return_value=Mock(
+                            total=100 * setup.worker.GIB, used=(100 - available) * setup.worker.GIB, free=available * setup.worker.GIB)):
+                    report = setup.disk_preflight(private, model_reusable=False)
+                self.assertEqual(report["status"], expected)
+                self.assertEqual(report["required_bytes"], 30 * setup.worker.GIB)
+                self.assertEqual(report["available_bytes"], available * setup.worker.GIB)
+                self.assertEqual(len(report["volumes"]), 1)
+                self.assertEqual(report["volumes"][0]["required_bytes"], 30 * setup.worker.GIB)
+                self.assertFalse(report["budget_is_guarantee"])
+
+    def test_completed_model_budget_does_not_reserve_another_download(self):
+        with tempfile.TemporaryDirectory() as directory:
+            private = Path(directory)
+            with patch.object(setup, "default_model_size_inventory", return_value=True), \
+                    patch.object(setup, "_existing_disk_location", return_value=private), \
+                    patch.object(setup.shutil, "disk_usage", return_value=Mock(
+                        total=100 * setup.worker.GIB, used=88 * setup.worker.GIB, free=12 * setup.worker.GIB)):
+                report = setup.disk_preflight(private)
+            self.assertEqual(report["status"], "sufficient")
+            self.assertEqual(report["required_bytes"], 12 * setup.worker.GIB)
+            self.assertEqual(report["model_budget_bytes"], 0)
+            self.assertEqual(report["assembly_budget_bytes"], 0)
+
+    def test_disk_unknown_or_invalid_counters_fail_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            private = Path(directory)
+            for result in (OSError("private path"), Mock(total=100, used=10, free=float("nan")),
+                           Mock(total=100, used=10, free=101), Mock(total=100, used=10, free=True)):
+                with self.subTest(result=type(result).__name__), patch.object(setup, "_existing_disk_location", return_value=private), \
+                        patch.object(setup.shutil, "disk_usage", **({"side_effect": result} if isinstance(result, Exception) else {"return_value": result})):
+                    report = setup.disk_preflight(private, model_reusable=False)
+                self.assertEqual(report["status"], "unknown")
+                self.assertIsNone(report["available_bytes"])
+                self.assertEqual(set(report["unavailable_roles"]), {"model_and_environment", "uv_cache", "temporary"})
+                self.assertNotIn("private path", setup.disk_issue(report))
+
+    def test_disk_failure_stops_generic_setup_before_any_side_effect(self):
+        with tempfile.TemporaryDirectory() as directory:
+            private = Path(directory) / "nonexistent"
+            self.host(private, system="win32", machine="AMD64", macos="")
+            with patch.object(setup.shutil, "disk_usage", side_effect=OSError("unavailable")), \
+                    patch.object(setup.subprocess, "run") as run, patch.object(Path, "mkdir") as mkdir, \
+                    patch.object(Path, "write_bytes") as write, redirect_stdout(io.StringIO()):
+                with self.assertRaises(SystemExit):
+                    setup.main([])
+            run.assert_not_called()
+            mkdir.assert_not_called()
+            write.assert_not_called()
+            self.assertFalse(private.exists())
+
+    def test_default_inventory_does_not_read_existing_absolute_path_settings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            private = Path(directory)
+            self.host(private)
+            config = private / "decider/config.json"
+            config.parent.mkdir()
+            original = b'{"python":"/old/env/python","model_path":"/old/model","preserve":true}'
+            config.write_bytes(original)
+            with patch.object(Path, "read_bytes", side_effect=AssertionError("must not read settings")):
+                report = self.report(private)
+            self.assertEqual(report["status"], "ready_to_setup")
+            self.assertEqual(report["existing_config"], "preserved_not_reconfigured")
+            self.assertEqual(report["inventory_scope"], "default_setup_layout_not_configured_runtime")
+            self.assertFalse(report["model_files_present"])
+            self.assertEqual(config.read_bytes(), original)
+
+    def test_model_reuse_inventory_requires_pinned_manifest_and_all_file_sizes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            private = Path(directory)
+            model = private / "models" / setup.REVISION
+            model.mkdir(parents=True)
+            names = (*setup.worker.REQUIRED_FILES[:-3], *setup.worker.WEIGHT_HASHES)
+            files = {name: {"bytes": 1, "sha256": "unused-in-size-only-check"} for name in names}
+            for name in names:
+                (model / name).write_bytes(b"x")
+            manifest = json.dumps({"files": files}).encode()
+            (model / "release-manifest.json").write_bytes(manifest)
+            with patch.object(setup.worker, "MANIFEST_SHA256", setup.hashlib.sha256(manifest).hexdigest()):
+                self.assertTrue(setup.default_model_size_inventory(private))
+                (model / names[0]).write_bytes(b"xx")
+                self.assertFalse(setup.default_model_size_inventory(private))
+            self.assertFalse(setup.default_model_size_inventory(private))
 
 
 if __name__ == "__main__":
