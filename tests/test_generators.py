@@ -53,11 +53,23 @@ class IsolatedSettings(unittest.TestCase):
             "credential_source": "none", "cli_status": "not_installed"}))
         self.stack.enter_context(patch.dict(os.environ, {}, clear=True))
 
-    def test_missing_settings_default_to_named_gemini_but_unconfigured(self):
+    def test_missing_settings_default_to_sarashina_mini_but_unconfigured(self):
         public = settings.public_config()
-        self.assertEqual((public["provider"], public["model"]), ("gemini", "gemini-3.8-flash-high"))
+        self.assertEqual((public["provider"], public["model"]), ("sarashina", "sarashina3-mini"))
+        self.assertEqual(public["providers"][0]["id"], "sarashina")
+        self.assertEqual(public["providers"][0]["max_text_chars"], 12000)
         self.assertFalse(any(item["available"] for item in public["providers"]))
         self.assertFalse(self.path.exists())
+
+    def test_existing_provider_and_model_are_preserved_without_rewriting_file(self):
+        for provider, model in (("gemini", "gemini-3.8-flash-high"), ("sarashina", "sarashina3-nano"),
+                                ("claude", "claude-opus-5-5")):
+            original = json.dumps({"version": 1, "provider": provider, "model": model}).encode("utf-8")
+            with self.subTest(provider=provider):
+                self.path.write_bytes(original)
+                selected = settings.read_settings()
+                self.assertEqual((selected["provider"], selected["model"]), (provider, model))
+                self.assertEqual(self.path.read_bytes(), original)
 
     def test_only_allowlisted_nonsecret_preferences_are_saved(self):
         public = settings.save_settings({"provider": "sarashina", "model": "sarashina3-nano"})
@@ -232,20 +244,20 @@ class AdapterTests(unittest.TestCase):
         with self.assertRaises(generators.GenerationError):
             self.call(provider="sarashina")
 
-    def test_sarashina_explicit_short_text_limit_never_truncates(self):
+    def test_sarashina_explicit_text_limit_never_truncates(self):
         with self.assertRaises(generators.GenerationError) as error:
-            self.call(provider="sarashina", source="あ" * 1501)
+            self.call(provider="sarashina", source="あ" * 12001)
         self.assertEqual(error.exception.code, "input_too_long")
         self.post.assert_not_called()
         self.key.assert_not_called()
         self.post.return_value = response("sarashina", "sarashina3-nano")
-        output = self.call(provider="sarashina", model="sarashina3-nano", source="あ" * 1500)
+        output = self.call(provider="sarashina", model="sarashina3-nano", source="あ" * 12000)
         endpoint, body, _, provider = self.post.call_args.args
         self.assertEqual((endpoint, provider), (generators.SARASHINA_ENDPOINT, "sarashina"))
         self.assertEqual(body["model"], "sarashina3-nano")
         self.assertEqual(body["max_completion_tokens"], 8000)
         self.assertTrue(body["response_format"]["json_schema"]["strict"])
-        self.assertEqual(len(json.loads(body["messages"][1]["content"])["source"]), 1500)
+        self.assertEqual(len(json.loads(body["messages"][1]["content"])["source"]), 12000)
         self.assertEqual(output["identity"]["reported_model"], "sarashina3-nano")
 
     def test_unconfigured_or_explicit_claude_never_falls_back(self):

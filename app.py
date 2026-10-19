@@ -29,7 +29,7 @@ from service_runtime import data_id
 TOOLS = [
     {"name": "japanese_editor_profiles", "description": "校正の用途・強さと接続状態を取得する。文章は送信しない。",
      "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
-    {"name": "japanese_editor_analyze", "description": "原文の規則を点検する。generate=trueの場合のみ選択した外部サービスへ原文を送り、修正案を生成する。通常のホスト校正はホスト自身で案を作りreview_proposalsへ渡す。原本は変更しない。",
+    {"name": "japanese_editor_analyze", "description": "原文の規則を点検する。generate=trueの場合のみ選択した外部サービスへ原文を送り、修正案を生成する。通常のホスト校正はホスト自身で案を作りreview_proposalsへ渡す。Sarashina生成はローカルDeciderの意味判定が必須。原本は変更しない。",
      "inputSchema": {"type": "object", "properties": {
          "text": {"type": "string", "maxLength": 12000},
          "profile": {"type": "string", "enum": [p["id"] for p in CONFIG["profiles"]]},
@@ -132,7 +132,7 @@ def mcp():
                 validate_unicode_input(params)
                 result = {"protocolVersion": params.get("protocolVersion", "2024-11-05"),
                           "capabilities": {"tools": {"listChanged": False}},
-                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.8"},
+                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.9"},
                           "instructions": "日本語の校正は用途・強さを選び、ホスト自身が修正候補を作りreview_proposalsで比較する。採用案だけをfinalizeへ渡し返ったtextを最終稿にする。未実行の判定を成功と扱わない。小説・台詞の作風を保つ。generate=trueは外部送信を伴うため通常のホスト校正では不要。"}
             elif method == "ping":
                 result = {}
@@ -288,7 +288,7 @@ class Handler(BaseHTTPRequestHandler):
             except (rpc_auth.AuthenticationError, ValueError):
                 return self.reject(401, "共有サービスの認証要求を確認できません。")
         if path == "/api/health":
-            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.8", "data_id": data_id(), "closing": self.server.closing})
+            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.9", "data_id": data_id(), "closing": self.server.closing})
         if path == "/api/providers":
             return self.send(200, provider_settings.public_config())
         if path == "/api/integrations/codex":

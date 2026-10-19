@@ -63,8 +63,8 @@ function configFixture() {
     generation: {
       provider: "gemini", model: "gemini-3.8-flash-high", secret_store: { available: true },
       providers: [
+        { id: "sarashina", label: "Sarashina", available: true, configured: true, models: ["sarashina3-mini", "sarashina3-nano"], max_text_chars: 12000, notice: "API", auth_method: "api_key" },
         { id: "gemini", label: "Gemini 3.8 Flash", available: true, cli_installed: true, cli_status: "ready", models: ["gemini-3.8-flash-high"], max_text_chars: 12000, notice: "Google公式CLI", auth_method: "google_login" },
-        { id: "sarashina", label: "Sarashina", available: true, configured: true, models: ["sarashina"], max_text_chars: 4000, notice: "API", auth_method: "api_key" },
         { id: "claude", label: "Claude CLI", available: true, models: ["claude-model"], max_text_chars: 12000, notice: "CLI", auth_method: "existing_cli" },
       ],
     },
@@ -138,8 +138,121 @@ function harness() {
 const raw = "😀この機能を利用することが可能です。\r\n保存件数の上限は3件です。\r\n`code` https://example.test";
 const corrected = raw.replace("利用することが可能です", "利用できます");
 
-test("default toggles submit generate/judge and immediately render/export exact corrected raw text", async () => {
+function useSarashina(state) {
+  state.config.generation.provider = "sarashina";
+  state.config.generation.model = "sarashina3-mini";
+}
+
+test("fresh Sarashina configuration selects mini, shows key setup, and requires meaning judgment", async () => {
+  const { state, get, h, toggle } = harness(); useSarashina(state);
+  state.config.generation.providers.find((item) => item.id === "sarashina").available = false;
+  state.config.generation.providers.find((item) => item.id === "sarashina").configured = false;
+  await h.loadConfig();
+  assert.equal(get("provider").value, "sarashina"); assert.equal(get("provider-model").value, "sarashina3-mini");
+  assert.equal(get("generation-option-label").textContent, "Sarashina校正");
+  assert.equal(get("enable-decider").checked, true); assert.equal(get("enable-decider").disabled, true);
+  assert.equal(get("decider-requirement").hidden, false); assert.equal(get("api-key-settings").hidden, false);
+  assert.equal(get("gemini-login-settings").hidden, true); assert.equal(get("setup-prompt").hidden, false);
+  assert.match(get("credential-status").textContent, /SarashinaのAPIキーは未設定/);
+  h.setSourceText(raw); h.invalidate(); const before = state.requests.length; await h.analyze();
+  assert.equal(state.requests.length, before); assert.equal(get("settings-dialog").open, true);
+  toggle("enable-decider", false); assert.equal(get("enable-decider").checked, true);
+});
+
+test("Sarashina sends both stages and exports judged candidates without approval buttons", async () => {
+  const { state, get, h, toggle } = harness(); useSarashina(state); await h.loadConfig();
+  h.setSourceText(raw); h.invalidate(); toggle("enable-decider", false);
+  state.analysis = { ...analysisFixture(raw), requirements: { needs_decider: true } }; await h.analyze();
+  const body = state.requests.find((item) => item.url === "/api/analyze").body;
+  assert.equal(body.provider, "sarashina"); assert.equal(body.model, "sarashina3-mini");
+  assert.equal(body.generate, true); assert.equal(body.judge, true);
+  assert.equal(h.getOutput(), corrected); assert.equal(get("copy-result").disabled, false);
+  assert.equal(get("output-title").textContent, "校正後"); assert.equal(get("edits-list").querySelectorAll("button").length, 0);
+  await h.exportResult("copy"); assert.equal(state.clipboard, corrected);
+});
+
+test("Sarashina blocks transmission for unconfigured Decider but permits configured busy/loading", async () => {
+  for (const status of ["not_configured", "disabled", "error", "busy", "loading"]) {
+    const { state, get, h } = harness(); useSarashina(state);
+    const configured = ["busy", "loading"].includes(status);
+    state.config.decider = { available: configured, status };
+    state.config.stages.decider = configured ? status : "not_connected";
+    await h.loadConfig(); h.setSourceText(raw); h.invalidate(); state.analysis = analysisFixture(raw);
+    await h.analyze();
+    assert.equal(state.requests.some((item) => item.url === "/api/analyze"), configured, status);
+    if (!configured) {
+      assert.match(get("error-message").textContent, /Sarashinaの校正にはDeciderの意味判定が必要/);
+      assert.equal(get("settings-dialog").open, true); assert.match(get("status-text").textContent, /原文は送信していません/);
+    }
+  }
+});
+
+test("rules-only mode and switching from Sarashina to Gemini keep optional judging available", async () => {
+  const { state, get, h, toggle } = harness(); useSarashina(state); await h.loadConfig();
+  h.setSourceText(raw); h.invalidate(); toggle("enable-generation", false); toggle("enable-decider", false);
+  assert.equal(get("enable-decider").disabled, false); assert.equal(get("decider-requirement").hidden, true);
+  state.analysis = { ...analysisFixture(raw), edits: [], stages: { rules: "executed", generation: "not_requested", decider: "not_run" } };
+  await h.analyze(); let body = state.requests.filter((item) => item.url === "/api/analyze").at(-1).body;
+  assert.equal(body.generate, false); assert.equal(body.judge, false); assert.equal(Object.hasOwn(body, "provider"), false);
+  assert.equal(get("copy-result").disabled, false);
+  toggle("enable-generation", true); assert.equal(get("enable-decider").checked, true); assert.equal(get("enable-decider").disabled, true);
+  get("provider").value = "gemini"; get("provider").listeners.change(); toggle("enable-decider", false);
+  assert.equal(get("enable-decider").disabled, false); assert.equal(get("enable-decider").checked, false);
+  state.analysis = analysisFixture(raw, { status: "not_run" }); await h.analyze();
+  body = state.requests.filter((item) => item.url === "/api/analyze").at(-1).body;
+  assert.equal(body.provider, "gemini"); assert.equal(body.judge, false); assert.equal(get("copy-result").disabled, false);
+});
+
+for (const decision of [undefined, { status: "not_run" }, { status: "error", error: { message: "モデルを読めません" } },
+  { status: "input_rejected" }, { status: "executed", choice: "unknown" }]) {
+  test(`Sarashina retains raw source and candidates while ${decision?.choice || decision?.status || "missing"} judgment blocks export`, async () => {
+    const { state, get, h } = harness(); useSarashina(state); await h.loadConfig(); h.setSourceText(raw); h.invalidate();
+    state.analysis = analysisFixture(raw, decision || { status: "not_run" });
+    if (!decision) delete state.analysis.edits[0].decision;
+    // A response without a requirements receipt must still honor the bound
+    // Sarashina request, rather than silently making judgment optional.
+    if (decision?.status !== "not_run") state.analysis.requirements = { needs_decider: true };
+    await h.analyze();
+    assert.equal(h.currentSource(), raw); assert.equal(h.getOutput(), corrected); assert.ok(h.getRun());
+    assert.equal(get("copy-result").disabled, true); assert.equal(get("download-result").disabled, true);
+    assert.match(get("output-title").textContent, /修正候補/); assert.match(get("meaning-warning").textContent, /意味判定が未完了/);
+    assert.match(get("status-text").textContent, /コピー・保存はできません/);
+    assert.doesNotMatch(get("status-text").textContent, /校正が終わりました|コピー・保存できます/);
+    assert.doesNotMatch(get("comparison-summary").textContent, /意味を保っていると判定/);
+    const before = state.requests.length; await h.exportResult("copy"); await h.exportResult("download");
+    assert.equal(state.requests.length, before); assert.equal(state.clipboard, null);
+  });
+}
+
+test("Sarashina partial judgment blocks export; backend requirements also apply to other providers", async () => {
+  for (const provider of ["sarashina", "gemini"]) {
+    const { state, get, h } = harness();
+    if (provider === "sarashina") useSarashina(state);
+    await h.loadConfig(); h.setSourceText(raw); h.invalidate(); state.analysis = analysisFixture(raw);
+    const before = "3件"; const start = raw.indexOf(before);
+    state.analysis.edits.push({ id: "e2", start, end: start + before.length, before, after: "三件", decision: { status: "not_run" } });
+    state.analysis.requirements = { needs_decider: true }; state.analysis.stages.decider = "partial";
+    await h.analyze(); assert.equal(get("copy-result").disabled, true);
+    assert.match(get("comparison-summary").textContent, /1 \/ 2 件を判定/);
+    assert.match(get("output-title").textContent, /修正候補/);
+  }
+});
+
+test("Sarashina executed warnings and zero-edit results remain exportable", async () => {
+  for (const choice of ["shifted", "needs_review", "no_edits"]) {
+    const { state, get, h } = harness(); useSarashina(state); await h.loadConfig(); h.setSourceText(raw); h.invalidate();
+    state.analysis = analysisFixture(raw, { status: "executed", choice }); state.analysis.requirements = { needs_decider: true };
+    if (choice === "no_edits") { state.analysis.edits = []; state.analysis.stages.decider = "not_run"; }
+    await h.analyze(); assert.equal(get("copy-result").disabled, false);
+    if (choice !== "no_edits") { assert.equal(get("meaning-warning").hidden, false); assert.match(get("meaning-warning").textContent, /反映済み/); }
+    await h.exportResult("copy"); assert.equal(state.clipboard, choice === "no_edits" ? raw : corrected);
+  }
+});
+
+test("saved Gemini settings retain independent toggles and export exact corrected raw text", async () => {
   const { state, get, h } = harness(); await h.loadConfig();
+  assert.equal(get("provider").value, "gemini"); assert.equal(get("provider-model").value, "gemini-3.8-flash-high");
+  assert.equal(get("enable-decider").disabled, false); assert.equal(get("decider-requirement").hidden, true);
   assert.equal(get("enable-generation").checked, true); assert.equal(get("enable-decider").checked, true);
   h.setSourceText(raw); h.invalidate(); state.analysis = analysisFixture(raw); await h.analyze();
   const request = state.requests.find((item) => item.url === "/api/analyze");
@@ -163,7 +276,7 @@ test("default toggles submit generate/judge and immediately render/export exact 
 
 test("generation off skips provider setup; judge-on with no proposals reports not-run and unchanged output", async () => {
   const { state, get, h, toggle } = harness();
-  state.config.generation.providers[0].available = false;
+  state.config.generation.providers.find((item) => item.id === "gemini").available = false;
   await h.loadConfig(); h.setSourceText(raw); h.invalidate();
   assert.equal(get("setup-prompt").hidden, false);
   const before = state.requests.length; await h.analyze();

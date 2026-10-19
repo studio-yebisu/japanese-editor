@@ -113,6 +113,19 @@ def _identity(provider, requested, reported):
             "model_version_differs": not same}
 
 
+def resolve_selection(payload):
+    """Resolve saved choice and explicit overrides without reading credentials."""
+    try:
+        selected = provider_settings.read_settings()
+        provider = payload.get("provider", selected["provider"])
+        metadata = provider_settings._provider(provider)
+        model = payload.get("model", selected["model"] if provider == selected["provider"] else metadata["default_model"])
+        provider_settings._preference({"provider": provider, "model": model})
+    except provider_settings.ProviderSettingsError as exc:
+        raise GenerationError(exc.code, str(exc)) from None
+    return provider, model, metadata
+
+
 def generate(payload, instructions, schema):
     """Return {proposal, identity}; engine owns semantic/patch validation.
 
@@ -122,14 +135,7 @@ def generate(payload, instructions, schema):
     """
     if not isinstance(payload, dict) or not isinstance(instructions, str) or not isinstance(schema, dict):
         raise GenerationError("invalid_request", "原文・校正方針・出力形式を指定してください。")
-    try:
-        selected = provider_settings.read_settings()
-        provider = payload.get("provider", selected["provider"])
-        metadata = provider_settings._provider(provider)
-        model = payload.get("model", selected["model"] if provider == selected["provider"] else metadata["default_model"])
-        provider_settings._preference({"provider": provider, "model": model})
-    except provider_settings.ProviderSettingsError as exc:
-        raise GenerationError(exc.code, str(exc)) from None
+    provider, model, metadata = resolve_selection(payload)
     source = payload.get("source", payload.get("text"))
     if not isinstance(source, str) or not source.strip():
         raise GenerationError("invalid_input", "確認する原文を入力してください。")
@@ -159,7 +165,7 @@ def generate(payload, instructions, schema):
     identity = _identity(provider, model, response.get("model"))
     choices = response.get("choices")
     if not isinstance(choices, list) or len(choices) != 1 or not isinstance(choices[0], dict) or choices[0].get("finish_reason") != "stop":
-        raise GenerationError("generation_incomplete", "生成が完了していません。途中の文章は採用していません。")
+        raise GenerationError("generation_incomplete", "生成が完了していません。文章を分けて再実行してください。途中の文章は採用していません。")
     message = choices[0].get("message")
     if not isinstance(message, dict):
         raise GenerationError("invalid_response", "生成APIから本文を読み取れませんでした。")

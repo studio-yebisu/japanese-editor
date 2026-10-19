@@ -61,7 +61,7 @@ def config():
     providers = provider_settings.public_config()
     selected = next((item for item in providers["providers"] if item["id"] == providers["provider"]), {})
     return {
-        "version": "0.2.8", "max_text": MAX_TEXT,
+        "version": "0.2.9", "max_text": MAX_TEXT,
         "profiles": CONFIG["profiles"], "strengths": CONFIG["strengths"],
         "stages": {"rules": "ready" if (VENDOR / "scripts/yomiyasu_lint.py").is_file() else "unavailable",
                    "generator": "available" if selected.get("available") else "unavailable",
@@ -313,16 +313,25 @@ def _claude_proposal(text, context, instruction):
     return proposal, models
 
 
+def _generation_selection(provider=None, model=None):
+    import generators
+    preferences = {}
+    if provider:
+        preferences["provider"] = provider
+    if model:
+        preferences["model"] = model
+    try:
+        return generators.resolve_selection(preferences)
+    except generators.GenerationError as exc:
+        raise EditorError(str(exc)) from None
+
+
 def generate(text, profile, strength, context, provider=None, model=None):
     validate_unicode_input({"text": text, "context": context, "provider": provider, "model": model})
     import provider_settings
     import generators
     try:
-        selected = provider_settings.read_settings()
-        provider = provider or selected["provider"]
-        metadata = provider_settings._provider(provider)
-        model = model or (selected["model"] if provider == selected["provider"] else metadata["default_model"])
-        provider_settings._preference({"provider": provider, "model": model})
+        provider, model, _metadata = _generation_selection(provider, model)
         instruction, guidance = _generation_bundle(profile, strength)
         if provider == "claude":
             proposal, models = _claude_proposal(text, context, instruction)
@@ -369,20 +378,40 @@ def analyze(payload):
         raise EditorError("generateはtrueまたはfalseで指定してください。")
     if "judge" in payload and not isinstance(payload["judge"], bool):
         raise EditorError("judgeはtrueまたはfalseで指定してください。")
+    selected_provider, selected_model, needs_decider = None, None, False
+    if payload.get("generate", False):
+        selected_provider, selected_model, _metadata = _generation_selection(payload.get("provider"), payload.get("model"))
+        needs_decider = selected_provider == "sarashina"
+        if needs_decider:
+            if payload.get("judge", True) is not True:
+                raise EditorError("Sarashinaで修正案を作るにはDeciderの意味判定を有効にしてください。")
+            from decider import availability
+            try:
+                state = availability()
+                available = isinstance(state, dict) and state.get("available") is True and state.get("status") in ("configured", "ready", "busy", "loading")
+            except Exception:
+                available = False
+            if not available:
+                raise EditorError("Sarashinaの校正にはDeciderの意味判定が必要です。設定を済ませ、共有サービスへ接続できることを確認してから再実行してください。")
     profile = _pick(CONFIG["profiles"], payload.get("profile", "article"), "用途")
     strength = _pick(CONFIG["strengths"], payload.get("strength", "natural"), "強さ")
     progress.report("rules")
     findings = lint(text, profile)
-    output = {"version": "0.2.8", "source_hash": digest(text), "offset_encoding": "utf-16",
+    output = {"version": "0.2.9", "source_hash": digest(text), "offset_encoding": "utf-16",
               "profile": profile["id"], "strength": strength["id"], "findings": findings,
               "edits": [], "questions": [], "suggestions": [], "stages": {"rules": "executed", "generation": "not_requested", "decider": "not_run"},
               "notes": ["指摘は見直し候補です。指摘の有無で文章の品質や意味保持は判定できません。"],
               "yomiyasu": {**_guide_identity(), "rules": "executed", "generation_guidance": {"status": "not_sent", "sources": []}}}
+    if needs_decider:
+        # This describes the selected application workflow, even when the
+        # runtime later fails. Never infer completion from this requirement.
+        # UI export eligibility also checks every edit's actual decision.
+        output["requirements"] = {"needs_decider": True}
     if profile["id"] in ("fiction", "dialogue"):
         output["notes"].append("小説・台詞では比喩・省略・反復などを作風として残します。規則の指摘を一律に適用しません。")
     if payload.get("generate", False):
         progress.report("generation")
-        generated = generate(text, profile, strength, context, provider=payload.get("provider"), model=payload.get("model"))
+        generated = generate(text, profile, strength, context, provider=selected_provider, model=selected_model)
         edits, questions, notes, models, suggestions = generated[:5]
         output.update(edits=edits, questions=questions, suggestions=suggestions, generator_model=models[0])
         if len(generated) > 5:
@@ -395,6 +424,10 @@ def analyze(payload):
         if payload.get("judge", True):
             from decider import attach
             attach(output, text)
+        if needs_decider and any(not isinstance(edit.get("decision"), dict)
+                or edit["decision"].get("status") != "executed"
+                or edit["decision"].get("choice") not in ("preserved", "shifted", "needs_review") for edit in output["edits"]):
+            output["notes"].append("Deciderの意味判定を完了できていないため、この結果はコピー・保存できません。原文と修正候補を残しています。Deciderの実行状態を確認して再実行してください。")
     return output
 
 
