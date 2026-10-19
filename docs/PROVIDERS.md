@@ -2,15 +2,15 @@
 
 選んだ生成先へ原文・文体メモ・Yomiyasuの推敲方針・出力形式を送り、修正案を受け取ります。画面では変更を右の文章へ自動で反映し、左に原文を残します。変更理由や意味判定を確認してからコピー・保存できます。規則のチェックとローカル Decider の判定は、生成とは別の処理です。
 
-既定は **Gemini 3.8 Flash（High）/ 公式 Antigravity CLI** です。Google アカウントでログインした `agy` を使い、Gemini 用 API キーは使いません。未導入・認証エラー・利用上限・生成失敗を表示し、別サービスへ自動で切り替えません。
+初回の既定は **Sarashina / `sarashina3-mini`** です。利用者自身のAPIキーを設定し、Yomiyasuの方針で修正案を作り、ローカルDeciderで意味を比較します。Sarashinaで生成する場合は意味判定が必須です。既存の保存設定は保持し、GeminiやClaudeも選べます。障害時に別のサービスへ自動で切り替えません。
 
 | 選択肢 | 接続と認証 | 原文のアプリ内上限 |
 | --- | --- | --- |
+| Sarashina（初回既定） | Sarashina API / `sarashina3-mini`、`sarashina3-nano`。APIキーを設定し、ローカルDeciderの意味判定を併用 | 12,000字 |
 | Gemini 3.8 Flash（High） | Antigravity CLI 1.4.0 / 1.4.1、`gemini-3.8-flash-high`。CLI の Google ログイン | 12,000字 |
-| Sarashina（短文） | Sarashina API / `sarashina3-mini`、`sarashina3-nano`。API キーを設定 | 1,500字 |
 | Claude（既存 CLI） | 既存 Claude Code / `claude-opus-5-5`。既存 CLI の認証を利用 | 12,000字 |
 
-「字」は Python の Unicode 文字数です。Sarashina の1,500字制限は短文校正用のアプリ方針で、公式モデルのコンテキスト上限ではありません。超過した原文は拒否し、切り詰めて送りません。
+「字」は Python の Unicode 文字数です。12,000字はアプリの上限で、公式の128kトークンというコンテキスト長とは別の単位です。出力は公式上限の8,000トークンまでとし、途中で切れた応答は採用しません。超過した原文は拒否し、切り詰めて送りません。
 
 ## Antigravity CLI を導入する
 
@@ -55,7 +55,7 @@ agy --version
 
 ## Sarashina の API キー
 
-Sarashina は API キーを設定します。保存キーを優先し、未保存なら `SARASHINA_API_KEY` を使います。
+[Sarashina公式サービス](https://sarashina.ai/)へGoogleアカウントで登録し、APIキーを発行してアプリの設定へ保存します。PerplexityのAPIキーは使いません。保存キーを優先し、未保存なら `SARASHINA_API_KEY` を使います。
 
 - Windows は資格情報マネージャーの Generic Credential、対象名 `StudioYebisu/JapaneseEditor/generator/sarashina` を使います。
 - macOS はシステムの Security.framework の Generic Password API、サービス名 `StudioYebisu/JapaneseEditor/generator`、アカウント名 `sarashina` を使います。実機での保存・許可ダイアログ・読み出しは未検証です。
@@ -83,6 +83,6 @@ CLI の診断全文には原文や認証情報が含まれる可能性がある�
 
 ## 確認済みの範囲
 
-2026年10月17日に公式資料を無料専用 treg 経由で確認しました。Antigravity CLI 接続の実装と、実機でのログイン・生成の確認状況は [STATUS.md](STATUS.md) と [verification.json](../verification.json) を参照してください。以前の Gemini API アダプターのモック検査を、新しい CLI 接続の実生成の証拠へ置き換えません。
+2026年10月19日にSarashinaの公式資料を無料専用treg経由で再確認しました。Antigravity CLI 接続の実装と、実機でのログイン・生成の確認状況は [STATUS.md](STATUS.md) と [verification.json](../verification.json) を参照してください。以前の Gemini API アダプターのモック検査を、新しい CLI 接続の実生成の証拠へ置き換えません。
 
-Sarashina の API 形式・モデル名・保存先・秘密情報の非公開・長文拒否・途中出力拒否は、ネットワークと OS ストアを置き換えて検査した範囲です。実際の Sarashina API への校正リクエストや、実キーの登録は行っていません。Gemini の生成は公式 `agy` を使います。ブラウザーのトークンを取り出す処理はありません。
+Windowsでは保存済みキーを使い、実際のSarashina APIから修正案を生成し、ローカルFlash判定と最終稿のrun / verifyを実行しました。個別の実測は [STATUS.md](STATUS.md) に記録します。生成モデル名はAPIの報告で、内部のチェックポイントを証明するものではありません。Gemini の生成は公式 `agy` を使います。ブラウザーのトークンを取り出す処理はありません。

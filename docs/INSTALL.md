@@ -4,7 +4,7 @@ Windowsの配布版と、macOSのソース実行では準備が異なります�
 
 ## Windows
 
-Windows用ZIPを展開し、`YomiyasuStudio.exe` を起動します。モデルや認証情報は配布物に含めません。Perplexity Deciderのローカル判定を使う場合は、別途Pythonと `uv` を用意し、展開したフォルダーで次を実行します。固定モデル約9.10GBと専用依存を取得します。
+Windows用ZIPを展開し、`YomiyasuStudio.exe` を起動します。モデルや認証情報は配布物に含めません。標準のSarashina校正にはPerplexity Deciderのローカル判定が必要です。別途Pythonと `uv` を用意し、展開したフォルダーで次を実行します。固定モデル約9.10GBと専用依存を取得します。
 
 ```powershell
 python -B _internal/editor/tools/setup_decider.py --device cpu --cpu-dtype bfloat16 --max-length 2048
@@ -20,7 +20,7 @@ Mac向け `.app`・署名・公証はまだ用意していません。Python 3.1
 python3 -B app.py serve
 ```
 
-[http://127.0.0.1:8896](http://127.0.0.1:8896) を開きます。Deciderの意味判定をオフにすれば、Deciderを取得せずに、規則の点検と設定済みの生成サービスを使えます。
+[http://127.0.0.1:8896](http://127.0.0.1:8896) を開きます。Sarashina校正にはDeciderの意味判定が必要です。生成をオフにした規則の点検と、Gemini・Claudeの任意の生成では、Deciderを取得せずに使えます。
 
 総メモリ24GBのApple Silicon Mac向けに、ローカルDeciderの `mac24` プリセットを用意しています。macOS 14以降、arm64 Python 3.12〜3.14（3.14.1を除く）、`uv` が対象です。CPU BF16・文脈2048・CPU threads 8で実行し、MPSは使いません。**Mac実機の推論は未検証**です。
 

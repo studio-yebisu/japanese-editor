@@ -676,7 +676,7 @@ class EngineJudgmentDispatchTests(unittest.TestCase):
         text = "保存して下さい。"
         edits, _ = engine.validate_edits(text, [proposal("下さい", "ください")])
         with mock.patch.object(engine, "generate", return_value=(edits, [], [], [engine.MODEL], [])) as generate:
-            result = engine.analyze({"text": text, "generate": True, "judge": False})
+            result = engine.analyze({"text": text, "provider": "gemini", "generate": True, "judge": False})
         generate.assert_called_once()
         self.assertEqual(result["stages"]["generation"], "executed")
         self.assertNotIn("decision", result["edits"][0])

@@ -31,8 +31,8 @@
           </div>
           <div class="analysis-actions">
             <div class="processing-options" aria-label="校正に使う機能">
-              <label class="processing-option"><input id="enable-generation" type="checkbox" checked aria-describedby="generation-transmission" /><span id="generation-option-label">Gemini校正</span><small id="generation-transmission">原文を送信</small></label>
-              <label class="processing-option"><input id="enable-decider" type="checkbox" checked /><span>Deciderの意味判定</span></label>
+              <label class="processing-option"><input id="enable-generation" type="checkbox" checked aria-describedby="generation-transmission" /><span id="generation-option-label">Sarashina校正</span><small id="generation-transmission">原文を送信</small></label>
+              <label class="processing-option"><input id="enable-decider" type="checkbox" checked aria-describedby="decider-requirement" /><span>Deciderの意味判定</span><small id="decider-requirement" hidden>Sarashinaの意味確認に必須</small></label>
             </div>
             <button id="analyze-generate" type="button" class="button button-primary" disabled><span class="button-main">校正する</span><span class="button-detail sr-only">選択したサービスへ文章を送信</span></button>
           </div>
@@ -116,7 +116,7 @@
           <section class="settings-section" aria-labelledby="connection-title">
             <h3 id="connection-title">接続状態</h3>
             <div class="availability-row"><span>Yomiyasuの規則点検</span><span id="rules-stage" class="stage-badge">確認中</span></div><div class="availability-row"><span>修正案の生成</span><span id="generator-stage" class="stage-badge">確認中</span></div><div class="availability-row"><span>Deciderの意味判定</span><span id="decider-stage" class="stage-badge stage-muted">確認中</span></div>
-            <p id="decider-note" class="field-description">接続状態を確認しています。</p><div class="settings-actions"><button id="refresh-decider" type="button" class="text-button" disabled>接続状態を更新</button><button id="release-decider" type="button" class="text-button" disabled>判定モデルのメモリを解放</button></div>
+            <p id="decider-note" class="field-description">接続状態を確認しています。</p><div class="settings-actions"><button id="refresh-decider" type="button" class="text-button" disabled>接続状態を更新</button><button id="release-decider" type="button" class="text-button" disabled>判定モデルのメモリを解放</button><a href="https://github.com/studio-yebisu/yomiyasu-studio/blob/main/docs/INSTALL.md" target="_blank" rel="noreferrer noopener">ローカルDeciderの準備</a></div>
           </section>
           <section class="settings-section" aria-labelledby="integration-title"><h3 id="integration-title">Codexへの組み込み</h3><p>CodexやClaude Code自身に修正案を作ってもらう場合、追加のAPIキーは不要です。</p><div class="settings-actions"><button id="install-codex" type="button" class="button button-small button-secondary">このPCのCodexへ登録</button></div><p id="codex-status" class="field-description">登録状態を確認しています。</p></section>
         </div>

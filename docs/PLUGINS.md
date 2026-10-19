@@ -89,6 +89,8 @@ v0.2.7ではローカルDeciderの共有RPCへ認証を追加しました。**�
 
 結果の位置はUTF-16の `[start,end)`、`source_hash` は元の本文のSHA-256です。原文が変わった結果を使い回しません。規則の指摘、案を作ったモデルの理由、Deciderの選択は別の情報です。`decision.status=executed` のときだけ判定済みと説明し、未設定・入力上限・実行失敗・時間切れを成功に言い換えません。`scope=excerpt` は前後の抜粋の比較で、全文や採用案の組み合わせ全体の保証ではありません。
 
+Sarashinaを生成先に指定した `analyze(generate=true)` ではローカルDeciderの意味判定が必要です。`judge=false` や判定器の未設定は、外部生成の前に入力エラーとして止めます。生成後に判定が失敗した場合は、候補を保持した未判定の結果を返します。通常のホスト校正と `check_final` の全文点検は、この制約の対象外です。
+
 `analyze` の `generate=true` は選んだ外部サービスへ文章を送る明示的な機能です。既定はfalseで、通常のホスト校正は `review_proposals` を使います。Gemini は公式 Antigravity CLI（`agy`）の Google ログイン、Sarashina は API キーを使います。Antigravity CLI の導入・ログインは、画面からの生成を使う場合だけ必要です。ホスト自身が案を作る通常の MCP 校正では不要です。[生成サービスと認証](PROVIDERS.md) を参照してください。
 
 ## 停止・登録の見直し

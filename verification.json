@@ -100,6 +100,15 @@
       "scope": "Mac24 preflight and Yomiyasu guidance wiring source review only; not native Mac execution",
       "receipt_sha256": "1e56b7bb0e64de40582040e826a7c40b0fae039351c04527fc7883b7433adc8d",
       "receipt_published": false
+    },
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "Sarashina-first workflow and mandatory local PPDD specification consultation only; not source audit or quality approval",
+      "receipt_sha256": "208a0d57ed40db2e62f2cd84a84b7e1d50d34b969241be5f315b67cbc3078a7a",
+      "receipt_published": false
     }
   ],
   "upstream": {
@@ -1122,5 +1131,137 @@
       "Synchronous OS operations and safe owned-process cleanup can add time beyond the request deadline."
     ],
     "note": "Synthetic inputs and fixture workers only. Earlier model inference records remain historical."
+  },
+  "yomiyasu_studio_v029": {
+    "date": "2026-10-19",
+    "version": "0.2.9",
+    "first_run_provider": "sarashina",
+    "first_run_model": "sarashina3-mini",
+    "saved_provider_choices_preserved": true,
+    "sarashina_generation_requires_local_decider": true,
+    "checks": {
+      "windows_python_tests_run": 319,
+      "windows_python_tests_passed": 318,
+      "windows_python_tests_skipped": 1,
+      "linux_python_tests_run": 319,
+      "linux_python_tests_passed": 318,
+      "linux_python_tests_skipped": 1,
+      "linux_web_ui_tests_passed": 30,
+      "frozen_cli_mcp_run_verify": "passed",
+      "frozen_authenticated_rpc": "passed",
+      "windows_web_ui_tests_passed": 30,
+      "frozen_gui_edgechromium": "passed",
+      "local_install_and_codex_registration": "updated"
+    },
+    "real_windows_source_tests": {
+      "short_synthetic": {
+        "status": "passed",
+        "kind": "real_sarashina_api_and_local_decider",
+        "source_characters": 58,
+        "edits": 1,
+        "decisions": [
+          "preserved"
+        ],
+        "stages": {
+          "rules": "executed",
+          "generation": "executed",
+          "decider": "executed"
+        },
+        "seconds": 33.575,
+        "api_metrics": [
+          {
+            "seconds": 4.41,
+            "usage": {
+              "prompt_tokens": 34205,
+              "total_tokens": 34329,
+              "completion_tokens": 124
+            },
+            "reported_model": "sarashina3-mini"
+          }
+        ],
+        "yomiyasu_sources": 5,
+        "source_hash": "ba1c8c9c7a4d2a1ab40e6aff88b67940f38b29a391c480f4b0c08b5914ba9590",
+        "final_hash": "068eec141d7e2f65f8e5be583117cd332893cd2e636953aee3e6f13f03a9f7e0",
+        "final_check": "executed",
+        "final_verify": "executed",
+        "kept_3_and_14_days": true
+      },
+      "focused_intro_with_protected_reference": {
+        "status": "passed",
+        "fixture": "synthetic_markdown_with_protected_reference_and_focused_intro",
+        "source_characters": 12000,
+        "edits": 1,
+        "decisions": [
+          "preserved"
+        ],
+        "scopes": [
+          "excerpt"
+        ],
+        "seconds": 30.68,
+        "api_metrics": [
+          {
+            "seconds": 5.219,
+            "usage": {
+              "prompt_tokens": 39925,
+              "total_tokens": 40055,
+              "completion_tokens": 130
+            },
+            "finish_reason": "stop"
+          }
+        ],
+        "source_hash": "e365b6d0d5339782f258f216b6258b4b2234d6780773c4f9497670d170babb19",
+        "final_hash": "138445730911297e4bd773ce1e693ec50ecfa838d082f178647e7fe05674e760",
+        "final_check": "executed",
+        "final_verify": "executed",
+        "reference_bytes_preserved": true
+      },
+      "incomplete_long_generation": {
+        "status": "rejected_incomplete_generation",
+        "source_characters": 8438,
+        "code": "generation_incomplete",
+        "partial_output_accepted": false,
+        "note": "First natural-strength synthetic repeating-record trial reached an incomplete API result; not counted as successful proofreading."
+      },
+      "ui_incomplete_short_generation": {
+        "source_characters": 30,
+        "partial_output_accepted": false,
+        "original_preserved": true
+      },
+      "ui_short_synthetic": {
+        "status": "passed",
+        "source_characters": 58,
+        "generator": "sarashina3-mini",
+        "edits": 1,
+        "decider": "pplx-decider-flash-v1.2",
+        "decision": "preserved",
+        "scope": "document",
+        "cpu_dtype": "bfloat16",
+        "yomiyasu_sources": "full guide and applicable references included",
+        "ui_copy_after_run_verify": true,
+        "kept_3_and_14_days": true,
+        "screenshot_sha256": "38ae90c4675c2cd6ea4f7029321a5897f0149614b54c629d7676261797cba499",
+        "note": "Observed actual UI/API/local inference; screenshot stored privately, not bundled."
+      }
+    },
+    "mac_native_verified": false,
+    "limits": [
+      "PPDD compares edits and may use excerpts; these fixtures do not prove full-document semantic preservation or general model quality.",
+      "A 12000-character input limit does not guarantee a completed generation; the API output cap remains 8000 tokens.",
+      "Incomplete generation is rejected without partial JSON salvage or provider fallback.",
+      "Sarashina is a free public beta with individual API keys and regional, rate and input/output-use terms."
+    ],
+    "real_windows_installed_test": {
+      "status": "passed",
+      "host": "installed Windows frozen CLI service with browser UI",
+      "version": "0.2.9",
+      "source_characters": 58,
+      "generator": "sarashina3-mini",
+      "edits": 1,
+      "decider": "pplx-decider-flash-v1.2",
+      "decision": "preserved",
+      "ui_copy_after_run_verify": true,
+      "kept_3_and_14_days": true,
+      "screenshot_sha256": "91aea5426308967444fb21e8b5a23046aebf56004155fde1e4f4b513aa15947a"
+    }
   }
 }

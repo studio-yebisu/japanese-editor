@@ -19,23 +19,23 @@ from runtime_paths import PERSISTENT_ROOT
 import mac_credentials
 
 SETTINGS_PATH = PERSISTENT_ROOT / "providers.json"
-DEFAULT_PROVIDER = "gemini"
+DEFAULT_PROVIDER = "sarashina"
 CREDENTIAL_PREFIX = "StudioYebisu/JapaneseEditor/generator/"
 _LOCK = threading.RLock()
 
 PROVIDERS = {
+    "sarashina": {
+        "label": "Sarashina", "default_model": "sarashina3-mini",
+        "models": ("sarashina3-mini", "sarashina3-nano"), "transport": "sarashina-api", "max_text_chars": 12000,
+        "auth_method": "api_key", "env": ("SARASHINA_API_KEY",), "setup_url": "https://sarashina.ai/",
+        "notice": "原文12,000字まで。文章と校正方針を Sarashina API に送信します。修正候補はローカルのDeciderで意味の変化を確認します。利用規約第11条は入出力の学習等への利用を定めています。有償プランのオプトアウトは別途設定が必要です。",
+    },
     "gemini": {
         "label": "Gemini 3.8 Flash（Antigravity CLI）", "default_model": "gemini-3.8-flash-high",
         "models": ("gemini-3.8-flash-high",), "transport": "antigravity-cli", "max_text_chars": 12000,
         "auth_method": "google_login", "env": (),
         "setup_url": "https://antigravity.google/docs/install?tab=cli",
         "notice": "Google公式のAntigravity CLIでGemini 3.8 Flash（High）へ文章と校正方針を送信します。AI Pro / Ultra は契約したGoogleアカウントでCLIへログインしてください。利用枠とモデルの提供状況はアカウントにより異なります。",
-    },
-    "sarashina": {
-        "label": "Sarashina（短文）", "default_model": "sarashina3-mini",
-        "models": ("sarashina3-mini", "sarashina3-nano"), "transport": "sarashina-api", "max_text_chars": 1500,
-        "auth_method": "api_key", "env": ("SARASHINA_API_KEY",), "setup_url": "https://sarashina.ai/",
-        "notice": "原文1,500字まで。文章と校正方針を Sarashina API に送信します。利用規約第11条は入出力の学習等への利用を定めています。有償プランのオプトアウトは別途設定が必要です。",
     },
     "claude": {
         "label": "Claude（既存 CLI）", "default_model": "claude-opus-5-5",

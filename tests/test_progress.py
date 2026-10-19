@@ -179,7 +179,7 @@ class EngineProgressTests(unittest.TestCase):
         with patch.object(engine, "lint", side_effect=lint), patch.object(engine, "generate", side_effect=generate), \
              patch.object(decider, "availability", return_value=INFO), patch.object(decider_runtime, "decide", side_effect=decide):
             with progress.operation("request-stages"):
-                result = engine.analyze({"text": text, "generate": True, "judge": True})
+                result = engine.analyze({"text": text, "provider": "gemini", "model": "gemini-3.8-flash-high", "generate": True, "judge": True})
         self.assertEqual(observed, [("rules", None), ("generation", None), ("decider", 0), ("decider", 1)])
         self.assertEqual(result["decider"]["executed"], 2)
         final = self.registry.get("request-stages")
@@ -196,7 +196,7 @@ class EngineProgressTests(unittest.TestCase):
         with patch.object(engine, "generate", return_value=(edits, [], [], ["fixture"], [])), \
              patch.object(decider, "availability") as available:
             with progress.operation("request-generation-only"):
-                engine.analyze({"text": text, "generate": True, "judge": False})
+                engine.analyze({"text": text, "provider": "gemini", "generate": True, "judge": False})
                 self.assertEqual(self.registry.get("request-generation-only")["stage"], "generation")
             available.assert_not_called()
 

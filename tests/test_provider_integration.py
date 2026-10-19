@@ -47,6 +47,30 @@ class ProviderIntegrationTests(unittest.TestCase):
         return engine.analyze({"text": TEXT, "profile": "article", "strength": "natural",
                                "context": "語り口を残す", "generate": True, "judge": False, **fields})
 
+    def provider_analyze(self, provider, **fields):
+        """Guidance/routing fixtures satisfy Sarashina's mandatory judge only.
+
+        These tests inspect generation inputs, not model quality. Keep all real
+        credentials, transports and inference disabled while returning explicit
+        fixture decisions on this scoped branch.
+        """
+        if provider != "sarashina":
+            return self.analyze(provider=provider, **fields)
+
+        def judged(output, _text):
+            for edit in output["edits"]:
+                edit["decision"] = {"status": "executed", "choice": "preserved"}
+            output["stages"]["decider"] = "executed"
+            return output
+
+        with patch("decider.availability", return_value={"available": True, "status": "configured"}) as available, \
+                patch("decider.attach", side_effect=judged) as judge:
+            output = self.analyze(provider=provider, judge=True, **fields)
+            available.assert_called_once_with()
+            judge.assert_called_once()
+        self.assertEqual(output["requirements"], {"needs_decider": True})
+        return output
+
     def test_default_routes_gemini_and_retains_cli_identity_and_source_hash(self):
         output = self.analyze()
         payload, instruction, schema = self.cloud.call_args.args
@@ -70,7 +94,7 @@ class ProviderIntegrationTests(unittest.TestCase):
 
     def test_explicit_sarashina_model_overrides_saved_gemini_without_fallback(self):
         self.cloud.return_value["identity"] = identity("sarashina", "sarashina3-nano")
-        output = self.analyze(provider="sarashina", model="sarashina3-nano")
+        output = self.provider_analyze("sarashina", model="sarashina3-nano")
         payload = self.cloud.call_args.args[0]
         self.assertEqual((payload["provider"], payload["model"]), ("sarashina", "sarashina3-nano"))
         self.assertEqual(output["generator"]["reported_provider"], "sarashina")
@@ -136,7 +160,7 @@ class ProviderIntegrationTests(unittest.TestCase):
                     with self.subTest(profile=profile["id"], strength=strength["id"], provider=provider):
                         self.cloud.reset_mock(); self.claude.reset_mock()
                         self.cloud.return_value = {"proposal": PROPOSAL, "identity": identity(provider, model)}
-                        output = self.analyze(profile=profile["id"], strength=strength["id"], provider=provider, model=model)
+                        output = self.provider_analyze(provider, profile=profile["id"], strength=strength["id"], model=model)
                         instruction = self.claude.call_args.args[2] if provider == "claude" else self.cloud.call_args.args[1]
                         self.assertEqual(instruction.count(guide_bytes.decode("utf-8")), 1)
                         self.assertIn(profile["guidance"], instruction)
@@ -195,7 +219,7 @@ class ProviderIntegrationTests(unittest.TestCase):
                  patch.object(engine.shutil, "which", return_value="offline-claude-fixture"), \
                  patch.object(engine.subprocess, "run", side_effect=claude_boundary):
                 for provider, model in (("gemini", "gemini-3.8-flash-high"), ("sarashina", "sarashina3-nano"), ("claude", engine.MODEL)):
-                    output = self.analyze(profile=profile["id"], provider=provider, model=model)
+                    output = self.provider_analyze(provider, profile=profile["id"], model=model)
                     instruction = captured[provider]
                     self.assertIn(guide, instruction)
                     self.assertEqual(engine.digest(instruction), output["yomiyasu"]["generation_guidance"]["instruction_sha256"])

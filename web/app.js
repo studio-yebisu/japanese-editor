@@ -12,6 +12,7 @@
     profileDescription: byId("profile-description"), count: byId("character-count"),
     generateButton: byId("analyze-generate"), generationToggle: byId("enable-generation"),
     deciderToggle: byId("enable-decider"), generationLabel: byId("generation-option-label"), generationTransmission: byId("generation-transmission"),
+    deciderRequirement: byId("decider-requirement"),
     rulesStage: byId("rules-stage"), generatorStage: byId("generator-stage"),
     deciderStage: byId("decider-stage"), generationNotice: byId("generation-notice"),
     deciderNote: byId("decider-note"), refreshDecider: byId("refresh-decider"),
@@ -315,10 +316,14 @@
       ui.deciderNote.textContent = `${model} / ${precisionDeviceLabel(capability)}。${latestError ? "前の試行でエラーがありました。設定は有効なので、対象を確認して再試行できます。" : capability?.loaded ? "モデルは読み込み済みです。" : "初回はモデルを読み込むため時間がかかります。"}判定はこの PC で行います。意味の保持を保証するものではありません。`;
     } else if (state === "unavailable") {
       stage(ui.deciderStage, "利用できません");
-      ui.deciderNote.textContent = "ローカル判定は利用できません。修正候補はご自身で原文と読み比べられます。";
+      ui.deciderNote.textContent = requiresDecider()
+        ? "Sarashinaの校正にはDeciderの意味判定が必要です。モデルと接続の設定を確認してください。"
+        : "ローカル判定は利用できません。修正候補はご自身で原文と読み比べられます。";
     } else if (state === "not_connected") {
       stage(ui.deciderStage, "未接続");
-      ui.deciderNote.textContent = "Decider は未接続です。モデルによる判定はまだ行っていません。";
+      ui.deciderNote.textContent = requiresDecider()
+        ? "Sarashinaの校正にはDeciderへの接続が必要です。設定後に接続状態を更新してください。"
+        : "Decider は未接続です。モデルによる判定はまだ行っていません。";
     } else {
       stage(ui.deciderStage, "確認できません");
       ui.deciderNote.textContent = "Decider の状態を読み取れません。接続状態を更新して確認できます。";
@@ -334,6 +339,31 @@
 
   function generatorLabel() { return selectedGenerator()?.label || "選択したサービス"; }
 
+  function requiresDecider() {
+    return ui.generationToggle.checked && selectedGenerator()?.id === "sarashina";
+  }
+
+  function deciderConfigured() {
+    // Busy/loading are configured runtimes; their queue and timeout are handled
+    // by the server. Only a missing/disabled/unusable configuration blocks send.
+    return config?.decider?.available === true
+      && !["disabled", "not_configured", "error"].includes(config.decider.status);
+  }
+
+  function syncDeciderRequirement() {
+    const required = requiresDecider();
+    if (required) ui.deciderToggle.checked = true;
+    ui.deciderToggle.disabled = !config || settingsBusy || required;
+    ui.deciderRequirement.hidden = !required;
+  }
+
+  function requiredJudgmentPending(result = run) {
+    if (!result || !(result.data.requirements?.needs_decider === true
+      || (result.snapshot.generate && result.snapshot.provider === "sarashina"))) return false;
+    return result.data.edits.some((edit) => edit.decision?.status !== "executed"
+      || !["preserved", "shifted", "needs_review"].includes(edit.decision.choice));
+  }
+
   function renderGenerator() {
     const provider = selectedGenerator();
     const ready = provider?.available === true;
@@ -348,7 +378,7 @@
     ui.generationTransmission.textContent = ui.generationToggle.checked ? "原文を送信" : "送信しません";
     ui.generateButton.querySelector(".button-detail").textContent = ui.generationToggle.checked
       ? `${provider?.label || "選択したサービス"}へ文章を送信` : "外部へ送信せず、規則を確認";
-    ui.setupPrompt.hidden = !ui.generationToggle.checked || ready || !config;
+    ui.setupPrompt.hidden = !config || !ui.generationToggle.checked || (ready && (!requiresDecider() || deciderConfigured()));
     ui.providerNotice.textContent = provider?.notice || "修正案を作るサービスを選んでください。";
     ui.credentialStatus.textContent = gemini
       ? ready ? "公式Antigravity CLIを利用できます。認証・利用枠・モデルへのアクセスは修正案を作るときに確認します。"
@@ -372,6 +402,7 @@
     if (api && config?.generation?.secret_store?.notice && config.generation.secret_store.available === false) {
       ui.credentialStatus.textContent += ` ${config.generation.secret_store.notice}`;
     }
+    syncDeciderRequirement();
   }
 
   function fillProviderModels(preferred) {
@@ -420,14 +451,14 @@
     ui.generateButton.disabled = !ready || settingsBusy || Boolean(activeExport) || refreshingCapability;
     ui.generateButton.querySelector(".button-main").textContent = "校正する";
     ui.generationToggle.disabled = !config || settingsBusy;
-    ui.deciderToggle.disabled = !config || settingsBusy;
+    syncDeciderRequirement();
     ui.provider.disabled = !config || Boolean(activeRequest) || settingsBusy;
     ui.providerModel.disabled = !config || Boolean(activeRequest) || settingsBusy;
     ui.geminiLogin.disabled = selectedGenerator()?.id !== "gemini" || !selectedGenerator()?.cli_installed || selectedGenerator()?.cli_status === "unsupported_version" || Boolean(activeRequest) || settingsBusy;
     ui.saveProvider.disabled = !config || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy || refreshingCapability;
     ui.releaseDecider.disabled = !config?.decider?.loaded || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy;
     ui.installCodex.disabled = !codexAvailable || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy;
-    ui.copy.disabled = !run || Boolean(activeExport) || Boolean(activeRequest);
+    ui.copy.disabled = !run || requiredJudgmentPending() || Boolean(activeExport) || Boolean(activeRequest);
     ui.download.disabled = ui.copy.disabled;
     ui.refreshDecider.disabled = !config || Boolean(activeRequest) || Boolean(activeExport) || refreshingCapability || settingsBusy;
     ui.edits.querySelectorAll("button").forEach((button) => { button.disabled = Boolean(activeRequest); });
@@ -585,11 +616,17 @@
   async function analyze() {
     if (!config || activeRequest || activeExport || settingsBusy || refreshingCapability || !currentSource().trim()) return;
     const generate = ui.generationToggle.checked;
-    const judge = ui.deciderToggle.checked;
+    const judge = requiresDecider() || ui.deciderToggle.checked;
     if (generate && config.stages.generator !== "available") {
       showError("校正するには修正案を作るサービスを設定してください。", false, true);
       setStatus("設定を保存してから、もう一度「校正する」を押してください。");
       openSettings(true);
+      return;
+    }
+    if (requiresDecider() && !deciderConfigured()) {
+      showError("Sarashinaの校正にはDeciderの意味判定が必要です。接続状態とモデルの設定を確認してください。", false, true);
+      setStatus("原文は送信していません。Deciderの準備ができてから、もう一度「校正する」を押してください。");
+      openSettings();
       return;
     }
     const limit = generate ? selectedGenerator()?.max_text_chars || 12000 : config.max_text || 12000;
@@ -637,7 +674,8 @@
         data: { ...data, edits },
       };
       renderResults();
-      setStatus(edits.length ? `${edits.length} 件の変更を右の文章へ反映しました。コピー・保存できます。`
+      setStatus(requiredJudgmentPending() ? "修正候補を残しました。意味判定が終わっていないため、コピー・保存はできません。接続状態を確認して、もう一度校正してください。"
+        : edits.length ? `${edits.length} 件の変更を右の文章へ反映しました。コピー・保存できます。`
         : generate ? "校正が終わりました。変更はありません。" : "Yomiyasuの規則点検が終わりました。原文をそのまま右に表示しています。");
     } catch (error) {
       if (error.name === "AbortError" || revision !== requestRevision) return;
@@ -658,7 +696,8 @@
     ui.outputPanel.hidden = false;
     ui.reviewDetails.hidden = false;
     const { data } = run;
-    ui.reviewCount.textContent = `変更 ${data.edits.length} 件`;
+    const judgmentPending = requiredJudgmentPending();
+    ui.reviewCount.textContent = judgmentPending ? `意味判定が未完了 · 候補 ${data.edits.length} 件` : `変更 ${data.edits.length} 件`;
     const executed = data.edits.filter((edit) => edit.decision?.status === "executed").length;
     const preserved = data.edits.filter((edit) => edit.decision?.status === "executed" && edit.decision.choice === "preserved").length;
     ui.comparisonSummary.textContent = !data.edits.length ? ""
@@ -680,7 +719,9 @@
       input_rejected: "入力の長さなどのため、Decider の判定を保留した候補があります。各候補の案内をご覧ください。",
       deferred: "Decider の判定を保留しています。各候補の状態と案内をご覧ください。",
     };
-    ui.summary.textContent = generationLabels[data.stages.generation] || "校正結果を確認してください。";
+    ui.summary.textContent = judgmentPending
+      ? "修正候補を右の文章に表示しています。意味判定が終わるまでコピー・保存はできません。"
+      : generationLabels[data.stages.generation] || "校正結果を確認してください。";
     if (data.yomiyasu?.rules === "executed") {
       const version = typeof data.yomiyasu.version === "string" ? ` ${data.yomiyasu.version}` : "";
       const guidance = data.yomiyasu.generation_guidance;
@@ -725,9 +766,13 @@
 
   function renderEdits() {
     const { edits } = run.data;
+    const judgmentPending = requiredJudgmentPending();
     ui.editsCount.textContent = String(edits.length);
     ui.edits.replaceChildren();
     ui.editGuidance.hidden = edits.length === 0;
+    ui.editGuidance.textContent = judgmentPending
+      ? "修正候補を右に表示しています。意味判定が終わるまでコピー・保存はできません。"
+      : "変更は右の文章に反映済みです。理由と意味判定を確認できます。";
     if (!edits.length) {
       ui.edits.append(node("p", "empty-note", run.data.stages.generation === "not_requested"
         ? "今回は文章を置き換える修正案はありません。サービスを設定すると、修正案の作成も依頼できます。"
@@ -739,8 +784,8 @@
       const card = node("article", `edit-card is-applied${attention ? " has-attention" : ""}`);
       card.dataset.editId = edit.id;
       const top = node("div", "edit-card-top");
-      top.append(node("h4", "edit-label", `変更 ${index + 1}${edit.rule ? ` · ${edit.rule}` : ""}`));
-      top.append(node("span", "edit-state", attention ? "変更済み · 意味判定を確認" : "変更済み"));
+      top.append(node("h4", "edit-label", `${judgmentPending ? "修正候補" : "変更"} ${index + 1}${edit.rule ? ` · ${edit.rule}` : ""}`));
+      top.append(node("span", "edit-state", judgmentPending ? "候補を表示 · 意味判定が未完了" : attention ? "変更済み · 意味判定を確認" : "変更済み"));
       const diff = node("div", "edit-diff");
       const before = node("div", "diff-part");
       before.append(node("span", "diff-label", "原文"), node("del", "diff-before", edit.before || "（挿入位置）"));
@@ -790,7 +835,8 @@
       box.append(node("p", "model-decision-meta", isInputRejected(decision)
         ? "原文を分けて、もう一度「校正する」を押してください。接続状態の更新だけでは解消しません。"
         : decision?.status === "error" || error
-          ? "変更は右に反映しています。接続状態やエラーを確認し、必要ならもう一度校正してください。"
+          ? requiredJudgmentPending() ? "修正候補は右に残しています。接続状態やエラーを確認して、もう一度校正してください。"
+            : "変更は右に反映しています。接続状態やエラーを確認し、必要ならもう一度校正してください。"
           : "Decider による意味の判定は実行していません。"));
     }
     return box;
@@ -832,16 +878,19 @@
   function updateOutput() {
     if (!run) return;
     const edits = run.data.edits;
+    const judgmentPending = requiredJudgmentPending();
     outputRaw = applyEdits(run.snapshot.source, edits);
     ui.output.value = outputRaw;
     paintComparison(ui.preview, comparisonParts(run.snapshot.source, edits, "after"), "change-added");
     paintComparison(ui.sourceHighlight, comparisonParts(run.snapshot.source, edits, "before"), "change-removed");
     ui.sourceHighlight.append(document.createTextNode("\n"));
     syncSourceScroll();
-    ui.outputTitle.textContent = "校正後";
-    ui.preview.setAttribute("aria-label", "変更を反映した文章の全文");
-    ui.changedCount.textContent = `変更 ${edits.length} 件`;
-    ui.outputSummary.textContent = edits.length
+    ui.outputTitle.textContent = judgmentPending ? "修正候補（意味判定が未完了）" : "校正後";
+    ui.preview.setAttribute("aria-label", judgmentPending ? "意味判定が未完了の修正候補の全文" : "変更を反映した文章の全文");
+    ui.changedCount.textContent = `${judgmentPending ? "候補" : "変更"} ${edits.length} 件`;
+    ui.outputSummary.textContent = judgmentPending
+      ? "修正候補を表示しています。意味判定が終わるまでコピー・保存はできません。"
+      : edits.length
       ? "変更を反映しました。原文は左に残っています。"
       : "変更はありません。原文と同じ文章です。";
     const shifted = edits.filter((edit) => edit.decision?.status === "executed" && edit.decision.choice === "shifted").length;
@@ -858,7 +907,11 @@
     ui.meaningWarning.hidden = notices.length === 0;
     ui.meaningWarning.textContent = notices.length
       ? `${notices.join(" · ")}。これらの変更も反映済みです。詳細で原文と理由を確認できます。` : "";
-    if (!edits.length) {
+    if (judgmentPending) {
+      ui.meaningWarning.hidden = false;
+      ui.meaningWarning.textContent = "修正候補は意味判定が未完了です。コピー・保存は保留しています。詳細で判定できなかった理由を確認できます。";
+      ui.comparisonSummary.textContent = `Decider：${judged} / ${edits.length} 件を判定。未完了のためコピー・保存は保留`;
+    } else if (!edits.length) {
       ui.comparisonSummary.textContent = run.snapshot.judge
         ? "修正案がないため、Perplexity Decider の意味判定は実行していません。"
         : "Perplexity Decider の意味判定はオフです。";
@@ -883,7 +936,7 @@
   });
   ui.generateButton.addEventListener("click", analyze);
   ui.generationToggle.addEventListener("change", () => { invalidate(); renderGenerator(); });
-  ui.deciderToggle.addEventListener("change", () => invalidate());
+  ui.deciderToggle.addEventListener("change", () => { syncDeciderRequirement(); invalidate(); });
   ui.refreshDecider.addEventListener("click", () => refreshDeciderCapability());
   ui.retryConfig.addEventListener("click", loadConfig);
   ui.settingsOpen.addEventListener("click", () => openSettings());
@@ -893,7 +946,7 @@
   ui.errorSettings.addEventListener("click", () => openSettings(true));
   ui.errorLogin.addEventListener("click", () => { openSettings(); ui.geminiLogin.focus(); });
   async function exportResult(kind) {
-    if (!run || activeExport || activeRequest) return;
+    if (!run || requiredJudgmentPending() || activeExport || activeRequest) return;
     const exportRun = run;
     const exportRevision = revision;
     const finalText = outputRaw;
