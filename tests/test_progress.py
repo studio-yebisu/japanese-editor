@@ -274,6 +274,7 @@ class HttpProgressTests(unittest.TestCase):
         self.assertEqual(handler.send.call_args.args, (200, {"ok": True}))
         self.assertEqual(self.registry.get("request-http")["status"], "completed")
         poll = self.handler("/api/progress/request-http")
+        del poll.headers["Content-Length"]
         poll.do_GET()
         self.assertEqual(poll.send.call_args.args, (200, self.registry.get("request-http")))
 
@@ -304,6 +305,7 @@ class HttpProgressTests(unittest.TestCase):
     def test_get_invalid_unknown_and_nonloopback_host_are_rejected(self):
         for route, status in (("/api/progress/invalid", 400), ("/api/progress/request-missing", 404)):
             handler = self.handler(route)
+            del handler.headers["Content-Length"]
             handler.do_GET()
             self.assertEqual(handler.send.call_args.args[0], status)
         handler = self.handler("/api/progress/request-http")

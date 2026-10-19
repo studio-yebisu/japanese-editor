@@ -11,6 +11,7 @@ import atexit
 from collections import deque
 from contextlib import contextmanager
 import ctypes
+import http.client
 import json
 import math
 import os
@@ -21,9 +22,8 @@ import sys
 import threading
 import time
 import uuid
-from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
+import rpc_auth
 from runtime_paths import RESOURCE_ROOT, PERSISTENT_ROOT
 
 ROOT = RESOURCE_ROOT
@@ -179,6 +179,7 @@ def _safe_error(error):
     messages = {"not_configured": "ローカルDeciderの設定がありません。", "disabled": "ローカルDeciderは無効です。",
                 "insufficient_memory": "空きメモリが不足しているため、モデルを読み込んでいません。",
                 "service_unavailable": "共有Deciderサービスに接続できません。", "timeout": "Deciderの応答が時間内に届きませんでした。",
+                "service_authentication_failed": "共有Deciderサービスを認証できません。アプリと共有サービスを同じバージョンに更新してください。",
                 "worker_stop_failed": "判定プロセスの停止を確認できません。重複起動を防ぐため再読み込みを保留しています。",
                 "request_too_long": "入力がモデルのトークン上限を超えています。文章を短くして再実行してください。",
                 "invalid_request": "Deciderへの要求形式を確認してください。",
@@ -528,7 +529,7 @@ def _service_configuration():
         valid = (url is not None and not any(ord(character) <= 32 or ord(character) == 127 for character in value)
                  and url.scheme == "http" and url.hostname in ("127.0.0.1", "localhost")
                  and url.username is None and url.password is None and url.path in ("", "/")
-                 and not url.query and not url.fragment and 0 < (url.port or 80) <= 65535)
+                 and not url.query and not url.fragment and 0 < (80 if url.port is None else url.port) <= 65535)
     except ValueError:
         valid = False
     if not valid:
@@ -539,11 +540,6 @@ def _service_configuration():
     return {"url": value.rstrip("/"), "timeout": remote, "cpu_dtype": data.get("cpu_dtype", "float32"), "device": data.get("device")}
 
 
-class _NoRedirect(HTTPRedirectHandler):
-    def redirect_request(self, *_args, **_kwargs):
-        return None
-
-
 def _remote(service, path, payload=None, timeout=3):
     try:
         body = None if payload is None else json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8")
@@ -551,34 +547,26 @@ def _remote(service, path, payload=None, timeout=3):
             raise ValueError("request too large")
     except (ValueError, TypeError, UnicodeError) as exc:
         raise DeciderRuntimeError("invalid_request", "Deciderへの要求が大きすぎるか、JSONとして扱えません。", recoverable=True) from exc
-    request = Request(service["url"] + path, data=body,
-                      headers={"Content-Type": "application/json"} if body is not None else {},
-                      method="GET" if body is None else "POST")
-    # Local manuscripts must not pass through environment-configured proxies or
-    # an HTTP redirect to another origin.
-    opener = build_opener(ProxyHandler({}), _NoRedirect())
     try:
-        with opener.open(request, timeout=timeout) as response:
-            raw = response.read(2_000_001)
-        if len(raw) > 2_000_000:
-            raise ValueError("response too large")
+        # Authenticate the exclusively bound loopback peer before sending any
+        # manuscript bytes, then bind request and response to that same socket.
+        # There is no legacy unsigned fallback, proxy or redirect path.
+        status_code, raw = rpc_auth.authenticated_request(service["url"], path, body, timeout=timeout)
         output = json.loads(raw)
         if not isinstance(output, dict):
             raise ValueError("response is not an object")
-        return output
-    except HTTPError as exc:
-        try:
-            error_body = json.loads(exc.read(65536))
-        except (ValueError, OSError):
-            error_body = {}
-        error = error_body.get("error") if isinstance(error_body, dict) else None
-        if exc.code in (400, 409, 422, 503) and isinstance(error, dict) and isinstance(error.get("code"), str):
+        if status_code == 200:
+            return output
+        error = output.get("error")
+        if status_code in (400, 409, 422, 503) and isinstance(error, dict) and isinstance(error.get("code"), str):
             raise DeciderRuntimeError(error["code"], str(error.get("message", "Deciderの処理が完了しませんでした。")), error.get("details"),
-                                      recoverable=error["code"] in RECOVERABLE_REQUEST_ERRORS and error.get("recoverable") is True) from exc
-        if exc.code in (400, 409, 422, 503) and isinstance(error_body, dict) and isinstance(error_body.get("code"), str):
-            raise DeciderRuntimeError(error_body["code"], str(error or "Deciderの処理が完了しませんでした。")) from exc
-        raise DeciderRuntimeError("service_unavailable", "共有Deciderサービスに接続できません。サーバーの起動状態を確認してください。") from exc
-    except (URLError, OSError) as exc:
+                                      recoverable=error["code"] in RECOVERABLE_REQUEST_ERRORS and error.get("recoverable") is True)
+        if status_code in (400, 409, 422, 503) and isinstance(output.get("code"), str):
+            raise DeciderRuntimeError(output["code"], str(error or "Deciderの処理が完了しませんでした。"))
+        raise DeciderRuntimeError("service_unavailable", "共有Deciderサービスに接続できません。サーバーの起動状態を確認してください。")
+    except rpc_auth.AuthenticationError as exc:
+        raise DeciderRuntimeError("service_authentication_failed", str(exc)) from exc
+    except (OSError, http.client.HTTPException) as exc:
         raise DeciderRuntimeError("service_unavailable", "共有Deciderサービスに接続できません。サーバーの起動状態を確認してください。") from exc
     except ValueError as exc:
         raise DeciderRuntimeError("service_protocol_error", "共有Deciderサービスの応答形式が不正です。") from exc
