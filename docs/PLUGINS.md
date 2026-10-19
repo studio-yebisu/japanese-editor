@@ -1,6 +1,6 @@
 # Codex / Claude / MCP への組み込み
 
-WindowsとmacOSで共通のPythonエンジンを使います。主な使い方は、ホスト自身のモデルで修正案を作り、MCPで原文との対応とローカル判定を確認する流れです。通常のホスト校正に、GeminiやSarashinaを追加で呼ぶ必要はありません。MCP・スキルの導入と、任意の大きなFlashモデルの導入を分けます。
+WindowsとmacOSで共通のPythonエンジンを使います。主に、ホスト自身のモデルで修正案を作り、MCPで原文との対応とローカル判定を確認します。通常のホスト校正に、GeminiやSarashinaを追加で呼ぶ必要はありません。MCP・スキルと、容量の大きなFlashモデルは別々に導入します。Flashモデルの導入は任意です。
 
 画面では修正を右の文章へ自動で反映します。MCPではホストが候補を見直し、最終稿に反映する案を `finalize` へ渡します。MCPの登録だけで、開いているファイルを自動で書き換えることはありません。
 
@@ -18,7 +18,7 @@ python -B install.py
 python3 -B install.py
 ```
 
-Windows専用アプリの「Codexに登録」からも同じ登録処理を使えます。stdio MCP用の実行ファイルは `StudioYebisuEditorCLI.exe` です。GUI用の `StudioYebisuEditor.exe` をMCPのコマンドへ指定しないでください。
+Windows専用アプリの「このPCのCodexへ登録」からも同じ登録処理を使えます。stdio MCP用の実行ファイルは `StudioYebisuEditorCLI.exe` です。GUI用の `StudioYebisuEditor.exe` をMCPのコマンドへ指定しないでください。
 
 登録処理は次を行います。
 
@@ -32,7 +32,7 @@ CodexのMCP設定は通常 `~/.codex/config.toml`（`CODEX_HOME`指定時はそ�
 
 ## 別のホストや手動登録
 
-次のコマンドは、現在の実体に対応するMCP設定JSONを出力します。設定や認証情報を自動変更しません。
+次のコマンドは現在の実体に対応するMCP設定JSONを出力します。設定や認証情報を自動変更しません。
 
 ```sh
 python -B app.py mcp-config
@@ -77,10 +77,10 @@ MCPは必要時に `127.0.0.1:8896` の共有サービスを起動します。�
 
 結果の位置はUTF-16の `[start,end)`、`source_hash` は元の本文のSHA-256です。原文が変わった結果を使い回しません。規則の指摘、案を作ったモデルの理由、Deciderの選択は別の情報です。`decision.status=executed` のときだけ判定済みと説明し、未設定・入力上限・実行失敗・時間切れを成功に言い換えません。`scope=excerpt` は前後の抜粋の比較で、全文や採用案の組み合わせ全体の保証ではありません。
 
-`analyze` の `generate=true` は、選んだ外部サービスへ文章を送る明示的な機能です。既定はfalseで、通常のホスト校正は `review_proposals` を使います。Gemini は公式 Antigravity CLI（`agy`）の Google ログイン、Sarashina は API キーを使います。Antigravity CLI の導入・ログインは、画面からの生成を使う場合だけ必要です。ホスト自身が案を作る通常の MCP 校正では不要です。[生成サービスと認証](PROVIDERS.md) を参照してください。
+`analyze` の `generate=true` は選んだ外部サービスへ文章を送る明示的な機能です。既定はfalseで、通常のホスト校正は `review_proposals` を使います。Gemini は公式 Antigravity CLI（`agy`）の Google ログイン、Sarashina は API キーを使います。Antigravity CLI の導入・ログインは、画面からの生成を使う場合だけ必要です。ホスト自身が案を作る通常の MCP 校正では不要です。[生成サービスと認証](PROVIDERS.md) を参照してください。
 
 ## 停止・登録の見直し
 
-Flashだけを解放するには `python -B app.py decider-stop`、共有サービス全体を終了するには `python -B app.py stop-service` を使います。macOSは `python3` に読み替えます。判定中の停止は処理の終了を待つ場合があり、画面を閉じることを推論取消の保証としません。
+Flashだけを解放するには `python -B app.py decider-stop`、共有サービス全体を終了するには `python -B app.py stop-service` を使います。macOSは `python3` に読み替えます。判定中に停止を指示しても、処理の終了を待つ場合があります。画面を閉じても、推論が取り消される保証はありません。
 
 MCP登録を外す場合は、CodexのMCP設定で `yebisu-japanese-editor` だけを無効化または削除します。不要になった個人スキルを取り除く前に、自分で加えた変更を確認してください。既存のCodex設定全体をバックアップで上書きする方法は、後から追加した他の設定を失う可能性があります。Sarashina の API キーの削除はアプリの専用操作または OS の資格情報管理で行い、設定JSONを削除しただけでキーが消えたとは扱いません。Gemini のログイン情報は公式 Antigravity CLI が OS キーリングで管理します。アプリは認証トークンを読んだりコピーしたりしません。旧版で保存した Gemini API キーを、新しい Google ログイン接続で使用・自動削除することはありません。

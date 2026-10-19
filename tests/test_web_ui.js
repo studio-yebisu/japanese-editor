@@ -191,7 +191,7 @@ test("each toggle is independent; disabled judging never appears as a successful
   assert.equal(body.generate, true); assert.equal(body.judge, false); assert.equal(h.getOutput(), corrected);
   assert.match(get("meaning-warning").textContent, /意味判定未実行 1 件/);
   assert.match(get("comparison-summary").textContent, /オフ/);
-  assert.doesNotMatch(get("edits-list").textContent, /意味を保持と判定/);
+  assert.doesNotMatch(get("edits-list").textContent, /意味を保っていると判定/);
   toggle("enable-generation", false); state.analysis = { ...analysisFixture(raw), edits: [], stages: { rules: "executed", generation: "not_requested", decider: "not_run" } }; await h.analyze();
   const last = state.requests.filter((item) => item.url === "/api/analyze").at(-1).body;
   assert.equal(last.generate, false); assert.equal(last.judge, false); assert.equal(h.getOutput(), raw);
@@ -204,7 +204,7 @@ for (const decision of [{ status: "executed", choice: "shifted" }, { status: "ex
     assert.equal(h.getOutput(), corrected); assert.equal(h.currentSource(), raw);
     assert.equal(get("meaning-warning").hidden, false); assert.equal(get("copy-result").disabled, false);
     assert.match(get("meaning-warning").textContent, /反映済み/);
-    assert.doesNotMatch(get("edits-list").textContent, /意味を保持と判定/);
+    assert.doesNotMatch(get("edits-list").textContent, /意味を保っていると判定/);
     assert.match(get("edits-list").textContent, /変更済み/);
     assert.equal(get("edits-list").querySelectorAll("button").length, 0);
   });
@@ -346,7 +346,7 @@ test("export shows inspection progress with its own request ID, then clears prog
   state.analysis = analysisFixture(raw); await h.analyze();
   let release; state.exportGate = () => new Promise((resolve) => { release = resolve; });
   const pending = h.exportResult("copy"); const operation = h.getProgress();
-  assert.match(get("progress-message").textContent, /Yomiyasuの全文点検中/);
+  assert.match(get("progress-message").textContent, /Yomiyasuで全文を点検しています/);
   const request = state.requests.find((item) => item.url === "/api/export");
   assert.equal(request.headers["X-Yebisu-Request-Id"], operation.requestId);
   assert.equal(get("copy-result").disabled, true); release(); await pending;

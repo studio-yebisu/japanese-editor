@@ -160,9 +160,9 @@ def lint(text, profile):
                                 timeout=30, cwd=ROOT, **hidden_process())
         data = json.loads(result.stdout)
     except (subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
-        raise EditorError("ルール点検を完了できませんでした。文章を短くして試してください。") from exc
+        raise EditorError("規則点検を完了できませんでした。文章を短くして試してください。") from exc
     if result.returncode != 0 or data.get("format") != "yomiyasu-lint" or data.get("format_version") != 2:
-        raise EditorError("ルール点検の応答形式または実行状態を確認できませんでした。")
+        raise EditorError("規則点検の応答形式または実行状態を確認できませんでした。")
     return [{key: item.get(key) for key in ("rule", "message", "line", "severity", "snippet")}
             for item in data.get("findings", [])]
 
@@ -244,7 +244,7 @@ def generation_instructions(profile, strength):
 def _claude_proposal(text, context, instruction):
     executable = shutil.which("claude")
     if not executable:
-        raise EditorError("Claude Codeが見つかりません。規則のチェックは利用できます。")
+        raise EditorError("Claude Codeが見つかりません。規則の点検は利用できます。")
     # The upstream guide exceeds Windows' command-line length limit. Send it on
     # stdin with the manuscript; only the short role instruction is an argv.
     payload = json.dumps({"editor_instructions": instruction, "source": text, "style_notes": context}, ensure_ascii=False)
@@ -337,7 +337,7 @@ def analyze(payload):
               "notes": ["指摘は見直し候補です。指摘の有無で文章の品質や意味保持は判定できません。"],
               "yomiyasu": {**_guide_identity(), "rules": "executed", "generation_guidance": {"status": "not_sent", "sources": []}}}
     if profile["id"] in ("fiction", "dialogue"):
-        output["notes"].append("小説・台詞では、比喩・省略・反復などを作風として残します。ルール指摘を一律に適用しません。")
+        output["notes"].append("小説・台詞では比喩・省略・反復などを作風として残します。規則の指摘を一律に適用しません。")
     if payload.get("generate", False):
         progress.report("generation")
         generated = generate(text, profile, strength, context, provider=payload.get("provider"), model=payload.get("model"))
@@ -348,7 +348,7 @@ def analyze(payload):
         if len(generated) > 6:
             output["yomiyasu"].update(generated[6])
         output["notes"].extend(notes)
-        output["notes"].append("修正理由は生成モデルの提案です。")
+        output["notes"].append("修正理由は修正案を作ったモデルの説明です。")
         output["stages"]["generation"] = "executed"
         if payload.get("judge", True):
             from decider import attach
@@ -425,5 +425,5 @@ def check_final(source, final, profile_id="article"):
         progress.report("checking", completed=2, total=2)
         return {"text": final, "source_hash": digest(source), "final_hash": digest(final),
                 "check": data, "verification": verified,
-                "note": "Yomiyasuの全文点検と本文照合が完了しました。意味保持や読みやすさの合格判定ではありません。"}
+                "note": "Yomiyasuによる全文の点検と本文の照合が完了しました。意味が保たれているか、読みやすいかを判定したものではありません。"}
 

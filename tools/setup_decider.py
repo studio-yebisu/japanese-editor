@@ -135,7 +135,7 @@ def preflight(args, private):
             "inference_verified": False, "native_mac_verified": False,
             "runtime_checks": {"model_hashes": "not_run", "cpu_bfloat16_ops": "not_run",
                                "cuda": "not_run", "inference": "not_run", "native_macos": "unverified"},
-            "note": "準備可否の点検です。総RAMと現在の空きRAMは別です。演算対応・速度・実推論の成功は保証しません。"}
+            "note": "準備できるかどうかの点検です。総RAMと現在の空きRAMは別です。演算対応・速度・実推論の成功は保証しません。"}
 
 
 def main(argv=None):

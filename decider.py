@@ -164,10 +164,10 @@ def attach(output, text):
     output["decider"] = {"model": info["model"], "revision": info["revision"], "backend": "local",
                          "device": info["device"], "executed": successes, "total": len(output["edits"])}
     output["decider"].update({key: info[key] for key in ("precision", "precision_override", "reference_path") if key in info})
-    output["notes"].append("Deciderの結果は意味変化に対するモデルの判定です。修正理由は候補を作ったモデルの説明です。")
-    output["notes"].append("判定は一件ずつ原文に適用した候補が対象です。複数の候補を合わせた最終稿の意味は判定していません。")
+    output["notes"].append("Deciderの結果は意味が変わったかどうかについてのモデルの判定です。修正理由は候補を作ったモデルの説明です。")
+    output["notes"].append("各修正案を一件ずつ原文に反映した文章を判定します。複数の候補を合わせた最終稿の意味は判定していません。")
     if any(edit.get("decision", {}).get("scope") == "excerpt" for edit in output["edits"]):
-        output["notes"].append("長文の判定は、変更箇所と前後の抜粋を対象にしています。全文の意味保持を判定したものではありません。")
+        output["notes"].append("長文の判定は変更箇所と前後の抜粋を対象にしています。全文の意味保持を判定したものではありません。")
     if failure or had_errors:
         output["notes"].append("一部のDecider判定を完了できませんでした。原文と修正候補は残しています。")
     progress.report("decider", completed=attempts, total=total,

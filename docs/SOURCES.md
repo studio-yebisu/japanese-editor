@@ -60,7 +60,7 @@ lint の JSON は次の形式。`findings` は同じ行に複数出る場合が�
 
 上の形式説明では、`metrics` と品質点数ではない `rule_penalty_score`、候補の続きは省略した。diff は `format: yomiyasu-diff`, `format_version: 2` で、`status`, `changed`, `meaning_risks`, `meaning_risk_count`, `fail_on_meaning_risk_count`, `full_diff.hunks` 等を返す。check の run/verify は `format: yomiyasu-check-result`, `format_version: 1` である。異なる形式の結果を同一 schema として扱わない。
 
-候補があっても、`--strict` や `--fail-on` を付けない lint の終了コードは0。終了コード0や check の `executed` は、検査の実行状態を示し、修正案の適切さを保証しない。`partial` と入力・実行エラーは通常完了から区別する。`--reader` はメタデータとして記録されるが、現行 checker の検出結果自体は変えない。
+候補があっても、`--strict` や `--fail-on` を付けない lint の終了コードは0。終了コード0や check の `executed` は検査の実行状態を示し、修正案の適切さを保証しない。`partial` と入力・実行エラーは通常完了と区別する。`--reader` はメタデータとして記録されるが、現行 checker の検出結果自体は変えない。
 
 check は原稿全文を含む記録をローカルに保存するため、アプリの状態フォルダを明示し、公開データ・配布物から除外する。任意の `yomiyasu_hook.py` は同梱されているが、アプリの試作ではホスト設定へのフック導入や有効化を行っていない。
 
@@ -68,7 +68,7 @@ check は原稿全文を含む記録をローカルに保存するため、ア�
 
 Windows の `python`（3.13.7）で同梱 lint の `--help` と、合成した日本語2行を標準入力から渡す `--json --doc-type article --reader informed` を実行した。JSON を返して終了コード0だった。候補は4件（warn 3、info 1）で、`meta_filler`、`negative_parallelism`、`metaphor_verb` が含まれた。これは検査器が起動・検出・JSON 出力できた証拠であり、自然な日本語への修正品質を測った結果ではない。
 
-著者の文書は、Windows 実機、対話 UI、プラグイン配布形態で十分に検証していない範囲も明示している。今回の単体 lint 実行から、Codex / Claude のフック全体の Windows 互換性を推定しない。
+著者の文書はWindows 実機、対話 UI、プラグイン配布形態で十分に検証していない範囲も明示している。今回の単体 lint 実行から、Codex / Claude のフック全体の Windows 互換性を推定しない。
 
 ## Perplexity Decider v1.2 / Flash v1.2
 

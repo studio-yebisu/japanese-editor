@@ -54,11 +54,11 @@ def _post_json(endpoint, body, key, provider):
         messages = {400: "入力または生成設定を確認してください。", 401: "APIキーの認証を確認してください。",
                     403: "モデルへのアクセス権とAPIキーの制限を確認してください。",
                     404: "指定モデルの提供状況を確認してください。別モデルには切り替えていません。",
-                    429: "利用枠またはレート制限に達しました。時間をおいて、手動で再試行してください。"}
+                    429: "利用枠またはレート制限に達しました。時間をおいて手動で再試行してください。"}
         message = messages.get(exc.code, "生成サービスが応答を完了できませんでした。時間をおいて再試行してください。")
         raise GenerationError("http_error", f"生成APIでエラーが発生しました（HTTP {exc.code}）。{message}") from None
     except (URLError, OSError, TimeoutError):
-        raise GenerationError("connection_error", "生成APIへの接続を完了できませんでした。認証情報や原文を含むエラーの詳細は表示していません。") from None
+        raise GenerationError("connection_error", "生成APIに接続できませんでした。認証情報や原文を含むエラーの詳細は表示していません。") from None
     except GenerationError:
         raise
     except (ValueError, UnicodeError, RecursionError):

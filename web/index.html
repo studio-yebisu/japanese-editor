@@ -32,7 +32,7 @@
           <div class="analysis-actions">
             <div class="processing-options" aria-label="校正に使う機能">
               <label class="processing-option"><input id="enable-generation" type="checkbox" checked aria-describedby="generation-transmission" /><span id="generation-option-label">Gemini校正</span><small id="generation-transmission">原文を送信</small></label>
-              <label class="processing-option"><input id="enable-decider" type="checkbox" checked /><span>Perplexityによる意味判定</span></label>
+              <label class="processing-option"><input id="enable-decider" type="checkbox" checked /><span>Deciderの意味判定</span></label>
             </div>
             <button id="analyze-generate" type="button" class="button button-primary" disabled><span class="button-main">校正する</span><span class="button-detail sr-only">選択したサービスへ文章を送信</span></button>
           </div>
@@ -53,7 +53,7 @@
             <div class="panel-heading"><h2 id="source-title">原文</h2><div class="pane-tools"><button id="load-sample" type="button" class="text-button">例文</button><label class="text-button import-label" for="open-text">開く<input id="open-text" type="file" accept=".txt,.md,text/plain,text/markdown" /></label></div></div>
             <div class="editor-surface source-surface">
               <div id="source-highlight" class="source-highlight text-surface" aria-hidden="true"></div>
-              <label for="source" class="sr-only">確認したい日本語の原文</label>
+              <label for="source" class="sr-only">校正する文章の原文</label>
               <textarea id="source" class="source-text text-surface" placeholder="文章を入力するか、貼り付けてください。" spellcheck="false" aria-describedby="source-help"></textarea>
             </div>
             <div class="pane-footer source-meta"><span id="source-help">原文はそのまま残ります</span><span id="character-count">0 字</span></div>
@@ -63,8 +63,8 @@
             <div class="panel-heading"><h2 id="output-title">校正後</h2><span id="changed-count" class="quiet-label"></span></div>
             <p id="meaning-warning" class="meaning-warning" role="status" hidden></p>
             <div class="editor-surface output-surface">
-              <div id="review-empty" class="empty-state">校正した文章がここに表示されます。</div>
-              <div id="output-preview" class="output-preview text-surface" role="textbox" aria-readonly="true" aria-label="校正した文章の全文" tabindex="0"></div>
+              <div id="review-empty" class="empty-state">校正後の文章がここに表示されます。</div>
+              <div id="output-preview" class="output-preview text-surface" role="textbox" aria-readonly="true" aria-label="校正後の文章の全文" tabindex="0"></div>
               <label for="output" class="sr-only">変更を反映した文章</label>
               <textarea id="output" readonly spellcheck="false" tabindex="-1" hidden></textarea>
             </div>
@@ -107,15 +107,15 @@
             <div id="gemini-login-settings" hidden><p>Google公式のAntigravity CLIを導入し、Googleアカウントでログインします。GeminiのAPIキーは不要です。</p><div class="settings-actions"><button id="login-gemini" class="button button-small button-secondary" type="button">Googleアカウントでログイン</button></div><p class="field-description">ログインは公式CLIとGoogleの画面で行います。</p></div>
             <div id="api-key-settings" hidden><label for="api-key">SarashinaのAPIキー</label><input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="保存済みのキーは表示しません" /><button id="remove-api-key" class="text-button" type="button">保存したキーを削除</button><p class="field-description">Windowsの資格情報マネージャー、Macのキーチェーンに保存します。</p></div>
             <div class="settings-actions"><button id="save-provider" class="button button-small button-secondary" type="button">設定を保存</button><a id="provider-setup" target="_blank" rel="noreferrer noopener">導入とログインの案内</a></div>
-            <p id="generation-notice" class="field-description">生成サービスを確認しています。</p>
+            <p id="generation-notice" class="field-description">修正案を作るサービスを確認しています。</p>
           </section>
           <section class="settings-section" aria-labelledby="writing-settings-title">
-            <h3 id="writing-settings-title">文章の設定</h3><p id="profile-description" class="field-description">用途に合う読み方で文章を確認します。</p>
+            <h3 id="writing-settings-title">文章の設定</h3><p id="profile-description" class="field-description">用途に合わせて文章を確認します。</p>
             <label for="context">文体メモ・守りたい表現 <span class="optional-label">任意</span></label><textarea id="context" maxlength="2000" rows="3" placeholder="例：語り手のくだけた口調を残す。「ひと息つく」は変えない。" spellcheck="false" aria-describedby="context-help"></textarea><p id="context-help" class="field-description">2000字まで。文章と一緒に、選択したサービスへ送信します。</p>
           </section>
           <section class="settings-section" aria-labelledby="connection-title">
             <h3 id="connection-title">接続状態</h3>
-            <div class="availability-row"><span>規則のチェック</span><span id="rules-stage" class="stage-badge">確認中</span></div><div class="availability-row"><span>修正案の生成</span><span id="generator-stage" class="stage-badge">確認中</span></div><div class="availability-row"><span>Decider の判断</span><span id="decider-stage" class="stage-badge stage-muted">確認中</span></div>
+            <div class="availability-row"><span>Yomiyasuの規則点検</span><span id="rules-stage" class="stage-badge">確認中</span></div><div class="availability-row"><span>修正案の生成</span><span id="generator-stage" class="stage-badge">確認中</span></div><div class="availability-row"><span>Deciderの意味判定</span><span id="decider-stage" class="stage-badge stage-muted">確認中</span></div>
             <p id="decider-note" class="field-description">接続状態を確認しています。</p><div class="settings-actions"><button id="refresh-decider" type="button" class="text-button" disabled>接続状態を更新</button><button id="release-decider" type="button" class="text-button" disabled>判定モデルのメモリを解放</button></div>
           </section>
           <section class="settings-section" aria-labelledby="integration-title"><h3 id="integration-title">Codexへの組み込み</h3><p>CodexやClaude Code自身に修正案を作ってもらう場合、追加のAPIキーは不要です。</p><div class="settings-actions"><button id="install-codex" type="button" class="button button-small button-secondary">このPCのCodexへ登録</button></div><p id="codex-status" class="field-description">登録状態を確認しています。</p></section>

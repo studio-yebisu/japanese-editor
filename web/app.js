@@ -165,7 +165,7 @@
       ui.progressBar.value = data.completed;
       ui.progressMessage.textContent = `意味判定 ${data.completed} / ${data.total} 件 · ${message}`;
     } else if (countKnown) {
-      ui.progressMessage.textContent = `意味判定 0 / ${data.total} 件 · モデルの準備・最初の判定を待っています。${message}`;
+      ui.progressMessage.textContent = `意味判定 0 / ${data.total} 件 · モデルの準備と最初の判定を待っています。${message}`;
     } else if (data.stage === "generation" && Number.isInteger(data.attempt) && Number.isInteger(data.max_attempts)
       && data.attempt > 1 && data.attempt <= data.max_attempts && data.max_attempts <= 3) {
       ui.progressMessage.textContent = `${message}（${data.attempt} / ${data.max_attempts} 回目）`;
@@ -305,7 +305,7 @@
       ui.deciderNote.textContent = "この PC で判定しています。入力を変えると結果を表示しませんが、推論自体は続く場合があります。";
     } else if (state === "busy" || capability?.status === "busy") {
       stage(ui.deciderStage, "別の判定を実行中");
-      ui.deciderNote.textContent = "共有するローカル Decider が判定中です。完了してから接続状態を更新してください。";
+      ui.deciderNote.textContent = "共有しているローカルDeciderが判定中です。完了してから接続状態を更新してください。";
     } else if (state === "loading" || capability?.status === "loading") {
       stage(ui.deciderStage, "モデル読み込み中");
       ui.deciderNote.textContent = "ローカルモデルを読み込んでいます。しばらくしてから接続状態を更新してください。";
@@ -315,7 +315,7 @@
       ui.deciderNote.textContent = `${model} / ${precisionDeviceLabel(capability)}。${latestError ? "前の試行でエラーがありました。設定は有効なので、対象を確認して再試行できます。" : capability?.loaded ? "モデルは読み込み済みです。" : "初回はモデルを読み込むため時間がかかります。"}判定はこの PC で行います。意味の保持を保証するものではありません。`;
     } else if (state === "unavailable") {
       stage(ui.deciderStage, "利用できません");
-      ui.deciderNote.textContent = "ローカル判定は利用できません。修正候補は、ご自身で原文と読み比べられます。";
+      ui.deciderNote.textContent = "ローカル判定は利用できません。修正候補はご自身で原文と読み比べられます。";
     } else if (state === "not_connected") {
       stage(ui.deciderStage, "未接続");
       ui.deciderNote.textContent = "Decider は未接続です。モデルによる判定はまだ行っていません。";
@@ -340,7 +340,7 @@
     const gemini = provider?.id === "gemini";
     const api = provider?.auth_method === "api_key";
     if (config) config.stages.generator = ready ? "available" : "unavailable";
-    stage(ui.generatorStage, gemini ? ready ? "CLI 導入済み" : provider?.cli_status === "unsupported_version" ? "CLI の版を確認" : provider?.cli_installed ? "Google ログイン待ち" : "CLI 未導入"
+    stage(ui.generatorStage, gemini ? ready ? "CLI 導入済み" : provider?.cli_status === "unsupported_version" ? "CLIのバージョンを確認" : provider?.cli_installed ? "Google ログイン待ち" : "CLI 未導入"
       : ready ? api ? "キー設定済み" : "CLI 検出済み" : api ? "API キー未設定" : "CLI 未検出", ready);
     ui.generateButton.querySelector(".button-main").textContent = "校正する";
     const shortLabel = { gemini: "Gemini", sarashina: "Sarashina", claude: "Claude" }[provider?.id] || provider?.label || "AI";
@@ -349,14 +349,14 @@
     ui.generateButton.querySelector(".button-detail").textContent = ui.generationToggle.checked
       ? `${provider?.label || "選択したサービス"}へ文章を送信` : "外部へ送信せず、規則を確認";
     ui.setupPrompt.hidden = !ui.generationToggle.checked || ready || !config;
-    ui.providerNotice.textContent = provider?.notice || "生成サービスを選んでください。";
+    ui.providerNotice.textContent = provider?.notice || "修正案を作るサービスを選んでください。";
     ui.credentialStatus.textContent = gemini
-      ? ready ? "公式Antigravity CLIを利用できます。認証・利用枠・モデルへのアクセスは生成時に確認します。"
-        : provider?.cli_status === "unsupported_version" ? `導入済みのAntigravity CLIは ${provider.cli_version} です。対応する版を導入してください。`
+      ? ready ? "公式Antigravity CLIを利用できます。認証・利用枠・モデルへのアクセスは修正案を作るときに確認します。"
+        : provider?.cli_status === "unsupported_version" ? `導入済みのAntigravity CLIは ${provider.cli_version} です。対応するバージョンを導入してください。`
         : provider?.cli_installed ? "公式CLIは導入済みです。Antigravity CLIを開き、Googleアカウントでログインしてください。"
           : "公式Antigravity CLIが見つかりません。下の手順で導入後、アプリを開き直してください。"
       : provider?.configured
-        ? `接続設定あり（${provider.credential_source === "environment" ? "環境変数" : provider.credential_source === "existing_cli" ? "既存の CLI 認証" : "OS の資格情報ストア"}）。実利用可否は生成時に確認します。`
+        ? `接続設定あり（${provider.credential_source === "environment" ? "環境変数" : provider.credential_source === "existing_cli" ? "既存の CLI 認証" : "OS の資格情報ストア"}）。実際に利用できるかは修正案を作るときに確認します。`
         : api ? "SarashinaのAPIキーは未設定です。キーを取得して入力してください。" : "Claude CLIが見つかりません。";
     ui.geminiSettings.hidden = !gemini;
     ui.keySettings.hidden = !api;
@@ -368,7 +368,7 @@
     if (provider?.setup_url) ui.providerSetup.href = provider.setup_url;
     ui.generationNotice.textContent = ready
       ? `${provider.notice} 原文は自動保存しません。`
-      : "生成先を設定してください。規則だけの確認と、Codex・Claudeからの校正も利用できます。";
+      : "修正案を作るサービスを設定してください。設定しなくても規則の点検やCodex・Claudeからの校正は利用できます。";
     if (api && config?.generation?.secret_store?.notice && config.generation.secret_store.available === false) {
       ui.credentialStatus.textContent += ` ${config.generation.secret_store.notice}`;
     }
@@ -394,14 +394,14 @@
   async function saveProvider(remove = false) {
     if (!config || settingsBusy || activeRequest || activeExport || refreshingCapability) return;
     settingsBusy = true; updateButtons(); clearError();
-    const operation = startBusy(remove ? "保存したAPIキーを削除しています。" : "生成サービスの設定を保存しています。");
+    const operation = startBusy(remove ? "保存したAPIキーを削除しています。" : "修正案を作るサービスの設定を保存しています。");
     const payload = { provider: ui.provider.value, model: ui.providerModel.value };
     if (remove) payload.remove_key = true;
     else if (selectedGenerator()?.auth_method === "api_key" && ui.apiKey.value.trim()) payload.api_key = ui.apiKey.value.trim();
     try {
       const generation = await readJson(await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }));
       config.generation = generation; loadProviders(generation);
-      setStatus(remove ? "保存したAPIキーを削除しました。環境変数のキーは変更していません。" : "生成サービスの設定を保存しました。原文はそのままです。");
+      setStatus(remove ? "保存したAPIキーを削除しました。環境変数のキーは変更していません。" : "修正案を作るサービスの設定を保存しました。原文はそのままです。");
     } catch (error) { showError(error.message); }
     finally { stopBusy(operation); ui.apiKey.value = ""; settingsBusy = false; renderGenerator(); updateButtons(); }
   }
@@ -439,7 +439,7 @@
     ui.count.textContent = `${Array.from(currentSource()).length.toLocaleString("ja-JP")} 字`;
   }
 
-  function invalidate(message = "原文または設定が変わりました。もう一度チェックしてください。") {
+  function invalidate(message = "原文または設定が変わりました。もう一度「校正する」を押してください。") {
     revision += 1;
     const hadResults = Boolean(run || activeRequest || activeExport);
     if (activeRequest) activeRequest.abort();
@@ -454,7 +454,7 @@
     ui.empty.hidden = false;
     ui.reviewDetails.open = false;
     ui.reviewDetails.hidden = true;
-    ui.reviewCount.textContent = "まだチェックしていません";
+    ui.reviewCount.textContent = "まだ校正していません";
     ui.findings.replaceChildren();
     ui.edits.replaceChildren();
     ui.questions.replaceChildren();
@@ -480,7 +480,7 @@
 
   function updateProfileDescription() {
     const profile = config?.profiles.find((item) => item.id === ui.profile.value);
-    ui.profileDescription.textContent = profile?.description || "用途に合う読み方で文章を確認します。";
+    ui.profileDescription.textContent = profile?.description || "用途に合わせて文章を確認します。";
   }
 
   function fillOptions(select, values) {
@@ -566,11 +566,11 @@
         || edit.start < 0 || edit.end < edit.start || edit.end > source.length
         || typeof edit.before !== "string" || typeof edit.after !== "string"
         || source.slice(edit.start, edit.end) !== edit.before) {
-        throw new Error("原文と修正候補の位置が一致しません。文章を再チェックしてください。");
+        throw new Error("原文と修正候補の位置が一致しません。もう一度「校正する」を押してください。");
       }
       const splitsPair = (offset) => offset > 0 && offset < source.length
         && /[\uD800-\uDBFF]/.test(source[offset - 1]) && /[\uDC00-\uDFFF]/.test(source[offset]);
-      if (splitsPair(edit.start) || splitsPair(edit.end)) throw new Error("文字の途中に修正位置があります。文章を再チェックしてください。");
+      if (splitsPair(edit.start) || splitsPair(edit.end)) throw new Error("文字の途中に修正位置があります。もう一度「校正する」を押してください。");
       ids.add(edit.id);
       return Object.freeze({ ...edit });
     });
@@ -587,7 +587,7 @@
     const generate = ui.generationToggle.checked;
     const judge = ui.deciderToggle.checked;
     if (generate && config.stages.generator !== "available") {
-      showError("校正するには、生成先を設定してください。", false, true);
+      showError("校正するには修正案を作るサービスを設定してください。", false, true);
       setStatus("設定を保存してから、もう一度「校正する」を押してください。");
       openSettings(true);
       return;
@@ -629,7 +629,7 @@
       if (data.offset_encoding !== "utf-16" || typeof data.source_hash !== "string"
         || data.profile !== profile || data.strength !== strength || !data.stages
         || !Array.isArray(data.findings) || !Array.isArray(data.questions)) {
-        throw new Error("チェック結果の形式が一致しません。ページを読み直して、再チェックしてください。");
+        throw new Error("校正結果の形式が一致しません。ページを読み直して、もう一度「校正する」を押してください。");
       }
       const edits = validateEdits(data.edits, source);
       run = {
@@ -642,8 +642,8 @@
     } catch (error) {
       if (error.name === "AbortError" || revision !== requestRevision) return;
       showError(`校正できませんでした。${error.message}`, false, generate);
-      setStatus(generate ? "原文は残っています。ログインや生成先の設定を確認してください。" : "原文は残っています。入力と接続を確認してください。");
-      ui.reviewCount.textContent = "チェックできませんでした";
+      setStatus(generate ? "原文は残っています。ログイン状態や、修正案を作るサービスの設定を確認してください。" : "原文は残っています。入力と接続を確認してください。");
+      ui.reviewCount.textContent = "校正できませんでした";
     } finally {
       if (activeRequest === controller) { activeRequest = null; activeTask = null; }
       stopBusy(operation);
@@ -663,13 +663,13 @@
     const preserved = data.edits.filter((edit) => edit.decision?.status === "executed" && edit.decision.choice === "preserved").length;
     ui.comparisonSummary.textContent = !data.edits.length ? ""
       : executed === data.edits.length
-        ? preserved === executed ? `Decider：${executed} 件で意味保持と判定` : `Decider：${executed} 件を判定・詳細を確認`
+        ? preserved === executed ? `Decider：${executed} 件で意味を保っていると判定` : `Decider：${executed} 件を判定・詳細を確認`
         : executed ? `Decider：${executed} / ${data.edits.length} 件を判定` : "Decider：判定未実行";
     const generationLabels = {
-      executed: "生成した変更を右の文章に反映しました。",
+      executed: "作成した修正案を右の文章に反映しました。",
       not_requested: "修正案の生成はオフです。規則を確認し、原文をそのまま表示しています。",
-      unavailable: "規則のチェック結果です。修正案は今回作成できませんでした。",
-      host_supplied: "既存の修正候補に対するチェック結果です。",
+      unavailable: "規則の点検結果です。今回は修正案を作成できませんでした。",
+      host_supplied: "既存の修正案を点検した結果です。",
     };
     const judgmentLabels = {
       executed: "この PC の Decider で判定しました。モデルの判定は意味の保持を保証するものではありません。",
@@ -680,7 +680,7 @@
       input_rejected: "入力の長さなどのため、Decider の判定を保留した候補があります。各候補の案内をご覧ください。",
       deferred: "Decider の判定を保留しています。各候補の状態と案内をご覧ください。",
     };
-    ui.summary.textContent = generationLabels[data.stages.generation] || "チェック結果を確認してください。";
+    ui.summary.textContent = generationLabels[data.stages.generation] || "校正結果を確認してください。";
     if (data.yomiyasu?.rules === "executed") {
       const version = typeof data.yomiyasu.version === "string" ? ` ${data.yomiyasu.version}` : "";
       const guidance = data.yomiyasu.generation_guidance;
@@ -710,7 +710,7 @@
     ui.findingsCount.textContent = String(findings.length);
     ui.findings.replaceChildren();
     if (!findings.length) {
-      ui.findings.append(node("p", "empty-note", "今回の規則チェックでは、指摘はありません。文章全体の品質を保証するものではありません。"));
+      ui.findings.append(node("p", "empty-note", "今回の規則点検では、指摘はありません。文章全体の品質を保証するものではありません。"));
       return;
     }
     findings.forEach((finding) => {
@@ -730,8 +730,8 @@
     ui.editGuidance.hidden = edits.length === 0;
     if (!edits.length) {
       ui.edits.append(node("p", "empty-note", run.data.stages.generation === "not_requested"
-        ? "このチェックで置き換える候補はありません。生成サービスを設定すると、修正案も依頼できます。"
-        : "置き換える修正候補はありません。確認したい点があれば、上の指摘をご覧ください。"));
+        ? "今回は文章を置き換える修正案はありません。サービスを設定すると、修正案の作成も依頼できます。"
+        : "文章を置き換える修正案はありません。確認したい点があれば、上の指摘をご覧ください。"));
       return;
     }
     edits.forEach((edit, index) => {
@@ -748,7 +748,7 @@
       after.append(node("span", "diff-label", "修正後"), node("ins", "diff-after", edit.after || "（削除）"));
       diff.append(before, after);
       const reason = node("p", "edit-reason");
-      reason.append(node("span", "edit-reason-label", "修正案の作成時の理由"), node("span", "", edit.reason || "変更した箇所を原文と読み比べてください。"));
+      reason.append(node("span", "edit-reason-label", "修正案を作った理由"), node("span", "", edit.reason || "変更した箇所を原文と読み比べてください。"));
       card.append(top, diff, reason, renderModelDecision(edit.decision));
       if (edit.decision?.status === "executed" && ["shifted", "needs_review"].includes(edit.decision.choice)) {
         card.append(node("p", "edit-warning", "意味の変化に注意：この変更も右の文章に反映しています。前後の文と読み比べてください。"));
@@ -767,7 +767,7 @@
   }
 
   function renderModelDecision(decision) {
-    const labels = { preserved: "意味を保持と判定", shifted: "意味が変わる可能性", needs_review: "判断保留" };
+    const labels = { preserved: "意味を保っていると判定", shifted: "意味が変わる可能性", needs_review: "判断保留" };
     const executed = decision?.status === "executed" && Object.hasOwn(labels, decision.choice);
     const kind = executed ? decision.choice.replaceAll("_", "-") : decision?.status === "error" ? "error" : "not-run";
     const box = node("div", `model-decision is-${kind}`);
@@ -788,7 +788,7 @@
       const error = decisionErrorMessage(decision?.error);
       if (error) box.append(node("p", "model-decision-meta", error));
       box.append(node("p", "model-decision-meta", isInputRejected(decision)
-        ? "この候補を短くするか、原文を分けて再チェックしてください。接続状態の更新だけでは解消しません。"
+        ? "原文を分けて、もう一度「校正する」を押してください。接続状態の更新だけでは解消しません。"
         : decision?.status === "error" || error
           ? "変更は右に反映しています。接続状態やエラーを確認し、必要ならもう一度校正してください。"
           : "Decider による意味の判定は実行していません。"));
@@ -878,7 +878,7 @@
     setSourceText(sample);
     updateCount();
     invalidate();
-    setStatus("例文を入力しました。用途と程度を選んでチェックできます。");
+    setStatus("例文を入力しました。用途と校正の強さを選んで校正できます。");
     ui.source.focus();
   });
   ui.generateButton.addEventListener("click", analyze);
@@ -900,7 +900,7 @@
     const controller = new AbortController();
     activeExport = controller;
     const requestId = newRequestId();
-    const operation = startBusy("Yomiyasuの全文点検中です。原文と校正後の文章を確認しています。", { requestId, controller });
+    const operation = startBusy("Yomiyasuで全文を点検しています。原文と校正後の文章を確認しています。", { requestId, controller });
     clearError();
     ui.exportNote.hidden = true;
     updateButtons();
@@ -915,12 +915,12 @@
       if (run !== exportRun || revision !== exportRevision || controller.signal.aborted) return;
       if (data.text !== finalText || data.source_hash !== exportRun.snapshot.sourceHash
         || typeof data.final_hash !== "string" || data.check?.status !== "executed" || data.verification?.status !== "executed") {
-        throw new Error("検査した文章と現在の文章が一致しません。再チェックしてください。");
+        throw new Error("検査した文章と現在の文章が一致しません。もう一度「校正する」を押してください。");
       }
       ui.exportNote.textContent = typeof data.note === "string" ? data.note : "Yomiyasuの全文点検と本文照合が完了しました。意味保持や読みやすさの合格判定ではありません。";
       ui.exportNote.hidden = false;
       if (kind === "copy") {
-        if (!navigator.clipboard?.writeText) throw new Error("このブラウザーではクリップボードを利用できません。テキストでの保存をお試しください。");
+        if (!navigator.clipboard?.writeText) throw new Error("このブラウザーではクリップボードを利用できません。テキストファイルでの保存をお試しください。");
         await navigator.clipboard.writeText(data.text);
         if (run !== exportRun || revision !== exportRevision || controller.signal.aborted) return;
         setStatus("Yomiyasuの全文点検・本文照合を実行し、校正後の文章をコピーしました。");

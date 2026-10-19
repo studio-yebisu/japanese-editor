@@ -1,6 +1,6 @@
 # 日本語比較用の合成ケース
 
-`cases.json` は、比較評価へ使うオリジナルの合成12組である。`before` は原文全文、`after` は候補全文。`expected_label` は作成者の未レビュー案であり、人が確定した正解やモデルの実行結果ではない。全組に `synthetic: true` と `expected_label_origin: creator_proposal_unreviewed` を付けている。
+`cases.json` は、比較評価に使うオリジナルの合成12組である。`before` は原文全文、`after` は候補全文。`expected_label` は作成者の未レビュー案であり、人が確定した正解やモデルの実行結果ではない。全組に `synthetic: true` と `expected_label_origin: creator_proposal_unreviewed` を付けている。
 
 ラベルは `decider.py` の `meaning_shift` に合わせた `preserved`、`shifted`、`needs_review`。意味保持に加え、用途で保護する語り口も対象とする。自然さや好みの評価は別に行う。
 
