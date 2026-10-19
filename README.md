@@ -1,25 +1,27 @@
-# 日本語文章校正
+# Yomiyasu Studio
 
-日本語の文章を整え、どこを変えたか左右で見比べるツールです。解説・ブログ・仕事の文章・小説・台詞など、作るものに合わせて用途を切り替えられます。アプリで使うほか、CodexやClaude Codeへの組み込みにも対応します。制作は StudioYebisu です。
+Yomiyasu Studioは日本語の文章を整え、どこを変えたか左右で見比べるツールです。解説・ブログ・仕事の文章・小説・台詞など、作るものに合わせて用途を切り替えられます。アプリで使うほか、CodexやClaude Codeへの組み込みにも対応します。制作は StudioYebisu です。
 
 ## ダウンロード
 
-[最新版と更新内容を見る](https://github.com/studio-yebisu/japanese-editor/releases/latest)
+[最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/latest)
 
-| 使う環境 | v0.2.5のダウンロード | 提供状況 |
+| 使う環境 | v0.2.6のダウンロード | 提供状況 |
 | --- | --- | --- |
-| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/japanese-editor/releases/download/v0.2.5/StudioYebisuEditor-windows-x64-0.2.5.zip) | 専用ウィンドウ・実生成・ローカル意味判定を確認済み |
-| macOS | [ソース ZIP](https://github.com/studio-yebisu/japanese-editor/releases/download/v0.2.5/StudioYebisuEditor-source-0.2.5.zip) | Pythonで起動する実験版。Mac実機は未検証 |
+| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.6/YomiyasuStudio-windows-x64-0.2.6.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
+| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.6/YomiyasuStudio-source-0.2.6.zip) | Pythonで起動する実験版。Mac実機は未検証 |
 
-![小説の校正例。実画面の一部。左の原文に赤い取り消し線、右の校正後に緑の変更箇所を表示。](https://raw.githubusercontent.com/studio-yebisu/japanese-editor/main/docs/assets/editor.png)
+生成とローカル意味判定の実推論はv0.2.5で確認しています。v0.2.6を含む版ごとの検証内容は [STATUS.md](docs/STATUS.md) を参照してください。
+
+![小説の校正例。実画面の一部。左の原文に赤い取り消し線、右の校正後に緑の変更箇所を表示。](https://raw.githubusercontent.com/studio-yebisu/yomiyasu-studio/main/docs/assets/editor.png)
 
 ## Windowsで始める
 
 1. 上の「Windowsアプリ ZIP」をダウンロードします。
 2. ZIPを右クリックし、「**すべて展開**」を選びます。ZIPの中から直接起動しないでください。
-3. 展開先の `StudioYebisuEditor` フォルダーを開き、`StudioYebisuEditor.exe` を起動します。
+3. 展開先の `YomiyasuStudio` フォルダーを開き、`YomiyasuStudio.exe` を起動します。
 
-`StudioYebisuEditorCLI.exe` と `_internal` フォルダーは同じ場所に置いたままにします。exeだけを移すと動きません。**アプリの起動にPythonは不要**です。
+`YomiyasuStudioCLI.exe` と `_internal` フォルダーは同じ場所に置いたままにします。exeだけを移すと動きません。**アプリの起動にPythonは不要**です。
 
 WebView2が見つからないと表示された場合は、[Microsoft公式のWebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download)から「Evergreen Bootstrapper」を導入し、アプリを起動し直します。
 
@@ -34,7 +36,7 @@ Mac用の `.app` はまだ用意していません。ブラウザーで使うソ
 3. 「ターミナル」を開きます。ダウンロード先が通常の「ダウンロード」フォルダーなら、次を1行ずつ実行します。
 
 ```sh
-cd "$HOME/Downloads/StudioYebisuEditor-source-0.2.5"
+cd "$HOME/Downloads/YomiyasuStudio-source-0.2.6"
 python3 --version
 python3 -B app.py serve
 ```
@@ -103,7 +105,7 @@ Codex CLIが使える環境で、MCPと校正スキルをまとめて登録し�
 Windows配布版では、exeがあるフォルダーでPowerShellを開きます。
 
 ```powershell
-.\StudioYebisuEditorCLI.exe install-codex
+.\YomiyasuStudioCLI.exe install-codex
 ```
 
 Macのソース版では、上で展開した `app.py` のあるフォルダーで実行します。
@@ -116,6 +118,8 @@ python3 -B install.py
 
 > studio-yebisu-japanese-editorを使って、次の文章をブログ向けに整えて。意味と口調を残し、変更点と理由も見せて。
 
+既存の登録と設定を引き継ぐため、MCP名 `yebisu-japanese-editor`、個人スキル名 `studio-yebisu-japanese-editor`、設定・モデルの保存先と資格情報名は従来どおりです。製品の表示名とは別の互換用IDとして維持します。
+
 通常はCodex自身が修正案を作るため、追加のGemini設定や生成用APIキーは不要です。準備済みなら、ローカルDeciderも候補の意味判定に使います。[Claude Code・手動MCP登録など](docs/PLUGINS.md)
 
 ## ローカルの意味判定を追加する（任意）
@@ -124,7 +128,7 @@ Decider Flashは用意した原文と修正案を比較する判断モデルで�
 
 ### Windows
 
-`StudioYebisuEditor.exe` があるフォルダーでPowerShellを開き、次を実行します。
+`YomiyasuStudio.exe` があるフォルダーでPowerShellを開き、次を実行します。
 
 ```powershell
 python --version
@@ -170,6 +174,8 @@ python3 -B tools/setup_decider.py --preset mac24
 実行確認の範囲は [STATUS.md](docs/STATUS.md)、詳細な導入は [INSTALL.md](docs/INSTALL.md)、Windows固有の案内は [WINDOWS.md](docs/WINDOWS.md)を参照してください。
 
 ## 原典・ライセンス
+
+Yomiyasu StudioはStudioYebisuが制作する独立したアプリです。nanaism/yomiyasuの公式製品ではなく、原典著者による承認・品質保証を示しません。
 
 独自コードと文書は StudioYebisuの [MIT License](LICENSE) です。[nanaism/yomiyasu 2.0.0](https://github.com/nanaism/yomiyasu)の推敲方針・参照資料・検査スクリプトを使い、原典のMITとUnicode License V3の通知を無改変で保持しています。生成をオンにすると、その方針の全文と用途別資料を生成モデルへ渡します。
 

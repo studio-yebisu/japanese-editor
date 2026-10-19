@@ -41,7 +41,7 @@ agy --version
 
 既存の Antigravity ログインが有効なら、CLI が OS の安全なキーリングから認証し、再ログインなしで使えます。Windows は資格情報マネージャー、macOS はキーチェーンなどを公式 CLI 自身が扱います。アプリはトークンを読んだりコピーしたりせず、旧 Gemini CLI の OAuth ファイルも流用しません。[公式認証手順](https://antigravity.google/docs/install?tab=cli)、[公式移行案内](https://antigravity.google/docs/cli/gcli-migration/)
 
-ターミナルからアプリのログイン起動を使う場合は、ソース版で `python -B app.py gemini-login`（macOS は `python3`）、Windows 配布版で `.\StudioYebisuEditorCLI.exe gemini-login` を実行します。この操作は公式 `agy` の対話画面を開きます。アプリへ Google のパスワードを入力する必要はありません。
+ターミナルからアプリのログイン起動を使う場合は、ソース版で `python -B app.py gemini-login`（macOS は `python3`）、Windows 配布版で `.\YomiyasuStudioCLI.exe gemini-login` を実行します。この操作は公式 `agy` の対話画面を開きます。アプリへ Google のパスワードを入力する必要はありません。
 
 接続状態の表示では対応 CLI の検出と、実際の認証・モデル利用の結果を分けます。CLI を検出しただけでは、そのアカウントの認証や利用権を確認したことにはなりません。認証・利用枠・モデルへのアクセスは生成時に確認します。
 
@@ -62,6 +62,8 @@ Sarashina は API キーを設定します。保存キーを優先し、未保�
 - `providers.json` に保存するのは `version`、`provider`、`model` だけです。キーを設定JSON・生成結果・公開設定へ含めません。
 - 保存キーへのアクセス拒否や破損はエラーとし、環境変数へ切り替えません。キーの削除はアプリ固有の項目に限り、環境変数は削除しません。
 - macOS のシステムフレームワークが使えない環境や、その他のOSでは環境変数を使えます。平文ファイルへの代替保存は行いません。
+
+改名後も既存のキーを使えるよう、資格情報名と `providers.json` の保存先は従来どおりです。
 
 `public_config().secret_store` は `available`、`type`、`notice` を返します。`type` は `windows_credential_manager`、`macos_keychain`、`environment_only` のいずれかです。使用する SecKeychain API は Apple が非推奨としています。動作しない環境ではエラーを表示し、環境変数を案内します。[Apple の宣言](https://github.com/apple-oss-distributions/Security/blob/main/OSX/libsecurity_keychain/lib/SecKeychain.h)、[更新・解放・削除の宣言](https://github.com/apple-oss-distributions/Security/blob/main/OSX/libsecurity_keychain/lib/SecKeychainItem.h)
 

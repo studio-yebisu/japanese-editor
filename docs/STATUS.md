@@ -1,6 +1,16 @@
-# v0.2.5 と過去版の確認範囲
+# Yomiyasu Studio v0.2.6 と過去版の確認範囲
 
-2026-10-18。Windows / macOS 共通の MCP とスキルを中心に、Windows 専用ウィンドウを追加した版です。独自コードは StudioYebisu 名義の MIT。[ソースと導入手順](https://github.com/studio-yebisu/japanese-editor)、[配布版](https://github.com/studio-yebisu/japanese-editor/releases)を参照してください。Studio Yebisuの統合カタログへの掲載は、このアプリの公開とは別です。
+2026-10-19。Yomiyasu StudioはWindows / macOS共通のMCPとスキルを中心に、Windows専用ウィンドウも備えるアプリです。独自コードはStudioYebisu名義のMIT。[ソースと導入手順](https://github.com/studio-yebisu/yomiyasu-studio)、[配布版](https://github.com/studio-yebisu/yomiyasu-studio/releases)を参照してください。Studio Yebisuの統合カタログへの掲載は、このアプリの公開とは別です。
+
+## v0.2.6 の改名
+
+製品の表示名をYomiyasu Studioへ変更しました。Windowsの実行ファイル名は `YomiyasuStudio.exe` と `YomiyasuStudioCLI.exe`、配布ZIPは `YomiyasuStudio-windows-x64-0.2.6.zip` と `YomiyasuStudio-source-0.2.6.zip` です。公開先は `studio-yebisu/yomiyasu-studio` です。
+
+既存の登録と設定を引き継ぐため、MCP名 `yebisu-japanese-editor`、個人スキル名 `studio-yebisu-japanese-editor`、ソース内の `skills/japanese-editor/`、設定・モデルの保存先と資格情報名は維持します。上流のnanaism/yomiyasuとStudioYebisuの著作権・ライセンス通知は変更しません。Yomiyasu Studioは独立したアプリであり、上流の公式製品や承認を示しません。
+
+改名後のWindows版でPythonのテスト229件、画面ロジックのテスト19件を実行し、すべて通過しました。新名の凍結CLIでMCPと全文点検・照合、凍結GUIでEdgeChromiumの起動・規則点検・「Yomiyasu Studio」のタイトルを確認しました。この改名の検証では生成サービスとDeciderの推論は呼んでいません。Mac実機は未検証です。
+
+以下の過去版の検証記録では、当時の製品名・ファイル名・実測値を残しています。過去の試験をv0.2.6で実行したとは扱わず、改名後の確認結果は別に記録します。
 
 ## v0.2.5 の変更
 

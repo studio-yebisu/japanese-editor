@@ -1032,5 +1032,31 @@
       "final_sha256": "d3ffc0c3540f8b739192cd18e9bba8e5483611e45d83de79c2f4e953b2c94bee"
     },
     "mac_native_inference_verified": false
+  },
+  "yomiyasu_studio_v026": {
+    "date": "2026-10-19",
+    "product_name": "Yomiyasu Studio",
+    "version": "0.2.6",
+    "repository": "https://github.com/studio-yebisu/yomiyasu-studio",
+    "checks": {
+      "python_tests_passed": 229,
+      "web_ui_tests_passed": 19,
+      "frozen_cli_mcp_run_verify": "passed",
+      "frozen_gui_edgechromium": "passed",
+      "native_page_title": "Yomiyasu Studio",
+      "cloud_calls_in_rebrand_smokes": 0,
+      "model_calls_in_rebrand_smokes": 0
+    },
+    "compatibility_preserved": [
+      "data_directory",
+      "data_directory_environment_variable",
+      "credential_namespace",
+      "mcp_registration_key",
+      "skill_id",
+      "health_protocol_identity",
+      "legacy_cli_fallback"
+    ],
+    "mac_native_verified": false,
+    "note": "Earlier version records remain historical evidence; model inference was not repeated for this rebrand."
   }
 }

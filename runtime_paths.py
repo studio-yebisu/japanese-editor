@@ -25,8 +25,14 @@ PERSISTENT_ROOT = PERSISTENT_ROOT.resolve()
 
 def cli_command(*arguments):
     if FROZEN:
-        name = "StudioYebisuEditorCLI.exe" if os.name == "nt" else "StudioYebisuEditorCLI"
-        return [str(Path(sys.executable).resolve().with_name(name)), *map(str, arguments)]
+        suffix = ".exe" if os.name == "nt" else ""
+        directory = Path(sys.executable).resolve().parent
+        command = directory / ("YomiyasuStudioCLI" + suffix)
+        legacy = directory / ("StudioYebisuEditorCLI" + suffix)
+        # Older installations remain usable until their complete bundle is updated.
+        if not command.is_file() and legacy.is_file():
+            command = legacy
+        return [str(command), *map(str, arguments)]
     return [sys.executable, "-B", str(RESOURCE_ROOT / "app.py"), *map(str, arguments)]
 
 

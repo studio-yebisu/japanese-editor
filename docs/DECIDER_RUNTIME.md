@@ -15,6 +15,8 @@
 | 専用環境 | torch 2.14.0+cpu、transformers 5.17.0、CPU threads 8 |
 | 新規保管先 | Windows: `%LOCALAPPDATA%/StudioYebisu/JapaneseEditor/decider/`。macOS: `~/Library/Application Support/StudioYebisu/JapaneseEditor/decider/`。環境・モデル・設定・生ログは配布対象外 |
 
+改名後も既存のモデルと設定を使うため、保管先の `StudioYebisu/JapaneseEditor/` は維持します。
+
 公式 native は CPU で FP32 を選びます。このモードでは、隔離したワーカー内で backbone の `from_pretrained` に渡す dtype だけを、ロード中の限定された範囲で BF16 に変え、decision head も BF16 に揃えます。公式ソースや重みのバイト列、forward 処理、`torch.float32` 自体は変更しません。別モデルや量子化モデルへの置換ではありません。**公式 CPU FP32 との数値・判定の一致は未検証**です。対応しない環境で別精度へ自動的に切り替えることはありません。
 
 ## 新規環境で準備する

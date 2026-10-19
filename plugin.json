@@ -1,20 +1,29 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "studio-yebisu-japanese-editor",
-  "version": "0.2.5",
-  "description": "用途と作風に合わせて日本語を校正する、StudioYebisuのMCPとスキル。",
-  "author": {"name": "StudioYebisu"},
+  "name": "yomiyasu-studio",
+  "version": "0.2.6",
+  "description": "Yomiyasu StudioのMCPとスキル。用途と作風を保ち、日本語の修正案を比較します。",
+  "author": {
+    "name": "StudioYebisu"
+  },
   "license": "MIT",
-  "keywords": ["japanese", "proofreading", "yomiyasu", "mcp"],
+  "keywords": [
+    "japanese",
+    "proofreading",
+    "yomiyasu",
+    "mcp"
+  ],
   "extensions": {
     "com.openai": {
       "onboardingSkill": "./skills/setup/SKILL.md",
       "interface": {
-        "displayName": "文章の手入れ — StudioYebisu",
+        "displayName": "Yomiyasu Studio",
         "shortDescription": "原文と作風を残し、日本語の修正案を比較する。",
         "developerName": "StudioYebisu",
         "category": "Productivity",
-        "defaultPrompt": ["この文章を、用途と作風を保って校正してください。"]
+        "defaultPrompt": [
+          "この文章を、用途と作風を保って校正してください。"
+        ]
       }
     }
   }

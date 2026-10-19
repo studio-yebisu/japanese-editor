@@ -20,6 +20,6 @@ MCP・スキルの導入では、大きなモデルのダウンロードや既�
 
 ## 報告
 
-脆弱性は[GitHubの非公開報告](https://github.com/studio-yebisu/japanese-editor/security/advisories/new)を使ってください。フォームを利用できない場合は、[Issues](https://github.com/studio-yebisu/japanese-editor/issues)で報告内容を伏せ、非公開の連絡方法だけを問い合わせてください。通常の不具合や改善案もIssuesで受け付けます。
+脆弱性は[GitHubの非公開報告](https://github.com/studio-yebisu/yomiyasu-studio/security/advisories/new)を使ってください。フォームを利用できない場合は、[Issues](https://github.com/studio-yebisu/yomiyasu-studio/issues)で報告内容を伏せ、非公開の連絡方法だけを問い合わせてください。通常の不具合や改善案もIssuesで受け付けます。
 
 APIキー・実際の原稿・設定ファイル・脆弱性の悪用手順を公開投稿しないでください。共有できる範囲は、アプリの版、OSとPythonの版、架空の入力による再現手順、期待する動作と実際の動作です。対応済み・調査中・実機未確認を分けて記録します。

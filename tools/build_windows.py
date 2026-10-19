@@ -148,7 +148,7 @@ def smoke_cli(directory):
         {"jsonrpc":"2.0", "id":3, "method":"tools/call", "params":{"name":"japanese_editor_review_proposals", "arguments":{**payload, "judge":False}}},
         {"jsonrpc":"2.0", "id":4, "method":"tools/call", "params":{"name":"japanese_editor_finalize", "arguments":payload}},
     ]
-    process = subprocess.run([str(directory / "StudioYebisuEditorCLI.exe"), "mcp"],
+    process = subprocess.run([str(directory / "YomiyasuStudioCLI.exe"), "mcp"],
         input=("\n".join(json.dumps(value, ensure_ascii=False) for value in requests)+"\n").encode("utf-8"),
         capture_output=True, timeout=60)
     responses = [json.loads(line) for line in process.stdout.decode("utf-8").splitlines()]
@@ -175,7 +175,7 @@ def smoke_cli(directory):
 def smoke_gui(directory):
     target = BUILD_ROOT / f"proofs/native-window-{PROOF_SUFFIX}.json"
     target.unlink(missing_ok=True)
-    process = subprocess.run([str(directory / "StudioYebisuEditor.exe"), "--smoke-test-output", str(target)], timeout=75)
+    process = subprocess.run([str(directory / "YomiyasuStudio.exe"), "--smoke-test-output", str(target)], timeout=75)
     record = json.loads(target.read_text("utf-8"))
     if process.returncode or record.get("status") != "passed" or record.get("renderer") != "edgechromium":
         raise SystemExit(f"Native GUI smoke failed; inspect {target}")
@@ -193,7 +193,7 @@ def smoke_recovery(directory):
     target.unlink(missing_ok=True)
     gui = None
     with (target.parent / f"temporary-service-{PROOF_SUFFIX}.log").open("ab") as log:
-        service = subprocess.Popen([str(directory / "StudioYebisuEditorCLI.exe"), "serve"],
+        service = subprocess.Popen([str(directory / "YomiyasuStudioCLI.exe"), "serve"],
             stdin=subprocess.DEVNULL, stdout=log, stderr=log, creationflags=subprocess.CREATE_NO_WINDOW)
         try:
             deadline = time.monotonic()+15
@@ -201,7 +201,7 @@ def smoke_recovery(directory):
                 if service.poll() is not None or time.monotonic() > deadline:
                     raise SystemExit("検証用サービスを起動できませんでした。")
                 time.sleep(0.2)
-            gui = subprocess.Popen([str(directory / "StudioYebisuEditor.exe"), "--smoke-recovery-output", str(target)])
+            gui = subprocess.Popen([str(directory / "YomiyasuStudio.exe"), "--smoke-recovery-output", str(target)])
             deadline = time.monotonic()+50
             while True:
                 try:
@@ -248,7 +248,7 @@ def main(argv=None):
     if struct.calcsize("P") != 8:
         raise SystemExit("64ビット版 Python を使用してください。")
     if args.smoke_cli or args.smoke_gui or args.smoke_recovery:
-        directory = BUILD_ROOT / "dist/StudioYebisuEditor"
+        directory = BUILD_ROOT / "dist/YomiyasuStudio"
         if args.smoke_recovery:
             smoke_recovery(directory)
         if args.smoke_cli:
@@ -271,7 +271,7 @@ def main(argv=None):
                     "--distpath", str(BUILD_ROOT / "dist"), "--workpath", str(BUILD_ROOT / "pyinstaller"),
                     str(ROOT / "build/windows.spec")], cwd=ROOT, check=True,
                    env={**os.environ, "PYINSTALLER_CONFIG_DIR": str(BUILD_ROOT / "cache")})
-    print(BUILD_ROOT / "dist/StudioYebisuEditor")
+    print(BUILD_ROOT / "dist/YomiyasuStudio")
 
 
 if __name__ == "__main__":

@@ -31,7 +31,7 @@
 
 Python 標準ライブラリのみで動く。upstream は Python 3.8 以上の文法を用いる。単体 lint に必要な同梱モジュールは `scripts/markdown_visibility.py`。diff と check には同じ版の各 scripts と `references/lists/` も保持する。
 
-プロジェクトの `apps/japanese-editor/` を作業ディレクトリとする例:
+ソースを展開した `app.py` のあるフォルダーを作業ディレクトリとする例:
 
 ```powershell
 python -B vendor/yomiyasu/scripts/yomiyasu_lint.py original.md --doc-type article --reader informed --json

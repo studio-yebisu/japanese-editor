@@ -40,9 +40,9 @@ gui = Analysis([str(root / 'desktop.py')], pathex=[str(root), vendor_path],
                excludes=excludes)
 cli = Analysis([str(root / 'app.py')], pathex=[str(root), vendor_path],
                datas=resources, hiddenimports=sorted(vendor_imports), excludes=excludes+['webview'])
-gui_exe = EXE(PYZ(gui.pure), gui.scripts, [], exclude_binaries=True, name='StudioYebisuEditor',
+gui_exe = EXE(PYZ(gui.pure), gui.scripts, [], exclude_binaries=True, name='YomiyasuStudio',
               console=False, icon=str(generated / 'icon.ico'), uac_admin=False)
-cli_exe = EXE(PYZ(cli.pure), cli.scripts, [], exclude_binaries=True, name='StudioYebisuEditorCLI',
+cli_exe = EXE(PYZ(cli.pure), cli.scripts, [], exclude_binaries=True, name='YomiyasuStudioCLI',
               console=True, icon=str(generated / 'icon.ico'), uac_admin=False)
 COLLECT(gui_exe, cli_exe, gui.binaries, gui.datas, cli.binaries, cli.datas,
-        strip=False, upx=False, name='StudioYebisuEditor')
+        strip=False, upx=False, name='YomiyasuStudio')

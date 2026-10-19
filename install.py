@@ -11,7 +11,7 @@ from runtime_paths import cli_command
 
 
 def main():
-    parser = argparse.ArgumentParser(description="StudioYebisu 日本語エディターをCodexへ組み込む")
+    parser = argparse.ArgumentParser(description="Yomiyasu StudioをCodexへ組み込む")
     parser.add_argument("--print-config", action="store_true", help="設定例を表示し、登録はしない")
     args = parser.parse_args()
     if args.print_config:
