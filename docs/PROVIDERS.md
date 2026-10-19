@@ -6,11 +6,11 @@
 
 | 選択肢 | 接続と認証 | 原文のアプリ内上限 |
 | --- | --- | --- |
-| Sarashina（初回既定） | Sarashina API / `sarashina3-mini`、`sarashina3-nano`。APIキーを設定し、ローカルDeciderの意味判定を併用 | 12,000字 |
+| Sarashina（初回既定） | Sarashina API / `sarashina3-mini`、`sarashina3-nano`。APIキーを設定し、ローカルDeciderの意味判定を併用 | 全体12,000字、1回2,000字以内へ自動分割 |
 | Gemini 3.8 Flash（High） | Antigravity CLI 1.4.0 / 1.4.1、`gemini-3.8-flash-high`。CLI の Google ログイン | 12,000字 |
 | Claude（既存 CLI） | 既存 Claude Code / `claude-opus-5-5`。既存 CLI の認証を利用 | 12,000字 |
 
-「字」は Python の Unicode 文字数です。12,000字はアプリの上限で、公式の128kトークンというコンテキスト長とは別の単位です。出力は公式上限の8,000トークンまでとし、途中で切れた応答は採用しません。超過した原文は拒否し、切り詰めて送りません。
+「字」はPythonのUnicode文字数です。アプリの上限と、公式の128kトークンという文脈長は別です。Sarashina向けの分割は段落・改行・文末をコードで探し、AIを使わずに行います。引用やコード、URL、絵文字等の途中を避け、安全な境界がない場合は送信前に止めます。全体の原文を切り詰めたり改行を作り直したりしません。出力上限は各回8,000トークンで、途中で切れた応答は採用しません。分割ごとの文脈になるため、離れた段落どうしの関係を十分に扱えない場合があります。
 
 ## Antigravity CLI を導入する
 
@@ -55,7 +55,7 @@ agy --version
 
 ## Sarashina の API キー
 
-[Sarashina公式サービス](https://sarashina.ai/)へGoogleアカウントで登録し、APIキーを発行してアプリの設定へ保存します。PerplexityのAPIキーは使いません。保存キーを優先し、未保存なら `SARASHINA_API_KEY` を使います。
+[公式APIキー画面](https://chat.sarashina.ai/dashboard/api-keys)へGoogleアカウントで登録・ログインし、「API Keys」で新しいキーを作成します。コピーしてアプリの設定へ保存します。設定済みなら取得し直す必要はありません。PerplexityのAPIキーは使いません。保存キーを優先し、未保存なら `SARASHINA_API_KEY` を使います。[公式の取得手順](https://docs.sarashina.ai/introduction#1-api-キーの取得)
 
 - Windows は資格情報マネージャーの Generic Credential、対象名 `StudioYebisu/JapaneseEditor/generator/sarashina` を使います。
 - macOS はシステムの Security.framework の Generic Password API、サービス名 `StudioYebisu/JapaneseEditor/generator`、アカウント名 `sarashina` を使います。実機での保存・許可ダイアログ・読み出しは未検証です。
@@ -71,7 +71,11 @@ agy --version
 
 2026年10月13日から無料のパブリックベータとして案内されています。無料期間の終了日は未定です。公開サービスの利用規約は日本在住者・日本に本店を置く法人を対象とし、第11条で入力・出力の学習やサービス開発等への利用を定めています。有償プランのオプトアウトは将来のデータが対象で、過去分へ遡りません。企業向け Cloud PF Type A の条件を、公開APIへ置き換えて案内しません。[SB Intuitions の発表](https://www.sbintuitions.co.jp/news/press/20261013_01/)、[Sarashina 利用規約](https://sarashina.ai/terms)
 
-固定の HTTPS `https://api.sarashina.ai/v1/chat/completions`、Bearer ヘッダー、`response_format.json_schema`、`max_completion_tokens: 8000` を使います。アプリからの送信は1回の操作につき1リクエストです。送信1,000,000バイト・受信2,000,000バイトを境界とし、タイムアウトは180秒。リダイレクト・環境変数由来プロキシ・自動再試行・別サービスへの代替送信を行いません。429は時間をおいて手動で再試行します。公式上限は mini 6 RPM、nano 60 RPM です。[モデルと接続](https://docs.sarashina.ai/)、[Chat Completions](https://docs.sarashina.ai/api-reference/chat-completions)、[レート制限](https://docs.sarashina.ai/rate-limits)
+固定のHTTPS `https://api.sarashina.ai/v1/chat/completions`、Bearerヘッダー、`response_format.json_schema`、`max_completion_tokens: 8000` を使います。Sarashinaは分割したまとまりごとに送信し、同じプロバイダーとモデル、Yomiyasuの方針を使います。アプリ内の送信開始間隔を10秒以上空け、待機中も何番目を処理しているか示します。ほかのアプリが使った分の利用枠までは把握できません。
+
+各回は送信1,000,000バイト・受信2,000,000バイト・接続待ち180秒までです。途中のまとまりが失敗したら、その操作全体の結果を保留し、一部だけを本文へ反映しません。リダイレクト・環境変数由来プロキシ・自動再試行・別サービスへの代替送信は行いません。429は時間をおいて手動で再試行します。公式上限はmini 6 RPM、nano 60 RPMです。[モデルと接続](https://docs.sarashina.ai/)、[Chat Completions](https://docs.sarashina.ai/api-reference/chat-completions)、[レート制限](https://docs.sarashina.ai/rate-limits)
+
+処理中に原文を編集すると、その操作の結果表示を中止します。受理済みの生成や判定、分割処理は続く場合があります。再度「校正する」を押した場合は、先頭から送り直します。途中からの再開や、成功した部分だけの再利用は行いません。
 
 ## 生成結果の確認
 

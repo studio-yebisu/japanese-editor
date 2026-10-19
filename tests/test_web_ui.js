@@ -63,7 +63,7 @@ function configFixture() {
     generation: {
       provider: "gemini", model: "gemini-3.8-flash-high", secret_store: { available: true },
       providers: [
-        { id: "sarashina", label: "Sarashina", available: true, configured: true, models: ["sarashina3-mini", "sarashina3-nano"], max_text_chars: 12000, notice: "API", auth_method: "api_key" },
+        { id: "sarashina", label: "Sarashina", available: true, configured: true, models: ["sarashina3-mini", "sarashina3-nano"], max_text_chars: 2000, max_document_chars: 12000, chunking: "paragraphs", notice: "API", auth_method: "api_key" },
         { id: "gemini", label: "Gemini 3.8 Flash", available: true, cli_installed: true, cli_status: "ready", models: ["gemini-3.8-flash-high"], max_text_chars: 12000, notice: "Google公式CLI", auth_method: "google_login" },
         { id: "claude", label: "Claude CLI", available: true, models: ["claude-model"], max_text_chars: 12000, notice: "CLI", auth_method: "existing_cli" },
       ],

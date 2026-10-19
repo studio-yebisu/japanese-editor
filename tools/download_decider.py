@@ -10,6 +10,7 @@ import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from runtime_paths import PERSISTENT_ROOT
+from setup_decider import disk_preflight, disk_issue
 
 ROOT = PERSISTENT_ROOT / 'decider'
 REVISION = '6d771ad7b5ecff5e93b8fc7b90d4c5ccc341954d'
@@ -76,6 +77,13 @@ for name,expected in manifest['files'].items():
     if prefix>expected['bytes']: raise RuntimeError('Unexpected partial length')
     jobs=[(name,start,min(start+CHUNK,expected['bytes'])-1,expected['bytes']) for start in range(prefix,expected['bytes'],CHUNK)]
     plans.append((name,expected,prefix,jobs))
+# A same-size existing file can still fail its hash. Recheck the full download
+# budget after verification, before fetching any weight ranges or small files.
+disk = disk_preflight(ROOT, model_reusable=not plans and not small)
+problem = disk_issue(disk)
+if problem:
+    print(json.dumps({'disk': disk}, ensure_ascii=False), flush=True)
+    raise RuntimeError(problem)
 print(json.dumps({'prefixes_preserved':{p[0]:p[2] for p in plans},'ranges':sum(len(p[3]) for p in plans),'parallel':4}),flush=True)
 with ThreadPoolExecutor(max_workers=4) as pool:
     futures=[pool.submit(piece,job) for _,_,_,jobs in plans for job in jobs]

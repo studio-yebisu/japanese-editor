@@ -164,27 +164,27 @@ class SarashinaRequirementTests(unittest.TestCase):
         self.infer.assert_not_called()
         self.assertFalse(any("コピー・保存できません" in note for note in result["notes"]))
 
-    def test_twelve_thousand_characters_keep_one_strict_schema_request_and_completion_guard(self):
+    def test_two_thousand_characters_keep_one_strict_schema_request_and_completion_guard(self):
         self.key.side_effect = None
         self.key.return_value = "fake-key"
         self.post.side_effect = None
         self.post.return_value = {"model": "sarashina3-mini", "choices": [{"finish_reason": "stop", "message": {
             "content": json.dumps({"edits": [], "questions": [], "suggestions": []})}}]}
-        result = generators.generate({"source": "あ" * 12000, "provider": "sarashina"}, "校正方針", engine.GENERATOR_SCHEMA)
+        result = generators.generate({"source": "あ" * 2000, "provider": "sarashina"}, "校正方針", engine.GENERATOR_SCHEMA)
         self.assertEqual(result["proposal"]["edits"], [])
         self.post.assert_called_once()
         body = self.post.call_args.args[1]
         self.assertEqual((body["max_completion_tokens"], body["n"], body["stream"]), (8000, 1, False))
         self.assertEqual(body["response_format"]["json_schema"], {"name": "japanese_editor", "schema": engine.GENERATOR_SCHEMA, "strict": True})
-        self.assertEqual(len(json.loads(body["messages"][1]["content"])["source"]), 12000)
+        self.assertEqual(len(json.loads(body["messages"][1]["content"])["source"]), 2000)
         self.post.return_value["choices"][0]["finish_reason"] = "length"
         with self.assertRaises(generators.GenerationError) as raised:
-            generators.generate({"source": "あ" * 12000, "provider": "sarashina"}, "校正方針", engine.GENERATOR_SCHEMA)
+            generators.generate({"source": "あ" * 2000, "provider": "sarashina"}, "校正方針", engine.GENERATOR_SCHEMA)
         self.assertEqual(raised.exception.code, "generation_incomplete")
         self.post.reset_mock()
         self.key.reset_mock()
         with self.assertRaises(generators.GenerationError) as raised:
-            generators.generate({"source": "あ" * 12001, "provider": "sarashina"}, "校正方針", engine.GENERATOR_SCHEMA)
+            generators.generate({"source": "あ" * 2001, "provider": "sarashina"}, "校正方針", engine.GENERATOR_SCHEMA)
         self.assertEqual(raised.exception.code, "input_too_long")
         self.key.assert_not_called()
         self.post.assert_not_called()

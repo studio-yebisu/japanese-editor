@@ -10,7 +10,7 @@ Windows用ZIPを展開し、`YomiyasuStudio.exe` を起動します。モデル�
 python -B _internal/editor/tools/setup_decider.py --device cpu --cpu-dtype bfloat16 --max-length 2048
 ```
 
-既存設定は上書きしません。必要な空きRAM・停止方法は [DECIDER_RUNTIME.md](DECIDER_RUNTIME.md) を参照してください。
+既存設定は上書きしません。初回はモデルと取得中の一時領域、専用依存等を合わせた追加の空きディスク30GiBを目安とし、取得前に容量を確認します。CPU BF16・文脈2048には空きRAM11GiB以上、Windowsではコミット余裕も11GiB以上が必要です。総RAMと空きRAMは別の条件です。詳しい予算と停止方法は [DECIDER_RUNTIME.md](DECIDER_RUNTIME.md) を参照してください。
 
 ## macOS・Apple Silicon（実験段階）
 

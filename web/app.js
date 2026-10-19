@@ -8,7 +8,7 @@
     saveProvider: byId("save-provider"), removeKey: byId("remove-api-key"), providerSetup: byId("provider-setup"),
     geminiLogin: byId("login-gemini"), geminiSettings: byId("gemini-login-settings"), keySettings: byId("api-key-settings"),
     installCodex: byId("install-codex"), codexStatus: byId("codex-status"), releaseDecider: byId("release-decider"),
-    source: byId("source"), context: byId("context"), profile: byId("profile"), strength: byId("strength"),
+    source: byId("source"), sourceHelp: byId("source-help"), context: byId("context"), profile: byId("profile"), strength: byId("strength"),
     profileDescription: byId("profile-description"), count: byId("character-count"),
     generateButton: byId("analyze-generate"), generationToggle: byId("enable-generation"),
     deciderToggle: byId("enable-decider"), generationLabel: byId("generation-option-label"), generationTransmission: byId("generation-transmission"),
@@ -34,6 +34,8 @@
     errorSettings: byId("error-settings"), errorLogin: byId("error-login"), busyNote: byId("busy-note"),
     progressBox: byId("operation-progress"), progressBar: byId("progress-bar"), progressMessage: byId("progress-message"),
     settingsFeedback: byId("settings-feedback"),
+    onboarding: byId("sarashina-onboarding"), resourceError: byId("decider-resource-error"), deciderGuide: byId("decider-setup-guide"),
+    motion: byId("edit-motion"), motionLabel: byId("edit-motion-label"),
   };
 
   let config = null;
@@ -155,6 +157,7 @@
 
   function renderProgress(operation, data) {
     if (!progressIsCurrent(operation)) return;
+    renderEditMotion(operation, data);
     const message = typeof data.message === "string" && data.message ? data.message : operation.message;
     const countKnown = data.stage === "decider" && Number.isInteger(data.completed) && Number.isInteger(data.total)
       && data.total > 0 && data.completed >= 0 && data.completed <= data.total;
@@ -167,6 +170,9 @@
       ui.progressMessage.textContent = `意味判定 ${data.completed} / ${data.total} 件 · ${message}`;
     } else if (countKnown) {
       ui.progressMessage.textContent = `意味判定 0 / ${data.total} 件 · モデルの準備と最初の判定を待っています。${message}`;
+    } else if (data.stage === "generation" && Number.isInteger(data.chunk_index) && Number.isInteger(data.chunk_total)
+      && data.chunk_index > 0 && data.chunk_index <= data.chunk_total) {
+      ui.progressMessage.textContent = `段落の校正 ${data.chunk_index} / ${data.chunk_total} · ${message}`;
     } else if (data.stage === "generation" && Number.isInteger(data.attempt) && Number.isInteger(data.max_attempts)
       && data.attempt > 1 && data.attempt <= data.max_attempts && data.max_attempts <= 3) {
       ui.progressMessage.textContent = `${message}（${data.attempt} / ${data.max_attempts} 回目）`;
@@ -224,6 +230,7 @@
 
   function stopBusy(operation) {
     if (operation && activeProgress !== operation) return;
+    clearEditMotion(activeProgress);
     if (activeProgress?.pollTimer != null) clearTimeout(activeProgress.pollTimer);
     activeProgress?.pollController?.abort();
     activeProgress = null;
@@ -234,6 +241,82 @@
     ui.progressBox.hidden = true;
     ui.progressMessage.textContent = "";
     ui.progressBar.removeAttribute("value");
+  }
+
+  function clearEditMotion(operation) {
+    ui.motion.hidden = true;
+    ui.sourceHelp.textContent = "原文はそのまま残ります";
+    ui.sourceHighlight.removeAttribute("data-motion");
+    ui.preview.removeAttribute("data-motion");
+    if (operation?.motionPainted && !run) {
+      ui.sourceHighlight.textContent = currentSource() + "\n";
+      ui.preview.replaceChildren(); ui.empty.hidden = false;
+      ui.outputTitle.textContent = "校正後";
+      ui.outputSummary.textContent = "";
+      ui.comparisonSummary.textContent = "";
+    }
+  }
+
+  function renderEditMotion(operation, data) {
+    // Progress contains only hash + positions, never a cached manuscript.
+    // The original remains editable; a revision/abort invalidates this view.
+    const motion = data.motion;
+    if (data.status !== "running" || data.stage !== "decider" || !motion
+      || !operation.sourceHash || motion.source_hash !== operation.sourceHash
+      || motion.offset_encoding !== "utf-16" || !Array.isArray(motion.edits)
+      || !motion.edits.length || motion.edits.length > 50) return;
+    const source = operation.source;
+    const states = ["pending", "checking", "executed", "error", "not_run"];
+    const seen = new Set();
+    const entries = [...motion.edits].sort((a, b) => a.start - b.start || a.end - b.end);
+    let previous = 0;
+    for (const edit of entries) {
+      if (!Number.isInteger(edit.index) || edit.index < 0 || edit.index >= 50 || seen.has(edit.index)
+        || !Number.isInteger(edit.start) || !Number.isInteger(edit.end)
+        || edit.start < previous || edit.end < edit.start || edit.end > source.length
+        || !states.includes(edit.status)
+        || [edit.start, edit.end].some((offset) => offset > 0 && offset < source.length
+          && /[\uD800-\uDBFF]/.test(source[offset - 1]) && /[\uDC00-\uDFFF]/.test(source[offset]))) return;
+      seen.add(edit.index); previous = edit.end;
+    }
+    const key = JSON.stringify(entries);
+    if (operation.motionKey === key) return;
+    operation.motionKey = key; operation.motionPainted = true;
+    let cursor = 0;
+    const parts = [], mirror = [];
+    let focusMark = null, focusMirror = null;
+    for (const edit of entries) {
+      parts.push(document.createTextNode(source.slice(cursor, edit.start)));
+      mirror.push(document.createTextNode(source.slice(cursor, edit.start)));
+      const text = source.slice(edit.start, edit.end);
+      const mark = node("mark", `motion-span motion-${edit.status}${text ? "" : " change-anchor"}`, text);
+      parts.push(mark);
+      const echo = node("mark", `motion-echo motion-${edit.status}${text ? "" : " change-anchor"}`, text);
+      mirror.push(echo);
+      if (edit.status === "checking") { focusMark = mark; focusMirror = echo; }
+      cursor = edit.end;
+    }
+    parts.push(document.createTextNode(source.slice(cursor)), document.createTextNode("\n"));
+    mirror.push(document.createTextNode(source.slice(cursor)));
+    ui.sourceHighlight.replaceChildren(...parts); syncSourceScroll();
+    ui.preview.replaceChildren(...mirror); ui.empty.hidden = true;
+    ui.sourceHighlight.setAttribute("data-motion", "checking");
+    ui.preview.setAttribute("data-motion", "checking");
+    ui.outputTitle.textContent = "意味を照合しています";
+    ui.outputSummary.textContent = "入力文の修正候補の位置を表示しています。修正後の本文は判定終了後に表示します。";
+    const done = entries.filter((edit) => edit.status === "executed").length;
+    const checking = entries.find((edit) => edit.status === "checking");
+    if (checking && operation.focusedEdit !== checking.index && Number.isFinite(focusMark?.offsetTop)) {
+      operation.focusedEdit = checking.index;
+      ui.source.scrollTop = Math.max(0, focusMark.offsetTop - ui.source.clientHeight / 3);
+      syncSourceScroll();
+      ui.preview.scrollTop = Math.max(0, focusMirror.offsetTop - ui.preview.clientHeight / 3);
+    }
+    ui.motionLabel.textContent = checking
+      ? `修正候補 ${checking.index + 1} を照合中 · 判定済み ${done} / ${entries.length}`
+      : `修正箇所を確認しています · 判定済み ${done} / ${entries.length}`;
+    ui.motion.hidden = false;
+    ui.comparisonSummary.textContent = "赤ペンが示すのは生成済みの候補です。緑の本文は処理完了後に表示します。";
   }
 
   function node(tag, className, text) {
@@ -331,6 +414,19 @@
     if (latestError && activeTask !== "judge") {
       ui.deciderNote.append(node("br"), node("strong", "", "直近のエラー："), node("span", "", latestError));
     }
+    const details = capability?.error?.details;
+    const resources = [];
+    for (const [label, free, required] of [
+      ["空きRAM", details?.ram_available_bytes, details?.ram_required_bytes],
+      ["コミット余裕", details?.commit_available_bytes, details?.commit_required_bytes],
+      ["空きVRAM", details?.cuda_available_bytes, details?.cuda_required_bytes],
+    ]) {
+      if ([free, required].every((value) => Number.isFinite(value) && value >= 0 && value < 2 ** 60)) {
+        resources.push(`${label} ${(free / 2 ** 30).toFixed(1)}GiB / 必要 ${(required / 2 ** 30).toFixed(1)}GiB`);
+      }
+    }
+    ui.resourceError.hidden = resources.length === 0;
+    ui.resourceError.textContent = resources.length ? `直近の実行時：${resources.join(" · ")}` : "";
   }
 
   function selectedGenerator() {
@@ -379,6 +475,8 @@
     ui.generateButton.querySelector(".button-detail").textContent = ui.generationToggle.checked
       ? `${provider?.label || "選択したサービス"}へ文章を送信` : "外部へ送信せず、規則を確認";
     ui.setupPrompt.hidden = !config || !ui.generationToggle.checked || (ready && (!requiresDecider() || deciderConfigured()));
+    ui.setupPrompt.textContent = !ready ? api ? "APIキーを設定" : "接続を設定" : "PPDDの準備が必要";
+    if (requiresDecider() && !deciderConfigured()) ui.deciderGuide.open = true;
     ui.providerNotice.textContent = provider?.notice || "修正案を作るサービスを選んでください。";
     ui.credentialStatus.textContent = gemini
       ? ready ? "公式Antigravity CLIを利用できます。認証・利用枠・モデルへのアクセスは修正案を作るときに確認します。"
@@ -390,11 +488,12 @@
         : api ? "SarashinaのAPIキーは未設定です。キーを取得して入力してください。" : "Claude CLIが見つかりません。";
     ui.geminiSettings.hidden = !gemini;
     ui.keySettings.hidden = !api;
+    ui.onboarding.hidden = !api || provider?.configured === true;
     if (!api) ui.apiKey.value = "";
     ui.apiKey.disabled = !api || config?.generation?.secret_store?.available === false;
     ui.removeKey.disabled = !api || settingsBusy;
     ui.geminiLogin.disabled = !gemini || !provider?.cli_installed || provider?.cli_status === "unsupported_version" || settingsBusy || Boolean(activeRequest);
-    ui.providerSetup.textContent = api ? "SarashinaのAPIキー取得先" : "導入とログインの案内";
+    ui.providerSetup.textContent = api ? provider?.configured ? "キーの管理・再発行（Sarashina）" : "APIキーを取得（Sarashina）" : "導入とログインの案内";
     if (provider?.setup_url) ui.providerSetup.href = provider.setup_url;
     ui.generationNotice.textContent = ready
       ? `${provider.notice} 原文は自動保存しません。`
@@ -403,6 +502,7 @@
       ui.credentialStatus.textContent += ` ${config.generation.secret_store.notice}`;
     }
     syncDeciderRequirement();
+    updateCount();
   }
 
   function fillProviderModels(preferred) {
@@ -467,7 +567,11 @@
   }
 
   function updateCount() {
-    ui.count.textContent = `${Array.from(currentSource()).length.toLocaleString("ja-JP")} 字`;
+    const provider = selectedGenerator();
+    const limit = ui.generationToggle.checked ? provider?.max_document_chars || provider?.max_text_chars || 12000 : config?.max_text || 12000;
+    const count = Array.from(currentSource()).length;
+    ui.count.textContent = `${count.toLocaleString("ja-JP")} / ${limit.toLocaleString("ja-JP")} 字${ui.generationToggle.checked && provider?.chunking === "paragraphs" ? " · 2,000字ずつ" : ""}`;
+    ui.count.setAttribute("data-over-limit", String(count > limit));
   }
 
   function invalidate(message = "原文または設定が変わりました。もう一度「校正する」を押してください。") {
@@ -629,7 +733,7 @@
       openSettings();
       return;
     }
-    const limit = generate ? selectedGenerator()?.max_text_chars || 12000 : config.max_text || 12000;
+    const limit = generate ? selectedGenerator()?.max_document_chars || selectedGenerator()?.max_text_chars || 12000 : config.max_text || 12000;
     if (Array.from(currentSource()).length > limit) {
       showError(`この処理では ${limit.toLocaleString("ja-JP")} 字までです。原文を分けてください。`);
       return;
@@ -647,7 +751,13 @@
     activeTask = "analyze";
     clearError();
     const requestId = newRequestId();
-    const operation = startBusy(generate ? `${generatorLabel()} の校正を開始しています。` : "規則を確認しています。", { requestId, controller });
+    const operation = startBusy(generate ? `${generatorLabel()} の校正を開始しています。` : "規則を確認しています。", { requestId, controller, source });
+    ui.sourceHelp.textContent = "校正中に編集すると結果表示を中止します。受理済みの処理は続く場合があります。";
+    if (globalThis.crypto?.subtle) {
+      globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(source)).then((bytes) => {
+        if (progressIsCurrent(operation)) operation.sourceHash = Array.from(new Uint8Array(bytes), (value) => value.toString(16).padStart(2, "0")).join("");
+      }).catch(() => {}); // Cosmetic motion is optional; analysis/export checks remain mandatory.
+    }
     updateButtons();
     ui.reviewCount.textContent = "確認しています";
     setStatus(generate

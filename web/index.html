@@ -47,6 +47,7 @@
           <div id="progress-message" class="progress-message" role="status" aria-live="polite">処理しています。</div>
           <progress id="progress-bar" class="progress-bar" aria-labelledby="progress-message" max="1"></progress>
         </div>
+        <div id="edit-motion" class="edit-motion" role="status" aria-live="polite" hidden><span class="pen-dot" aria-hidden="true"></span><span id="edit-motion-label"></span><small>赤い範囲は修正候補です。判定が終わるまで本文は確定しません。</small></div>
 
         <div class="workspace">
           <section class="panel source-panel" aria-labelledby="source-title">
@@ -105,18 +106,32 @@
             <div class="settings-grid"><div class="field-group"><label for="provider">サービス</label><select id="provider" disabled></select></div><div class="field-group"><label for="provider-model">モデル</label><select id="provider-model" disabled></select></div></div>
             <p id="provider-notice" class="field-description"></p><p id="credential-status" class="field-description"></p>
             <div id="gemini-login-settings" hidden><p>Google公式のAntigravity CLIを導入し、Googleアカウントでログインします。GeminiのAPIキーは不要です。</p><div class="settings-actions"><button id="login-gemini" class="button button-small button-secondary" type="button">Googleアカウントでログイン</button></div><p class="field-description">ログインは公式CLIとGoogleの画面で行います。</p></div>
+            <div id="sarashina-onboarding" class="setup-guide" hidden>
+              <h4>APIキーを用意する</h4>
+              <ol><li><a href="https://chat.sarashina.ai/dashboard/api-keys" target="_blank" rel="noreferrer noopener">公式のAPIキー画面を開く</a> → Googleアカウントで登録・ログインします。</li><li>「API Keys」で「新しいAPIキーを作成」を選び、発行されたキーをコピーします。</li><li>この画面のAPIキー欄へ貼り付け、「設定を保存」を押します。</li></ol>
+              <p class="field-description">利用者ごとに自分のキーを使います。保存済みなら、入力し直す必要はありません。登録・利用条件への同意は公式サービスで行ってください。</p>
+              <p class="field-description">現在は無料ベータです。提供地域・回数・入出力の利用には<a href="https://sarashina.ai/terms" target="_blank" rel="noreferrer noopener">公式の利用条件</a>が適用されます。</p>
+            </div>
             <div id="api-key-settings" hidden><label for="api-key">SarashinaのAPIキー</label><input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="保存済みのキーは表示しません" /><button id="remove-api-key" class="text-button" type="button">保存したキーを削除</button><p class="field-description">Windowsの資格情報マネージャー、Macのキーチェーンに保存します。</p></div>
             <div class="settings-actions"><button id="save-provider" class="button button-small button-secondary" type="button">設定を保存</button><a id="provider-setup" target="_blank" rel="noreferrer noopener">導入とログインの案内</a></div>
             <p id="generation-notice" class="field-description">修正案を作るサービスを確認しています。</p>
-          </section>
-          <section class="settings-section" aria-labelledby="writing-settings-title">
-            <h3 id="writing-settings-title">文章の設定</h3><p id="profile-description" class="field-description">用途に合わせて文章を確認します。</p>
-            <label for="context">文体メモ・守りたい表現 <span class="optional-label">任意</span></label><textarea id="context" maxlength="2000" rows="3" placeholder="例：語り手のくだけた口調を残す。「ひと息つく」は変えない。" spellcheck="false" aria-describedby="context-help"></textarea><p id="context-help" class="field-description">2000字まで。文章と一緒に、選択したサービスへ送信します。</p>
           </section>
           <section class="settings-section" aria-labelledby="connection-title">
             <h3 id="connection-title">接続状態</h3>
             <div class="availability-row"><span>Yomiyasuの規則点検</span><span id="rules-stage" class="stage-badge">確認中</span></div><div class="availability-row"><span>修正案の生成</span><span id="generator-stage" class="stage-badge">確認中</span></div><div class="availability-row"><span>Deciderの意味判定</span><span id="decider-stage" class="stage-badge stage-muted">確認中</span></div>
             <p id="decider-note" class="field-description">接続状態を確認しています。</p><div class="settings-actions"><button id="refresh-decider" type="button" class="text-button" disabled>接続状態を更新</button><button id="release-decider" type="button" class="text-button" disabled>判定モデルのメモリを解放</button><a href="https://github.com/studio-yebisu/yomiyasu-studio/blob/main/docs/INSTALL.md" target="_blank" rel="noreferrer noopener">ローカルDeciderの準備</a></div>
+            <p id="decider-resource-error" class="resource-error" hidden></p>
+            <details id="decider-setup-guide" class="setup-guide"><summary>PPDDの準備と必要なPC</summary>
+              <p>PPDDはPerplexity Decider Flashです。意味判定はPC内で行い、PerplexityのAPIキーは使いません。Sarashina校正では準備が必要です。</p>
+              <ul><li>CPU版：空きRAM 11GiB以上。Windowsはコミット余裕も11GiB以上。GPUは不要です。</li><li>初回取得：モデル約9.10GB。依存と取得中の一時領域も使うため、空きディスク30GiBを目安にします。</li><li>Mac：Apple Silicon・総RAM 24GiB以上向けの実験設定。空きRAMは別途11GiB以上必要で、実機は未検証です。</li></ul>
+              <p>初回はPythonとuvを用意し、ターミナルで準備します。アプリ内での自動導入には未対応です。</p>
+              <p><a href="https://github.com/studio-yebisu/yomiyasu-studio/blob/main/docs/INSTALL.md" target="_blank" rel="noreferrer noopener">Windows・Macの導入手順を開く</a></p>
+              <p class="field-description">準備後に「接続状態を更新」を押します。総メモリ容量だけで動作を保証するものではありません。</p>
+            </details>
+          </section>
+          <section class="settings-section" aria-labelledby="writing-settings-title">
+            <h3 id="writing-settings-title">文章の設定</h3><p id="profile-description" class="field-description">用途に合わせて文章を確認します。</p>
+            <label for="context">文体メモ・守りたい表現 <span class="optional-label">任意</span></label><textarea id="context" maxlength="2000" rows="3" placeholder="例：語り手のくだけた口調を残す。「ひと息つく」は変えない。" spellcheck="false" aria-describedby="context-help"></textarea><p id="context-help" class="field-description">2000字まで。文章と一緒に、選択したサービスへ送信します。</p>
           </section>
           <section class="settings-section" aria-labelledby="integration-title"><h3 id="integration-title">Codexへの組み込み</h3><p>CodexやClaude Code自身に修正案を作ってもらう場合、追加のAPIキーは不要です。</p><div class="settings-actions"><button id="install-codex" type="button" class="button button-small button-secondary">このPCのCodexへ登録</button></div><p id="codex-status" class="field-description">登録状態を確認しています。</p></section>
         </div>

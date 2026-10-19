@@ -5,6 +5,7 @@ import sys
 sys.dont_write_bytecode = True
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
@@ -24,6 +25,109 @@ REPO = "perplexity-ai/pplx-decider-flash-v1.2"
 PINNED_DEPENDENCIES = {"torch": "2.14.0", "torchvision": "0.29.0", "transformers": "5.17.0",
                        "safetensors": "0.8.0", "pillow": "12.3.0", "huggingface-hub": "1.31.0"}
 MAC24_TOTAL_BYTES = 24 * worker.GIB
+# A conservative setup budget, not an installed-size or inference guarantee.
+# The fixed model is about 9.10 decimal GB (< 9 GiB). Range chunks and their
+# assembled file can coexist. Dependencies, uv cache and temporary files vary.
+MODEL_DISK_BUDGET = 9 * worker.GIB
+ENV_DISK_BUDGET = 4 * worker.GIB
+CACHE_DISK_BUDGET = 6 * worker.GIB
+TEMP_DISK_BUDGET = 2 * worker.GIB
+
+
+def default_model_size_inventory(private):
+    """Inspect the pinned manifest and file sizes, never weights or settings."""
+    model = private / "models" / REVISION
+    try:
+        manifest_path = model / "release-manifest.json"
+        if manifest_path.stat().st_size > 131072:
+            return False
+        data = manifest_path.read_bytes()
+        if hashlib.sha256(data).hexdigest() != worker.MANIFEST_SHA256:
+            return False
+        files = json.loads(data)["files"]
+        if not isinstance(files, dict) or not 1 <= len(files) <= 64:
+            return False
+        if not set((*worker.WEIGHT_HASHES, *worker.REQUIRED_FILES[:-3])).issubset(files):
+            return False
+        total = 0
+        for name, item in files.items():
+            path = Path(name)
+            size = item.get("bytes") if isinstance(item, dict) else None
+            if (path.is_absolute() or ".." in path.parts or type(size) is not int
+                    or not 0 <= size <= MODEL_DISK_BUDGET):
+                return False
+            total += size
+            if not (model / path).is_file() or (model / path).stat().st_size != size:
+                return False
+        return total <= MODEL_DISK_BUDGET
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+
+
+def _existing_disk_location(path):
+    """Find the owning filesystem without creating a missing directory."""
+    target = path.expanduser().resolve()
+    while not target.exists():
+        if target == target.parent:
+            raise OSError("No existing parent")
+        target = target.parent
+    return target
+
+
+def disk_preflight(private, *, model_reusable=None):
+    """Read-only capacity budget; unknown resources must not start a download."""
+    if model_reusable is None:
+        model_reusable = default_model_size_inventory(private)
+    cache = os.environ.get("UV_CACHE_DIR")
+    if not cache:
+        if sys.platform == "win32":
+            cache = str(Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local")) / "uv/cache")
+        elif sys.platform == "darwin":
+            cache = str(Path.home() / "Library/Caches/uv")
+        else:
+            cache = str(Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "uv")
+    # tempfile.gettempdir() probes by writing files; do not use it in check-only.
+    temporary = next((os.environ[name] for name in ("TMPDIR", "TEMP", "TMP") if os.environ.get(name)), None)
+    if not temporary:
+        temporary = str(Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local")) / "Temp") if sys.platform == "win32" else "/tmp"
+    roles = [("model_and_environment", private, ENV_DISK_BUDGET + (0 if model_reusable else 2 * MODEL_DISK_BUDGET)),
+             ("uv_cache", Path(cache), CACHE_DISK_BUDGET), ("temporary", Path(temporary), TEMP_DISK_BUDGET)]
+    volumes = {}
+    unavailable = []
+    for role, location, required in roles:
+        try:
+            existing = _existing_disk_location(location)
+            usage = shutil.disk_usage(existing)
+            if (any(type(value) is not int or value < 0 for value in (usage.total, usage.used, usage.free))
+                    or usage.total <= 0 or usage.free > usage.total or usage.used > usage.total):
+                raise ValueError("Invalid disk counters")
+            identity = existing.stat().st_dev
+            volume = volumes.setdefault(identity, {"roles": [], "available_bytes": usage.free, "required_bytes": 0})
+            volume["roles"].append(role)
+            volume["available_bytes"] = min(volume["available_bytes"], usage.free)
+            volume["required_bytes"] += required
+        except (OSError, ValueError, RuntimeError, AttributeError, TypeError):
+            unavailable.append(role)
+    entries = list(volumes.values())
+    status = "unknown" if unavailable else "insufficient" if any(item["available_bytes"] < item["required_bytes"] for item in entries) else "sufficient"
+    return {"status": status, "required_bytes": sum(item[2] for item in roles),
+            "available_bytes": entries[0]["available_bytes"] if len(entries) == 1 and not unavailable else None,
+            "volumes": entries, "unavailable_roles": unavailable,
+            "default_model_reuse_candidate": model_reusable,
+            "inventory_scope": "default_setup_layout",
+            "model_budget_bytes": 0 if model_reusable else MODEL_DISK_BUDGET,
+            "assembly_budget_bytes": 0 if model_reusable else MODEL_DISK_BUDGET,
+            "dependencies_cache_temporary_budget_bytes": ENV_DISK_BUDGET + CACHE_DISK_BUDGET + TEMP_DISK_BUDGET,
+            "budget_is_guarantee": False,
+            "note": "標準配置への追加導入容量の目安です。既存設定の別の絶対パスは調べていません。再利用候補も取得時にハッシュを照合します。依存やキャッシュによって追加の容量が必要になる場合があります。"}
+
+
+def disk_issue(report):
+    if report["status"] == "unknown":
+        return "保存先・uvキャッシュ・一時領域の空き容量を確認できません。保存先とアクセス権を確認してください。取得は開始しません。"
+    if report["status"] == "insufficient":
+        return "導入用のディスク空き容量が不足しています。disk.volumesのavailable_bytesとrequired_bytesを確認してください。取得は開始しません。"
+    return None
 
 
 def parse_arguments(argv=None):
@@ -123,13 +227,18 @@ def preflight(args, private):
         issues.append("Python 3.12以降が必要です。")
     if uv is None:
         issues.append("セットアップにはuvが必要です。")
+    disk = disk_preflight(private)
+    problem = disk_issue(disk)
+    if problem:
+        issues.append(problem)
     return {"status": "ready_to_setup" if not issues else "not_ready", "check_only": args.check_only,
             "preset": args.preset, "experimental": args.preset == "mac24", "host": host,
             "selected": {"device": args.device, "cpu_dtype": args.cpu_dtype, "max_length": args.max_length,
-                         "cpu_threads": 8}, "resources": resource, "issues": issues,
+                         "cpu_threads": 8}, "resources": resource, "disk": disk, "issues": issues,
             "prerequisites": {"python_3_12_or_later": sys.version_info >= (3, 12), "uv_available": uv is not None},
             "dependencies": dependency_snapshot(private),
             "existing_config": "preserved_not_reconfigured" if (private / "config.json").exists() else "absent",
+            "inventory_scope": "default_setup_layout_not_configured_runtime",
             "model_files_present": all((private / "models" / REVISION / name).is_file()
                                        for name in (*worker.REQUIRED_FILES, *worker.WEIGHT_HASHES)),
             "inference_verified": False, "native_mac_verified": False,
@@ -147,7 +256,15 @@ def main(argv=None):
         if args.check_only:
             return 0 if report["status"] == "ready_to_setup" else 2
         if report["status"] != "ready_to_setup":
-            raise SystemExit("準備条件を満たしていません。取得・設定変更は行っていません。")
+            raise SystemExit("準備条件を満たしていません。取得・設定変更は行っていません。既存環境の故障を示す結果ではありません。")
+    else:
+        # Preserve generic setup's ability to fetch now and free RAM later.
+        # The actual model load still has its independent RAM/commit guards.
+        disk = disk_preflight(private)
+        print(json.dumps({"disk": disk}, ensure_ascii=False, indent=2))
+        problem = disk_issue(disk)
+        if problem:
+            raise SystemExit(problem)
     uv = shutil.which("uv")
     if uv is None or sys.version_info < (3, 12):
         raise SystemExit("Python 3.12以降とuvを先に導入してください。既存環境は変更しません。")
