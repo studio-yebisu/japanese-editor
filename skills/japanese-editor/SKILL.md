@@ -5,9 +5,9 @@ description: 用途に合わせて日本語の修正候補を作り、原文と�
 
 # Yomiyasu Studioで用途を切り替える日本語校正
 
-このパッケージの [yomiyasu 2.0.0](../../vendor/yomiyasu/SKILL.md) を判断規則として使う。別に導入した同種スキルと規則を重ねて競合させない。引用した規則とスクリプトには [MIT](../../vendor/yomiyasu/LICENSE) と [Unicode notice](../../vendor/yomiyasu/UNICODE-LICENSE.txt) が適用される。
+このパッケージの [yomiyasu](../../vendor/yomiyasu/SKILL.md) を判断規則として使う。別に導入した同種スキルと規則を重ねて競合させない。引用した規則とスクリプトには [MIT](../../vendor/yomiyasu/LICENSE) と [Unicode notice](../../vendor/yomiyasu/UNICODE-LICENSE.txt) が適用される。
 
-`japanese_editor_profiles` で用途と接続状態を取得する。ユーザーが述べた用途を選び、不明なときは文章から仮の用途を示す。小説と台詞では比喩、省略、反復、方言、一人称、語尾、曖昧さを残す。強さを上げても、主張・比重・確度・文の働きを保ち、原文にない情報を足さない原則を変えない。
+`japanese_editor_profiles` で用途と接続状態、Yomiyasuの使用版を取得する。アプリの起動時に原典を更新し、管理対象の参照資料にも反映する。手元で変更したスキルは保持する。最終稿を別の呼び出しで点検するときは、前の結果の `yomiyasu.commit` を `yomiyasu_revision` に渡すと同じ版を使える。ユーザーが述べた用途を選び、不明なときは文章から仮の用途を示す。小説と台詞では比喩、省略、反復、方言、一人称、語尾、曖昧さを残す。強さを上げても、主張・比重・確度・文の働きを保ち、原文にない情報を足さない原則を変えない。
 
 ホスト自身で修正候補を作り、`japanese_editor_review_proposals` へ原文と次の形式で渡す。独立版用の `generate=true` はホストからは使わず、追加の生成モデル呼び出しを避ける。
 

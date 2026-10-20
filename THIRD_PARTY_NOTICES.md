@@ -7,7 +7,7 @@ Yomiyasu StudioはStudioYebisuが制作する独立したアプリです。nanai
 ## 同梱する yomiyasu
 
 - 著者: **nanaism**、Copyright (c) 2026 nanaism。
-- 原典: [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)。固定版2.0.0、コミット `68075bea91ae27958766effd6aaa56d42d6be125`。
+- 原典: [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)。同梱版2.1.0、コミット `8be3ef6e0e668f14cae30c3da6b0c20b95b2179f`。
 - ライセンス: [同梱MIT](vendor/yomiyasu/LICENSE) と [Unicode License V3 の通知](vendor/yomiyasu/UNICODE-LICENSE.txt)。Unicode通知は Copyright © 1991–2026 Unicode, Inc.。
 - `vendor/yomiyasu/` のスキル・参照資料・検査スクリプトは原典のファイルを無改変で保持します。来歴、各ファイルの原典URL、ハッシュは [UPSTREAM.json](vendor/yomiyasu/UPSTREAM.json) に記録します。
 - アプリの用途・画面・生成プロバイダー・MCPとの接続はStudioYebisu側の追加です。原典著者による承認・品質保証を示しません。

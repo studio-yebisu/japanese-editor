@@ -1,6 +1,6 @@
 {
-  "stage": "implementation_and_static_review_only",
-  "verified_on": "2026-10-19",
+  "stage": "implementation_static_review_official_acquisition_and_installed_startup_observed",
+  "verified_on": "2026-10-20",
   "spec_consultations": [
     {
       "requested": "claude-opus-5-5",
@@ -117,6 +117,15 @@
       ],
       "scope": "Paragraph splitting, real-state motion and onboarding specification consultation only; not source audit or runtime/quality approval. Advice was checked against existing text-preservation contracts.",
       "receipt_sha256": "4ba10c3f16a291da9c5ca67d6bb33cbc6631534674ac69f578b807e061d7156a",
+      "receipt_published": false
+    },
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "Startup official Yomiyasu update specification consultation only; not source/runtime approval",
+      "receipt_sha256": "43fa17ca1f897e5aed8ed9e8746a961d69cdea2a8e7503d908c7ea8ca7b993d3",
       "receipt_published": false
     }
   ],
@@ -1303,6 +1312,54 @@
       "windows_x64": "built",
       "local_install_and_codex": "updated",
       "owned_service_health_version": "0.2.10",
+      "feature_runtime_tests": "not_run_at_user_request"
+    }
+  },
+  "yomiyasu_studio_v0211": {
+    "date": "2026-10-20",
+    "version": "0.2.11",
+    "status": "implementation_static_review_and_official_snapshot_acquisition",
+    "upstream": {
+      "repository": "https://github.com/nanaism/yomiyasu",
+      "version": "2.1.0",
+      "commit": "8be3ef6e0e668f14cae30c3da6b0c20b95b2179f",
+      "files": 36,
+      "actual_acquisition": true,
+      "git_blob_oid_and_sha256": "matched",
+      "checker_execution_during_acquisition": false
+    },
+    "startup_update": {
+      "mode": "nonblocking_background",
+      "debounce_seconds": 600,
+      "compatible_major": 2,
+      "fallback": "bundled retained; last known snapshot on acquisition failure; next operation bundled after checker execution failure",
+      "operation_snapshot_pinned": true,
+      "old_snapshots_retained": true,
+      "codex_sync": "existing managed unmodified references only",
+      "offline_environment": "YEBISU_YOMIYASU_OFFLINE=1",
+      "installed_startup_observed": {
+        "state": "current",
+        "active_version": "2.1.0",
+        "active_commit": "8be3ef6e0e668f14cae30c3da6b0c20b95b2179f",
+        "managed_codex_reference_sync": "updated",
+        "source": "bundled"
+      }
+    },
+    "checks": {
+      "python_ast": "parsed_13_changed_modules",
+      "javascript_syntax": "node_check_passed",
+      "static_package_compatibility": "matched_existing_json_contracts_stdlib_imports_and_materials",
+      "test_suites": "not_run_at_user_request",
+      "proofreading_api_calls": 0,
+      "decider_inference_calls": 0,
+      "visual_runtime_review": "not_run_at_user_request",
+      "mac_native": "not_run"
+    },
+    "note": "Official snapshot acquisition and static validation do not prove checker runtime, security, proofreading quality, GUI quality or Mac compatibility. Earlier version results remain historical.",
+    "packaging": {
+      "windows_x64": "built",
+      "local_install_and_codex": "updated",
+      "owned_service_health_version": "0.2.11",
       "feature_runtime_tests": "not_run_at_user_request"
     }
   }

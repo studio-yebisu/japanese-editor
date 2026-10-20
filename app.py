@@ -24,6 +24,7 @@ import provider_settings
 import integrations
 import progress
 import rpc_auth
+import yomiyasu_updates
 from service_runtime import data_id
 
 TOOLS = [
@@ -40,7 +41,8 @@ TOOLS = [
       "required": ["text"], "additionalProperties": False}},
     {"name": "japanese_editor_check_final", "description": "採用した修正後の全文をyomiyasu run/verifyで点検・照合する。品質や意味保持の保証ではない。ファイルは変更しない。",
      "inputSchema": {"type": "object", "properties": {"text": {"type": "string"},
-                       "final": {"type": "string"}, "profile": {"type": "string"}},
+                       "final": {"type": "string"}, "profile": {"type": "string"},
+                       "yomiyasu_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$", "description": "前の結果と同じYomiyasuの版を使う場合に指定"}},
                      "required": ["text", "final"], "additionalProperties": False}},
 ]
 EDIT_SCHEMA = {"type": "array", "maxItems": 50, "items": {"type": "object",
@@ -49,7 +51,7 @@ EDIT_SCHEMA = {"type": "array", "maxItems": 50, "items": {"type": "object",
 TOOLS.extend([
     {"name": "japanese_editor_finalize", "description": "採用した修正候補から共通エンジンが最終稿を組み立て、その正確な本文をrun/verifyする。原本を変更しない。",
      "inputSchema": {"type": "object", "properties": {"text": {"type": "string"}, "edits": EDIT_SCHEMA,
-        "profile": {"type": "string"}}, "required": ["text", "edits"], "additionalProperties": False}},
+        "profile": {"type": "string"}, "yomiyasu_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}}, "required": ["text", "edits"], "additionalProperties": False}},
     {"name": "japanese_editor_review_proposals", "description": "ホストが作った候補の位置・保護範囲・重複を点検し、ローカルDeciderで意味変化を判定する。別の生成モデルは呼ばない。",
      "inputSchema": {"type": "object", "properties": {"text": {"type": "string"}, "edits": EDIT_SCHEMA,
         "profile": {"type": "string"}, "strength": {"type": "string"}, "judge": {"type": "boolean", "default": True}}, "required": ["text", "edits"], "additionalProperties": False}},
@@ -68,6 +70,15 @@ for tool in TOOLS:
 
 
 def execute_tool(name, arguments):
+    try:
+        revision = arguments.get("yomiyasu_revision") if isinstance(arguments, dict) else None
+        with yomiyasu_updates.using_revision(revision):
+            return _execute_tool(name, arguments)
+    except yomiyasu_updates.UpdateError:
+        raise EditorError("指定したYomiyasuの版を利用できません。もう一度校正してから書き出してください。") from None
+
+
+def _execute_tool(name, arguments):
     validate_unicode_input(arguments)
     if not isinstance(arguments, dict):
         raise EditorError("入力はJSONオブジェクトで指定してください。")
@@ -132,7 +143,7 @@ def mcp():
                 validate_unicode_input(params)
                 result = {"protocolVersion": params.get("protocolVersion", "2024-11-05"),
                           "capabilities": {"tools": {"listChanged": False}},
-                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.10"},
+                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.11"},
                           "instructions": "日本語の校正は用途・強さを選び、ホスト自身が修正候補を作りreview_proposalsで比較する。採用案だけをfinalizeへ渡し返ったtextを最終稿にする。未実行の判定を成功と扱わない。小説・台詞の作風を保つ。generate=trueは外部送信を伴うため通常のホスト校正では不要。"}
             elif method == "ping":
                 result = {}
@@ -288,9 +299,11 @@ class Handler(BaseHTTPRequestHandler):
             except (rpc_auth.AuthenticationError, ValueError):
                 return self.reject(401, "共有サービスの認証要求を確認できません。")
         if path == "/api/health":
-            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.10", "data_id": data_id(), "closing": self.server.closing})
+            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.11", "data_id": data_id(), "closing": self.server.closing})
         if path == "/api/providers":
             return self.send(200, provider_settings.public_config())
+        if path == "/api/yomiyasu/status":
+            return self.send(200, yomiyasu_updates.public_status())
         if path == "/api/integrations/codex":
             return self.send(200, integrations.status())
         if path == "/api/decider/status":
@@ -420,10 +433,13 @@ class Handler(BaseHTTPRequestHandler):
                 elif route == "/api/judge":
                     result = review_proposals({**payload, "judge": True})
                 else:
-                    result = check_final(payload.get("text"), payload.get("final"), payload.get("profile", "article"))
+                    with yomiyasu_updates.using_revision(payload.get("yomiyasu_revision")):
+                        result = check_final(payload.get("text"), payload.get("final"), payload.get("profile", "article"))
             self.send(200, result)
         except progress.ProgressError as exc:
             self.send(exc.status, {"error": str(exc)})
+        except yomiyasu_updates.UpdateError:
+            self.send(400, {"error": "校正に使ったYomiyasuの版を利用できません。もう一度校正してください。"})
         except (EditorError, json.JSONDecodeError) as exc:
             self.send(getattr(exc, "http_status", 400), {"error": str(exc)})
         except Exception:
@@ -517,7 +533,9 @@ class EditorServer(ThreadingHTTPServer):
 
 
 def create_server(port=8896):
-    return EditorServer(port)
+    server = EditorServer(port)
+    yomiyasu_updates.start_background()
+    return server
 
 
 def main():
@@ -526,18 +544,30 @@ def main():
         if arguments and arguments[0] == "-B":
             arguments = arguments[1:]
         if arguments:
-            allowed = {str((ROOT / "vendor/yomiyasu/scripts" / name).resolve()): name
-                       for name in ("yomiyasu_lint.py", "yomiyasu_check.py", "yomiyasu_diff.py")}
-            if arguments[0] in allowed:
-                sys.argv = [sys.argv[0], "internal-yomiyasu", allowed[arguments[0]], *arguments[1:]]
+            candidate = Path(arguments[0])
+            if candidate.name in ("yomiyasu_lint.py", "yomiyasu_check.py", "yomiyasu_diff.py"):
+                try:
+                    revision = yomiyasu_updates.revision_for_root(candidate.resolve().parent.parent)
+                except (OSError, ValueError):
+                    raise SystemExit("Unknown checker snapshot") from None
+                sys.argv = [sys.argv[0], "internal-yomiyasu", candidate.name, "--yebisu-revision", revision, *arguments[1:]]
     if len(sys.argv) >= 3 and sys.argv[1] == "internal-yomiyasu":
         import runpy
         name = sys.argv[2]
         if name not in ("yomiyasu_lint.py", "yomiyasu_check.py", "yomiyasu_diff.py"):
             raise SystemExit("Unknown bundled checker")
-        directory = ROOT / "vendor/yomiyasu/scripts"
+        arguments = sys.argv[3:]
+        revision = "bundled"
+        if arguments[:1] == ["--yebisu-revision"]:
+            if len(arguments) < 2:
+                raise SystemExit("Missing checker snapshot")
+            revision, arguments = arguments[1], arguments[2:]
+        try:
+            directory = yomiyasu_updates.root_for_revision(revision) / "scripts"
+        except (OSError, ValueError):
+            raise SystemExit("Invalid checker snapshot") from None
         sys.path.insert(0, str(directory))
-        sys.argv = [str(directory / name), *sys.argv[3:]]
+        sys.argv = [str(directory / name), *arguments]
         runpy.run_path(str(directory / name), run_name="__main__")
         return
     parser = argparse.ArgumentParser(description="Yomiyasu Studio — 用途と作風に合わせる日本語校正")
@@ -562,6 +592,8 @@ def main():
     cli.add_argument("--provider", choices=("gemini", "sarashina", "claude"))
     cli.add_argument("--model")
     args = parser.parse_args()
+    if args.command in {"mcp", "profiles", "analyze", "review"}:
+        yomiyasu_updates.start_background()
     if args.command == "mcp":
         mcp()
     elif args.command == "serve":

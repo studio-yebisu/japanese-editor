@@ -4,16 +4,16 @@ Yomiyasu Studioは日本語の文章を整え、どこを変えたか左右で�
 
 ## ダウンロード
 
-[最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/tag/v0.2.10)
+[最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/tag/v0.2.11)
 
-| 使う環境 | v0.2.10のダウンロード | 提供状況 |
+| 使う環境 | v0.2.11のダウンロード | 提供状況 |
 | --- | --- | --- |
-| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.10/YomiyasuStudio-windows-x64-0.2.10.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
-| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.10/YomiyasuStudio-source-0.2.10.zip) | Pythonで起動する実験版。Mac実機は未検証 |
+| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.11/YomiyasuStudio-windows-x64-0.2.11.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
+| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.11/YomiyasuStudio-source-0.2.11.zip) | Pythonで起動する実験版。Mac実機は未検証 |
 
-Sarashina APIとローカルDeciderの実推論はv0.2.9でWindows上の確認記録があります。今回の段落分割・演出・導入案内の変更は静的確認のみで、実API・推論・画面の実行試験は行っていません。版ごとの確認内容は [STATUS.md](docs/STATUS.md) を参照してください。
+ベータ版です。Sarashina APIとローカルDeciderの実推論はv0.2.9でWindows上の確認記録があります。v0.2.11ではYomiyasuの公式資料を実際に取得し、整合性を確認しました。テストスイート・校正API・モデル推論・画面の実行試験は行っていません。版ごとの確認内容は [STATUS.md](docs/STATUS.md) を参照してください。
 
-Sarashinaを初回の生成先とし、ローカルDeciderの意味判定を必須にしています。今回、APIキー取得の案内と必要なPC条件を設定画面に追加し、長文を1回2,000字以内に分ける処理と、意味判定中に候補の位置を示す赤ペンの演出を加えました。既存の生成先とキーは保持します。**旧版からはアプリと共有サービスの両方を更新し、サービスを起動し直してください。** MCPも新版へ登録し直して、新しい会話で使います。[更新と接続の案内](docs/PLUGINS.md#共有サービスの更新)
+起動時にYomiyasu公式の更新を裏で確認し、対応する新版があれば校正方針・参照資料・検査スクリプトをまとめて更新します。同梱版も2.1.0へ更新しました。**旧版からはアプリと共有サービスの両方を更新し、サービスを起動し直してください。** MCPも新版へ登録し直して、新しい会話で使います。[更新と接続の案内](docs/PLUGINS.md#共有サービスの更新)
 
 ![小説の校正例。実画面の一部。左の原文に赤い取り消し線、右の校正後に緑の変更箇所を表示。](https://raw.githubusercontent.com/studio-yebisu/yomiyasu-studio/main/docs/assets/editor.png)
 
@@ -38,7 +38,7 @@ Mac用の `.app` はまだ用意していません。ブラウザーで使うソ
 3. 「ターミナル」を開きます。ダウンロード先が通常の「ダウンロード」フォルダーなら、次を1行ずつ実行します。
 
 ```sh
-cd "$HOME/Downloads/YomiyasuStudio-source-0.2.10"
+cd "$HOME/Downloads/YomiyasuStudio-source-0.2.11"
 python3 --version
 python3 -B app.py serve
 ```
@@ -112,6 +112,12 @@ Sarashina校正では意味判定を外せません。GeminiやClaudeを選ぶ�
 入力全体は12,000字までです。Sarashinaはコードで段落・文末を探し、1回2,000字以内に分けて順番に送信します。分割の判断にAPIやAIは使いません。改行や原文はそのまま残し、すべての生成が成功してから修正を統合します。安全に分けられない長い一文やコード等は、途中で切らず短縮の案内を出します。この区切り方だけで意味保持や品質を保証するものではありません。
 
 Gemini・Claudeは全体を一度に扱います。小説や台詞では、比喩・省略・反復・方言・語尾などを残す方針で校正します。
+
+## Yomiyasuの自動更新
+
+Windowsアプリ・Macのサーバー・MCPの起動時に、[公式リポジトリ](https://github.com/nanaism/yomiyasu)を確認します。短時間に起動し直した場合は10分間、確認を重複させません。待っている間も保存済みの版で校正でき、更新中の文章には同じ版を使い続けます。更新後の版は次の校正から使います。
+
+取得に失敗した場合や、アプリと互換性のない新版の場合は、保存済みの版を使います。更新版の検査スクリプトが失敗した場合は、その処理を止め、次の校正から同梱版へ戻します。同梱版は残します。利用中の版と更新状態は「設定」で確認できます。対応条件や保存先、オフライン設定は [自動更新の詳細](SECURITY.md#yomiyasuの自動更新)を参照してください。アプリ本体・生成CLI・Deciderの自動更新は行いません。
 
 ## Codexに組み込む
 
@@ -194,6 +200,6 @@ python3 -B tools/setup_decider.py --preset mac24
 
 Yomiyasu StudioはStudioYebisuが制作する独立したアプリです。nanaism/yomiyasuの公式製品ではなく、原典著者による承認・品質保証を示しません。
 
-独自コードと文書は StudioYebisuの [MIT License](LICENSE) です。[nanaism/yomiyasu 2.0.0](https://github.com/nanaism/yomiyasu)の推敲方針・参照資料・検査スクリプトを使い、原典のMITとUnicode License V3の通知を無改変で保持しています。生成をオンにすると、その方針の全文と用途別資料を生成モデルへ渡します。
+独自コードと文書は StudioYebisuの [MIT License](LICENSE) です。[nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)の推敲方針・参照資料・検査スクリプトを使い、原典のMITとUnicode License V3の通知を無改変で保持しています。同梱版は2.1.0です。生成をオンにすると、利用中の版の方針全文と用途別資料を生成モデルへ渡します。
 
 Perplexity Decider Flashのモデルと公式コードはApache-2.0で、元のLICENSE / NOTICEを保持して別途取得します。このアプリのために新しいモデルを学習したものではありません。Gemini・Sarashina・Claudeは各提供元の利用条件に従います。[原典と出典](docs/SOURCES.md) / [第三者の通知](THIRD_PARTY_NOTICES.md) / [開発への参加](CONTRIBUTING.md) / [問題の報告](SECURITY.md)

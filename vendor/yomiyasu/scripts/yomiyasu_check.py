@@ -12,7 +12,7 @@ mail（メール・チャット）と paper（論文・研究レポート）も�
 同じ権限で原稿と記録の両方を書き換えられる環境では、記録は実行漏れを見つけるためのもので、
 改ざんの防止や人の承認の証明にはならない。
 """
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
 import sys
 
@@ -594,18 +594,42 @@ def _ensure_state(state, default_place=False):
         raise
 
 
+def _home_path(value):
+    """--state-dir と環境変数 YOMIYASU_STATE_DIR の値の頭の ~ を、ホームフォルダに置き換える（フックの _home_path と同じ）。
+
+    置き換えるのは、値が「~」だけのときと、「~/」で始まるとき（Windows では「~\\」も）だけで、os.path.expanduser で
+    展開する。シェルの引用符の中や、エージェントの設定ファイルの環境変数では、~ が展開されないまま届くため。
+    「~user/x」や「~x」は置き換えない（その名前の利用者が機械にいるかどうかで、場所が変わらないように）。
+    HOME がなければ expanduser と同じく利用者の情報から探す。それでも決まらないとき（結果がまだ ~ で始まるか、
+    expanduser が例外を出したとき）は、値をそのまま返す（これまでと同じく、作業ディレクトリからの相対パス）。
+    ホームフォルダが空か空白だけ、またはルート（「/」、Windows では「C:\\」など）だけのときも、決まらないものとして
+    値をそのまま返す。HOME が空の文字列のとき expanduser は「~/x」を「/x」に、「~」を「/」にするので、状態フォルダを
+    ファイルシステムのルートに置かないため（HOME が「/」のときも expanduser の結果は同じで、見分けられない）。"""
+    if isinstance(value, str) and (value == "~" or value[:2] in ("~/", "~" + os.sep)):
+        try:
+            home = os.path.expanduser("~")
+            expanded = os.path.expanduser(value)
+        except Exception:  # pwd を読めない環境など
+            return value
+        if (not home.startswith("~") and os.path.splitdrive(home)[1].strip().strip("/" + os.sep)
+                and not expanded.startswith("~")):
+            return expanded
+    return value
+
+
 def state_dir_for(cwd, option=None):
     """状態フォルダの決め方（run、verify、フックで同じ規則）。
 
     1 --state-dir、2 環境変数 YOMIYASU_STATE_DIR、3 作業ディレクトリから上へたどり、.git（フォルダでもファイルでもよい）が
     ある最初のフォルダの .yomiyasu/、4 作業ディレクトリの .yomiyasu/。ここではフォルダを作らない。
     環境変数が空白だけのときと、展開されなかった ${…} を含むときは、ないものとして3と4に進む（--session の ${ と同じ扱い。
-    作業フォルダに「${CLAUDE_PROJECT_DIR}」のようなフォルダを作らない。反証で見つけた例）。"""
+    作業フォルダに「${CLAUDE_PROJECT_DIR}」のようなフォルダを作らない。反証で見つけた例）。
+    1と2の値の頭の ~ は、_home_path の決まりでホームフォルダに置き換える。"""
     if option:
-        return os.path.abspath(os.path.join(cwd, option))
+        return os.path.abspath(os.path.join(cwd, _home_path(option)))
     environment = os.environ.get("YOMIYASU_STATE_DIR")
     if environment and environment.strip() and "${" not in environment:
-        return os.path.abspath(os.path.join(cwd, environment))
+        return os.path.abspath(os.path.join(cwd, _home_path(environment)))
     cwd = os.path.abspath(cwd)
     current = cwd
     while True:
@@ -621,6 +645,8 @@ def _state_dir(option):
     # Absolute overrides must still work when the process cwd has disappeared.
     environment = os.environ.get("YOMIYASU_STATE_DIR")
     selected = option or (environment if environment and environment.strip() and "${" not in environment else None)
+    if selected:
+        selected = _home_path(selected)
     if selected and os.path.isabs(selected):
         return os.path.normpath(selected)
     return state_dir_for(_getcwd(), option)
@@ -1671,7 +1697,8 @@ def _review_count(section):
 
 def _fail_on_hits(ctx, diff_module):
     """--fail-on に当たった値（指定した順）。meaning-risk は diff の FAIL_ON_KINDS（数値・否定・入れ替え・文の種類・引用の印・
-    確度の強まり・状態の語の消え・書き手の約束の足し）と、新規作成の資料にない数値、warn と error は lint の候補で決める。"""
+    確度の強まり・状態の語の消え・書き手の約束の足し・許可の言い方の変化）と、新規作成の資料にない数値、warn と error は
+    lint の候補で決める。diff の数え方は --doc-type で変わる（事実や仕様を述べる種類では、確度の2つも数える）。"""
     hits = []
     counts = (ctx.lint_result or {}).get("counts") or {}
     for value in ctx.fail_on:
@@ -4336,7 +4363,9 @@ _VERIFY_USAGE = ("yomiyasu_check.py verify --final 最終稿|- [--run-id ID] [--
 _FAIL_ON_HELP = ("指定した条件に当たれば、記録を残したうえで終了コード1で終わります。何度でも、カンマ区切りでも指定できます。"
                  "meaning-risk: 意味が変わる恐れのうち、数値、否定、主語と目的語の入れ替え、文の種類（問いと平叙、文の種類の印）の"
                  "変化、引用の印の変化、確度を強めた書き換え（見込み → 予定、と思われる → 断定など）、原文の状態の語（未定、未確認、"
-                 "調査中など）が消えた書き換え、原文にない書き手の約束・保証・再発防止の誓いの足し（ここまでは diff の "
+                 "調査中など）が消えた書き換え、原文にない書き手の約束・保証・再発防止の誓いの足し、許可の言い方（してよい、"
+                 "してもよい、構わない）が消えたか増えた書き換え、--doc-type が pr、article、incident、proposal、manual、formal、paper の"
+                 "ときは「場合がある」の言い切りと「必ず」などの足し（ここまでは diff の "
                  "--fail-on=meaning-risk と同じ）と、新規作成で資料にない数値。コード・URL・引用ブロックなど変えない箇所の変化と、資料にない名前は数えません。"
                  "否定対比の主張の逆転と、元にない気持ちの語も数えません。確度を弱めた書き換え、数えない語だけの確度の変化、予定の言い切り（する予定です → します）、"
                  "かぎかっこの中の言葉の変化も数えません。原文にない因果のつながりの足しと、書き手の行為と読む印（いたします、今後・改めて、"
@@ -4409,8 +4438,12 @@ def _build_parser():
                          help="文書の立場（diff と同じ）。勧め（読み手に勧める）、決まり（手順）、説明（報告、体験）のどれか。")
     options.add_argument("--doc-type", metavar="種類",
                          help="文書の種類。lint と diff に渡し、記録と状態の行に残します。lint は、その種類で普通な書き方を"
-                              "候補にする規則を外します（yomiyasu_lint.py -h の一覧）。差分（意味が変わる恐れと規則の見直し候補）と"
-                              "資料との照合の判定は変わりません。"
+                              "候補にする規則を外します（yomiyasu_lint.py -h の一覧）。差分（意味が変わる恐れと規則の見直し候補）の"
+                              "見つけ方と、資料との照合の判定は変わりません。"
+                              # yomiyasu_diff.py の _counted_doc_type_help() と同じ文（diff を読み込まずにヘルプを出すため、ここに書く）
+                              "pr、article、incident、proposal、manual、formal、paper（事実や仕様を述べる種類）では、"
+                              "「場合がある」「ことがある」を消した言い切りと、断定に「必ず」などを足した書き換えを --fail-on に数えます"
+                              "（意味の検査で種類によって変わるのはこの2つだけです）。"
                               # yomiyasu_diff.py の _detector_level_help() と同じ文（diff を読み込まずにヘルプを出すため、ここに書く。
                               # tests/test_v200_check_infra.py が一致を見張る。反証で見つけた例）
                               "文体の硬化の検査は incident、formal、paper のとき、勢いの検査は pr、article、incident、manual、formal、paper "

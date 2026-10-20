@@ -11,10 +11,15 @@ import tempfile
 from pathlib import Path
 from runtime_paths import RESOURCE_ROOT, vendor_command, hidden_process
 import progress
+import yomiyasu_updates
 import segmentation
 
 ROOT = RESOURCE_ROOT
 VENDOR = ROOT / "vendor" / "yomiyasu"
+
+def _vendor_root():
+    # Preserve explicit fixture roots while pinning real operations to one revision.
+    return VENDOR if VENDOR != yomiyasu_updates.BUNDLED else yomiyasu_updates.current_root()
 CONFIG = json.loads((ROOT / "profiles.json").read_text("utf-8"))
 MAX_TEXT = 12000
 MAX_CONTEXT = 2000
@@ -55,6 +60,7 @@ def validate_unicode_input(value, label="入力"):
             validate_unicode_input(item, label)
 
 
+@yomiyasu_updates.pinned
 def config():
     from decider import availability
     decider = availability()
@@ -62,12 +68,12 @@ def config():
     providers = provider_settings.public_config()
     selected = next((item for item in providers["providers"] if item["id"] == providers["provider"]), {})
     return {
-        "version": "0.2.10", "max_text": MAX_TEXT,
+        "version": "0.2.11", "max_text": MAX_TEXT,
         "profiles": CONFIG["profiles"], "strengths": CONFIG["strengths"],
-        "stages": {"rules": "ready" if (VENDOR / "scripts/yomiyasu_lint.py").is_file() else "unavailable",
+        "stages": {"rules": "ready" if (_vendor_root() / "scripts/yomiyasu_lint.py").is_file() else "unavailable",
                    "generator": "available" if selected.get("available") else "unavailable",
                    "decider": decider["status"] if decider["status"] in ("loading", "busy") else "ready" if decider["available"] else "unavailable"},
-        "decider": decider, "generation": providers,
+        "decider": decider, "generation": providers, "yomiyasu_update": yomiyasu_updates.public_status(),
     }
 
 
@@ -185,22 +191,30 @@ def apply_edits(text, edits):
     return encoded.decode("utf-16-le")
 
 
+def _checker_failure(message):
+    if yomiyasu_updates.reject_current_revision():
+        return EditorError("更新版のYomiyasuで点検できませんでした。同梱版へ戻したので、もう一度校正してください。原文は残っています。")
+    return EditorError(message)
+
+
+@yomiyasu_updates.pinned
 def lint(text, profile):
     validate_unicode_input(text, "原文")
-    script = VENDOR / "scripts" / "yomiyasu_lint.py"
+    script = _vendor_root() / "scripts" / "yomiyasu_lint.py"
     if not script.is_file():
-        raise EditorError("同梱のyomiyasu検査器が見つかりません。")
-    command = vendor_command("yomiyasu_lint.py", "--reader", "informed", "--json")
+        raise _checker_failure("Yomiyasu検査器が見つかりません。")
+    command = vendor_command("yomiyasu_lint.py", "--reader", "informed", "--json", root=_vendor_root())
     if profile["doc_type"]:
         command.extend(["--doc-type", profile["doc_type"]])
     try:
         result = subprocess.run(command, input=text, encoding="utf-8", capture_output=True,
                                 timeout=30, cwd=ROOT, **hidden_process())
         data = json.loads(result.stdout)
-    except (subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
-        raise EditorError("規則点検を完了できませんでした。文章を短くして試してください。") from exc
-    if result.returncode != 0 or data.get("format") != "yomiyasu-lint" or data.get("format_version") != 2:
-        raise EditorError("規則点検の応答形式または実行状態を確認できませんでした。")
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError, UnicodeError) as exc:
+        raise _checker_failure("規則点検を完了できませんでした。文章を短くして試してください。") from exc
+    if (result.returncode != 0 or not isinstance(data, dict) or data.get("format") != "yomiyasu-lint" or data.get("format_version") != 2
+            or not isinstance(data.get("findings"), list) or any(not isinstance(item, dict) for item in data["findings"])):
+        raise _checker_failure("規則点検の応答形式または実行状態を確認できませんでした。")
     return [{key: item.get(key) for key in ("rule", "message", "line", "severity", "snippet")}
             for item in data.get("findings", [])]
 
@@ -236,20 +250,26 @@ def _guidance_paths(profile):
 
 def _guide_identity(content=None):
     try:
-        content = (VENDOR / "SKILL.md").read_bytes() if content is None else content
+        content = (_vendor_root() / "SKILL.md").read_bytes() if content is None else content
         guide = content.decode("utf-8")
     except (OSError, UnicodeError):
         return {"version": None, "guide_sha256": None, "guide_bytes": None}
     version = re.search(r'^  version:\s*["\']?([0-9]+\.[0-9]+\.[0-9]+)', guide, re.MULTILINE)
+    try:
+        commit = json.loads((_vendor_root() / "UPSTREAM.json").read_text("utf-8"))["commit"]
+    except (OSError, ValueError, KeyError):
+        commit = None
     return {"version": version[1] if version else None,
-            "guide_sha256": hashlib.sha256(content).hexdigest(), "guide_bytes": len(content)}
+            "guide_sha256": hashlib.sha256(content).hexdigest(), "guide_bytes": len(content),
+            "commit": commit}
 
 
+@yomiyasu_updates.pinned
 def _generation_bundle(profile, strength):
     materials = []
     try:
         for path in _guidance_paths(profile):
-            content = (VENDOR / path).read_bytes()
+            content = (_vendor_root() / path).read_bytes()
             materials.append((path, content, content.decode("utf-8")))
     except (OSError, UnicodeError) as exc:
         raise EditorError("同梱のYomiyasu校正方針を読み込めません。配布ファイルを確認してください。") from exc
@@ -429,6 +449,7 @@ def _sarashina_generation(text, strength, context, model, instruction, guidance,
     return edits, questions, notes, [model], suggestions, identity, guidance
 
 
+@yomiyasu_updates.pinned
 def generate(text, profile, strength, context, provider=None, model=None):
     validate_unicode_input({"text": text, "context": context, "provider": provider, "model": model})
     import provider_settings
@@ -455,6 +476,7 @@ def generate(text, profile, strength, context, provider=None, model=None):
     return edits, questions, notes, models, suggestions, identity, guidance
 
 
+@yomiyasu_updates.pinned
 def analyze(payload):
     if not isinstance(payload, dict):
         raise EditorError("入力はJSONオブジェクトで指定してください。")
@@ -488,7 +510,7 @@ def analyze(payload):
     strength = _pick(CONFIG["strengths"], payload.get("strength", "natural"), "強さ")
     progress.report("rules")
     findings = lint(text, profile)
-    output = {"version": "0.2.10", "source_hash": digest(text), "offset_encoding": "utf-16",
+    output = {"version": "0.2.11", "source_hash": digest(text), "offset_encoding": "utf-16",
               "profile": profile["id"], "strength": strength["id"], "findings": findings,
               "edits": [], "questions": [], "suggestions": [], "stages": {"rules": "executed", "generation": "not_requested", "decider": "not_run"},
               "notes": ["指摘は見直し候補です。指摘の有無で文章の品質や意味保持は判定できません。"],
@@ -522,6 +544,7 @@ def analyze(payload):
     return output
 
 
+@yomiyasu_updates.pinned
 def review_proposals(payload):
     """Host-model proposals use the same patch validation without a nested LLM."""
     if not isinstance(payload, dict):
@@ -541,6 +564,7 @@ def review_proposals(payload):
     return output
 
 
+@yomiyasu_updates.pinned
 def finalize_proposals(payload):
     """Bind a host's accepted proposals to the exact final bytes we check."""
     if not isinstance(payload, dict):
@@ -555,6 +579,7 @@ def finalize_proposals(payload):
     return output
 
 
+@yomiyasu_updates.pinned
 def check_final(source, final, profile_id="article"):
     """Use the upstream unified run/verify contract for an export candidate."""
     if not isinstance(source, str) or not isinstance(final, str) or max(len(source), len(final)) > MAX_TEXT:
@@ -562,7 +587,7 @@ def check_final(source, final, profile_id="article"):
     validate_unicode_input({"text": source, "final": final, "profile": profile_id})
     progress.report("checking", completed=0, total=2)
     profile = _pick(CONFIG["profiles"], profile_id, "用途")
-    script = VENDOR / "scripts/yomiyasu_check.py"
+    script = _vendor_root() / "scripts/yomiyasu_check.py"
     with tempfile.TemporaryDirectory(prefix="yebisu-final-") as directory:
         folder = Path(directory)
         original, candidate = folder / "source.md", folder / "final.md"
@@ -570,29 +595,32 @@ def check_final(source, final, profile_id="article"):
         candidate.write_bytes(final.encode("utf-8"))
         state = folder / "state"
         command = vendor_command("yomiyasu_check.py", "run", "--source", str(original), "--final", str(candidate),
-                   "--reader", "informed", "--fact-gaps", "--state-dir", str(state), "--json")
+                   "--reader", "informed", "--fact-gaps", "--state-dir", str(state), "--json", root=_vendor_root())
         if profile["doc_type"]:
             command.extend(["--doc-type", profile["doc_type"]])
         try:
             result = subprocess.run(command, capture_output=True, encoding="utf-8", timeout=45, cwd=ROOT, **hidden_process())
             data = json.loads(result.stdout)
-        except (subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
-            raise EditorError("出力前の全文点検が完了しませんでした。原文は残っています。") from exc
-        if result.returncode != 0 or data.get("format") != "yomiyasu-check-result" or data.get("status") != "executed":
-            raise EditorError("出力前の全文点検が完了しませんでした。修正案を減らして試してください。")
+        except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError, UnicodeError) as exc:
+            raise _checker_failure("出力前の全文点検が完了しませんでした。原文は残っています。") from exc
+        if (result.returncode != 0 or not isinstance(data, dict) or data.get("format") != "yomiyasu-check-result"
+                or data.get("format_version") != 1 or data.get("status") != "executed"):
+            raise _checker_failure("出力前の全文点検が完了しませんでした。修正案を減らして試してください。")
         run_id = data.get("run_id")
         if not run_id:
-            raise EditorError("点検の記録IDが取得できませんでした。")
+            raise _checker_failure("点検の記録IDが取得できませんでした。")
         progress.report("checking", completed=1, total=2, message="checking_verify")
         verify = vendor_command("yomiyasu_check.py", "verify", "--source", str(original), "--final", str(candidate),
-                  "--run-id", str(run_id), "--state-dir", str(state), "--json")
+                  "--run-id", str(run_id), "--state-dir", str(state), "--json", root=_vendor_root())
         try:
             checked = subprocess.run(verify, capture_output=True, encoding="utf-8", timeout=15, cwd=ROOT, **hidden_process())
             verified = json.loads(checked.stdout)
-        except (subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
-            raise EditorError("出力本文と点検記録の照合を完了できませんでした。") from exc
-        if checked.returncode or verified.get("status") != "executed" or verified.get("final", {}).get("sha256") != digest(final):
-            raise EditorError("出力本文と点検記録が一致しませんでした。")
+        except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError, UnicodeError) as exc:
+            raise _checker_failure("出力本文と点検記録の照合を完了できませんでした。") from exc
+        if (checked.returncode or not isinstance(verified, dict) or verified.get("format") != "yomiyasu-check-result"
+                or verified.get("format_version") != 1 or verified.get("status") != "executed"
+                or not isinstance(verified.get("final"), dict) or verified["final"].get("sha256") != digest(final)):
+            raise _checker_failure("出力本文と点検記録が一致しませんでした。")
         progress.report("checking", completed=2, total=2)
         return {"text": final, "source_hash": digest(source), "final_hash": digest(final),
                 "check": data, "verification": verified,

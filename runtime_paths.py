@@ -36,12 +36,14 @@ def cli_command(*arguments):
     return [sys.executable, "-B", str(RESOURCE_ROOT / "app.py"), *map(str, arguments)]
 
 
-def vendor_command(script, *arguments):
+def vendor_command(script, *arguments, root=None):
     if script not in ("yomiyasu_lint.py", "yomiyasu_check.py", "yomiyasu_diff.py"):
         raise ValueError("Unsupported bundled checker")
+    import yomiyasu_updates
+    root = yomiyasu_updates.current_root() if root is None else Path(root)
     if FROZEN:
-        return cli_command("internal-yomiyasu", script, *arguments)
-    return [sys.executable, "-B", str(RESOURCE_ROOT / "vendor/yomiyasu/scripts" / script), *map(str, arguments)]
+        return cli_command("internal-yomiyasu", script, "--yebisu-revision", yomiyasu_updates.revision_for_root(root), *arguments)
+    return [sys.executable, "-B", str(root / "scripts" / script), *map(str, arguments)]
 
 
 def hidden_process():

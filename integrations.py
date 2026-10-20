@@ -276,7 +276,8 @@ def _skill_contents():
             files["references/docs/" + name] = (RESOURCE_ROOT / "docs" / name).read_bytes()
         for name in PUBLIC_EVALUATION:
             files["references/evaluation/" + name] = (RESOURCE_ROOT / "evaluation" / name).read_bytes()
-        vendor = RESOURCE_ROOT / "vendor/yomiyasu"
+        import yomiyasu_updates
+        vendor = yomiyasu_updates.current_root()
         metadata = (vendor / "UPSTREAM.json").read_bytes()
         entries = json.loads(metadata)["files"]
         if not isinstance(entries, list) or not entries:
@@ -314,6 +315,45 @@ def _skill_contents():
         return files
     except (OSError, ValueError, TypeError, KeyError, UnicodeError):
         raise IntegrationError("配布物に必要な公開スキル資料が不足しているか、原典の照合に失敗しました。Codex設定は変更していません。") from None
+
+
+def refresh_yomiyasu():
+    """Update only managed references, retaining all Codex config bytes."""
+    if not MANIFEST.is_file():
+        return "not_installed"
+    try:
+        manifest_original = MANIFEST.read_bytes()
+        previous = json.loads(manifest_original)
+        config = _config_path()
+        target = Path.home() / ".agents/skills" / SKILL
+        if not target.exists() or not config.is_file():
+            return "not_installed"
+        _check_skill(target, previous)
+        original = config.read_bytes()
+        registered = tomllib.loads(original.decode("utf-8-sig")).get("mcp_servers", {}).get(SERVER, {})
+        command = previous["command"]
+        if [registered.get("command"), *registered.get("args", [])] != command:
+            return "modified"
+        contents = {name: (target / name).read_bytes() for name in previous["skill_sha256"]}
+        import yomiyasu_updates
+        vendor = yomiyasu_updates.current_root()
+        metadata = (vendor / "UPSTREAM.json").read_bytes()
+        manifest = yomiyasu_updates.validate_package(vendor)
+        contents = {name: raw for name, raw in contents.items() if not name.startswith("references/yomiyasu/")}
+        for row in manifest["files"]:
+            contents["references/yomiyasu/" + row["path"]] = (vendor / row["path"]).read_bytes()
+        contents["references/yomiyasu/UPSTREAM.json"] = metadata
+        # Old managed guides named a fixed version next to the same link.
+        contents["SKILL.md"] = re.sub(rb"yomiyasu [0-9]+\.[0-9]+\.[0-9]+", b"yomiyasu", contents["SKILL.md"])
+        hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in contents.items()}
+        if hashes == previous["skill_sha256"]:
+            return "current"
+        _replace_skill_and_manifest(target, contents, previous, manifest_original, command, config, original, original)
+        return "updated"
+    except IntegrationError:
+        return "modified"
+    except (OSError, ValueError, TypeError, KeyError):
+        return "deferred"
 
 
 def _replace_skill_and_manifest(target, contents, previous, manifest_original, command, config, original, merged):

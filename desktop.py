@@ -368,6 +368,8 @@ def main(argv=None):
         raise SystemExit("この起動方法はWindows / macOS向けです。ブラウザー版は app.py serve を使用してください。")
     session = None
     try:
+        import yomiyasu_updates
+        yomiyasu_updates.start_background()
         session = ServiceSession()
         if sys.platform == "win32" and not has_webview2():
             raise DesktopError("Microsoft Edge WebView2 Runtime が必要です。Microsoft 公式のダウンロードページから導入し、もう一度起動してください。\nhttps://developer.microsoft.com/microsoft-edge/webview2/\n自動ダウンロードは行いません。")
