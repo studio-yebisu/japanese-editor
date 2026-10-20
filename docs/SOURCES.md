@@ -1,27 +1,29 @@
 # 原典・利用条件・検証した範囲
 
-確認日: 2026-10-17（日本時間）。原典調査と、この PC での実行を区別して記録する。固定版 Flash の CPU BF16 推論、ブラウザと Claude Code MCP からの利用を実行済み。実行条件と限定した短文試験は [DECIDER_RUNTIME.md](DECIDER_RUNTIME.md)、現行状態は [STATUS.md](STATUS.md) を参照。幅広い日本語品質の独立評価と Production 採用は行っていない。
+Yomiyasuの取得・整合性確認: 2026-10-20（日本時間）。その他の原典調査と従来の実行記録は2026-10-17時点です。固定版FlashのCPU BF16推論、ブラウザーとClaude Code MCPからの過去の実行条件は [DECIDER_RUNTIME.md](DECIDER_RUNTIME.md)、版ごとの確認範囲は [STATUS.md](STATUS.md)を参照してください。幅広い日本語品質の独立評価とProduction採用は行っていません。
 
 ## yomiyasu
 
 | 項目 | 確認結果 |
 | --- | --- |
 | 原典 | [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) |
-| 固定コミット | `68075bea91ae27958766effd6aaa56d42d6be125` |
-| 版 | `2.0.0` |
+| 同梱コミット | `8be3ef6e0e668f14cae30c3da6b0c20b95b2179f` |
+| 同梱版 | `2.1.0` |
 | 役割 | 生成 AI 向けの日本語推敲方針と、表現・書式の lint、原文と案の全文差分、意味が変わる恐れのある形の検査 |
 | 利用条件 | MIT。`Copyright (c) 2026 nanaism` と原典の許諾表示を保持する。Unicode 由来部分の `UNICODE-LICENSE.txt` も保持する |
 | 配置 | `vendor/yomiyasu/`。スキル本文、全 references、全 scripts、LICENSE と Unicode notice を無改変で保存 |
 | 来歴 | `vendor/yomiyasu/UPSTREAM.json` に固定コミット、原典の相対パス、ファイル URL、Git blob OID、SHA-256、byte 数を記録 |
 
+同梱版は2026-10-20に公式から取得し、36ファイルのGit blob OID・SHA-256・必要資料を照合しました。起動時の自動更新では、この同梱版を残したまま、対応する2.x系の新版を別領域へ取得します。実際の使用コミットは結果の `yomiyasu.commit` と設定画面で確認します。以下の従来の実行記録は、新版で再実行したものではありません。
+
 固定された一次資料:
 
-- [SKILL.md](https://github.com/nanaism/yomiyasu/blob/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/SKILL.md)
-- [言い直しテスト](https://github.com/nanaism/yomiyasu/blob/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/rephrase-test.md)
-- [小説・エッセイの扱い](https://github.com/nanaism/yomiyasu/blob/68075bea91ae27958766effd6aaa56d42d6be125/skills/yomiyasu/references/doc-types/essay.md)
-- [付属ツールの仕様](https://github.com/nanaism/yomiyasu/blob/68075bea91ae27958766effd6aaa56d42d6be125/docs/tools.md)
-- [限界と著者の検証範囲](https://github.com/nanaism/yomiyasu/blob/68075bea91ae27958766effd6aaa56d42d6be125/docs/limitations.md)
-- [MIT License](https://github.com/nanaism/yomiyasu/blob/68075bea91ae27958766effd6aaa56d42d6be125/LICENSE)、[Unicode License](https://github.com/nanaism/yomiyasu/blob/68075bea91ae27958766effd6aaa56d42d6be125/UNICODE-LICENSE.txt)
+- [SKILL.md](https://github.com/nanaism/yomiyasu/blob/8be3ef6e0e668f14cae30c3da6b0c20b95b2179f/skills/yomiyasu/SKILL.md)
+- [言い直しテスト](https://github.com/nanaism/yomiyasu/blob/8be3ef6e0e668f14cae30c3da6b0c20b95b2179f/skills/yomiyasu/references/rephrase-test.md)
+- [小説・エッセイの扱い](https://github.com/nanaism/yomiyasu/blob/8be3ef6e0e668f14cae30c3da6b0c20b95b2179f/skills/yomiyasu/references/doc-types/essay.md)
+- [付属ツールの仕様](https://github.com/nanaism/yomiyasu/blob/8be3ef6e0e668f14cae30c3da6b0c20b95b2179f/docs/tools.md)
+- [限界と著者の検証範囲](https://github.com/nanaism/yomiyasu/blob/8be3ef6e0e668f14cae30c3da6b0c20b95b2179f/docs/limitations.md)
+- [MIT License](https://github.com/nanaism/yomiyasu/blob/8be3ef6e0e668f14cae30c3da6b0c20b95b2179f/LICENSE)、[Unicode License](https://github.com/nanaism/yomiyasu/blob/8be3ef6e0e668f14cae30c3da6b0c20b95b2179f/UNICODE-LICENSE.txt)
 
 原典が優先するのは、主張、比重、確度、文の働きの保持と、情報を勝手に足さないことである。候補数が減ったことや `rule_penalty_score` を、文章品質や意味保持の合格点として使わない。検査候補がなくても意味が変わる可能性があるため、全文差分を確認する。
 
@@ -48,7 +50,7 @@ lint の JSON は次の形式。`findings` は同じ行に複数出る場合が�
 {
   "format": "yomiyasu-lint",
   "format_version": 2,
-  "tool_version": "2.0.0",
+  "tool_version": "2.1.0",
   "candidate_count": 4,
   "counts": {"error": 0, "warn": 3, "info": 1},
   "no_rule_findings": false,

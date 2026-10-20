@@ -34,6 +34,7 @@
     errorSettings: byId("error-settings"), errorLogin: byId("error-login"), busyNote: byId("busy-note"),
     progressBox: byId("operation-progress"), progressBar: byId("progress-bar"), progressMessage: byId("progress-message"),
     settingsFeedback: byId("settings-feedback"),
+    yomiyasuVersion: byId("yomiyasu-version"), yomiyasuStatus: byId("yomiyasu-update-status"), yomiyasuDetail: byId("yomiyasu-update-detail"),
     onboarding: byId("sarashina-onboarding"), resourceError: byId("decider-resource-error"), deciderGuide: byId("decider-setup-guide"),
     motion: byId("edit-motion"), motionLabel: byId("edit-motion-label"),
   };
@@ -51,6 +52,7 @@
   let outputRaw = "";
   let busyTimer = null;
   let activeProgress = null;
+  let yomiyasuTimer = null;
 
   const sample = "この機能を利用することが可能です。保存件数の上限は3件です。";
 
@@ -145,6 +147,33 @@
     if (!ui.settingsDialog.open) ui.settingsDialog.showModal();
     ui.settingsFeedback.textContent = ui.error.hidden ? "" : ui.errorMessage.textContent;
     if (focusProvider) ui.provider.focus({ preventScroll: true });
+    if (config?.yomiyasu_update) refreshYomiyasu();
+  }
+
+  function renderYomiyasu(data) {
+    if (!data || typeof data.active_version !== "string") return;
+    const updateProgress = byId("yomiyasu-update-progress");
+    if (updateProgress) updateProgress.hidden = !["checking", "downloading"].includes(data.state);
+    ui.yomiyasuVersion.textContent = data.active_version;
+    ui.yomiyasuStatus.textContent = typeof data.message === "string" ? data.message : "更新状態を確認できません。保存済みの版を使います。";
+    const checked = data.checked_at ? new Date(data.checked_at) : null;
+    ui.yomiyasuDetail.textContent = checked && Number.isFinite(checked.getTime()) ? `最終確認：${checked.toLocaleString("ja-JP")}` : "";
+    if (data.skill_sync === "modified") ui.yomiyasuDetail.textContent += " Codex用の資料に変更があるため、そのコピーは保持しています。";
+    if (data.skill_sync === "deferred") ui.yomiyasuDetail.textContent += " Codex用の資料の同期は保留中です。アプリを起動し直すと再確認します。";
+  }
+
+  async function refreshYomiyasu(remaining = 45) {
+    if (yomiyasuTimer !== null) clearTimeout(yomiyasuTimer);
+    yomiyasuTimer = null;
+    try {
+      const data = await readJson(await fetch("/api/yomiyasu/status", { headers: { Accept: "application/json" }, cache: "no-store" }));
+      renderYomiyasu(data);
+      if (["checking", "downloading"].includes(data.state) && remaining > 0) {
+        yomiyasuTimer = setTimeout(() => refreshYomiyasu(remaining - 1), 2000);
+      }
+    } catch {
+      // Update status never blocks editing, setup, or exporting a pinned result.
+    }
   }
 
   function newRequestId() {
@@ -646,6 +675,8 @@
         throw new Error("文章の用途や接続状態を読み取れませんでした。");
       }
       config = next;
+      renderYomiyasu(next.yomiyasu_update);
+      if (next.yomiyasu_update) refreshYomiyasu();
       fillOptions(ui.profile, next.profiles);
       fillOptions(ui.strength, next.strengths);
       const natural = next.strengths.find((item) => item.id === "natural");
@@ -1071,7 +1102,8 @@
     try {
       const response = await fetch("/api/export", {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json", "X-Yebisu-Request-Id": requestId },
-        body: JSON.stringify({ text: exportRun.snapshot.source, final: finalText, profile: exportRun.snapshot.profile }),
+        body: JSON.stringify({ text: exportRun.snapshot.source, final: finalText, profile: exportRun.snapshot.profile,
+          yomiyasu_revision: exportRun.data.yomiyasu?.commit }),
         signal: controller.signal,
       });
       const data = await readJson(response);

@@ -138,7 +138,7 @@ class ProviderIntegrationTests(unittest.TestCase):
         self.assertEqual(output["stages"]["generation"], "not_requested")
         self.assertNotIn("generator", output)
         self.assertEqual(output["yomiyasu"]["rules"], "executed")
-        self.assertEqual(output["yomiyasu"]["version"], "2.0.0")
+        self.assertEqual(output["yomiyasu"]["version"], "2.1.0")
         self.assertEqual(output["yomiyasu"]["generation_guidance"], {"status": "not_sent", "sources": []})
         self.settings.assert_not_called()
         self.cloud.assert_not_called()
@@ -170,7 +170,7 @@ class ProviderIntegrationTests(unittest.TestCase):
                         self.assertIn(strength["guidance"], instruction)
                         provenance = output["yomiyasu"]
                         self.assertEqual(provenance["rules"], "executed")
-                        self.assertEqual(provenance["version"], "2.0.0")
+                        self.assertEqual(provenance["version"], "2.1.0")
                         self.assertEqual(provenance["guide_bytes"], len(guide_bytes))
                         self.assertEqual(provenance["guide_sha256"], hashlib.sha256(guide_bytes).hexdigest())
                         guidance = provenance["generation_guidance"]

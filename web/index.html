@@ -101,6 +101,13 @@
       <div class="dialog-content">
         <p id="settings-feedback" class="settings-feedback" role="status" aria-live="polite"></p>
         <div id="connection-settings" class="connection-settings">
+          <section class="settings-section" aria-labelledby="yomiyasu-update-title">
+            <h3 id="yomiyasu-update-title">Yomiyasu <span id="yomiyasu-version" class="quiet-label"></span></h3>
+            <p id="yomiyasu-update-status" class="field-description" role="status" aria-live="polite">更新情報を確認しています。</p>
+            <progress id="yomiyasu-update-progress" aria-label="Yomiyasuを更新しています" hidden></progress>
+            <p id="yomiyasu-update-detail" class="field-description"></p>
+            <p class="field-description">起動時に<a href="https://github.com/nanaism/yomiyasu" target="_blank" rel="noreferrer noopener">公式リポジトリ</a>を確認します。更新中やオフラインでも使えます。校正中の処理は同じ版を使い、次の校正から新版に切り替えます。</p>
+          </section>
           <section class="settings-section" aria-labelledby="provider-title">
             <h3 id="provider-title">修正案を作るサービス</h3>
             <div class="settings-grid"><div class="field-group"><label for="provider">サービス</label><select id="provider" disabled></select></div><div class="field-group"><label for="provider-model">モデル</label><select id="provider-model" disabled></select></div></div>
