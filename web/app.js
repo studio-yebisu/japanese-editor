@@ -9,6 +9,10 @@
     saveProvider: byId("save-provider"), removeKey: byId("remove-api-key"), providerSetup: byId("provider-setup"),
     geminiLogin: byId("login-gemini"), geminiSettings: byId("gemini-login-settings"), keySettings: byId("api-key-settings"),
     installCodex: byId("install-codex"), codexStatus: byId("codex-status"), releaseDecider: byId("release-decider"),
+    aiConnectionsOpen: byId("ai-connections-open"), aiConnections: byId("ai-connections"),
+    checkAiConnection: byId("check-ai-connection"), aiConnectionStatus: byId("ai-connection-status"),
+    showMcpConfig: byId("show-mcp-config"), mcpConfigBox: byId("mcp-config-box"),
+    mcpConfigText: byId("mcp-config-text"), copyMcpConfig: byId("copy-mcp-config"),
     deciderDevice: byId("decider-device"), saveDeciderDevice: byId("save-decider-device"), deciderDeviceStatus: byId("decider-device-status"),
     deciderBackend: byId("decider-backend"), saveDeciderBackend: byId("save-decider-backend"), deciderBackendStatus: byId("decider-backend-status"),
     source: byId("source"), sourceHelp: byId("source-help"), context: byId("context"), profile: byId("profile"), strength: byId("strength"),
@@ -633,7 +637,9 @@
     try {
       const state = await readJson(await fetch("/api/integrations/codex"));
       codexAvailable = state.available === true;
-      ui.codexStatus.textContent = state.registered && state.skill_installed ? "Codex に登録済みです。新しい会話から利用できます。" : state.available ? "このPCのCodexへ、MCPと校正スキルを登録できます。既存設定はバックアップします。" : "Codex CLI が見つかりません。導入後にアプリを開き直してください。";
+      ui.codexStatus.textContent = state.needs_update ? "Codexに別の版・保存先、または無効な登録が残っています。この版へ登録し直してから、新しい会話で確認してください。"
+        : state.current_registration && state.skill_installed ? "この版をCodexに登録済みです。新しい会話から利用できます。"
+        : state.available ? "このPCのCodexへ、MCPと校正スキルを登録できます。既存設定はバックアップします。" : "Codex CLIが見つかりません。導入案内または下のMCP設定で登録してください。";
       ui.installCodex.disabled = !codexAvailable || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy;
     } catch { ui.codexStatus.textContent = "Codex の登録状態を確認できませんでした。"; }
   }
@@ -657,6 +663,8 @@
     ui.deciderBackend.disabled = !config || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy || refreshingCapability;
     ui.saveDeciderBackend.disabled = ui.deciderBackend.disabled || ["busy", "loading"].includes(config?.decider?.status);
     ui.installCodex.disabled = !codexAvailable || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy;
+    ui.checkAiConnection.disabled = !config || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy || refreshingCapability;
+    ui.showMcpConfig.disabled = !config || settingsBusy;
     ui.copy.disabled = !run || requiredJudgmentPending() || Boolean(activeExport) || Boolean(activeRequest) || settingsBusy;
     ui.download.disabled = ui.copy.disabled;
     ui.refreshDecider.disabled = !config || Boolean(activeRequest) || Boolean(activeExport) || refreshingCapability || settingsBusy;
@@ -1228,6 +1236,35 @@
   ui.refreshDecider.addEventListener("click", () => refreshDeciderCapability());
   ui.retryConfig.addEventListener("click", loadConfig);
   ui.settingsOpen.addEventListener("click", () => openSettings());
+  ui.aiConnectionsOpen.addEventListener("click", () => { openSettings(); ui.aiConnections.scrollIntoView?.({ block: "start" }); ui.aiConnections.focus({ preventScroll: true }); });
+  ui.checkAiConnection.addEventListener("click", async () => {
+    if (!config || activeRequest || activeExport || settingsBusy || refreshingCapability) return;
+    settingsBusy = true; updateButtons();
+    const operation = startBusy("MCPの起動と規則点検を確認しています。原稿は使いません。");
+    ui.aiConnectionStatus.textContent = "このPCのMCPを起動して点検しています。最大30秒程度かかります。";
+    try {
+      const state = await readJson(await fetch("/api/integrations/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }));
+      if (state.status !== "passed" || state.rules !== "executed" || state.generation !== "not_requested" || state.decider !== "not_run") throw new Error("点検結果を確認できませんでした。");
+      ui.aiConnectionStatus.textContent = `MCP v${state.version} · 起動・規則点検を確認しました。AI側で新しい会話を開き、ツールの接続を確認してください。`;
+    } catch (error) { ui.aiConnectionStatus.textContent = `接続を確認できませんでした。${error.message}`; }
+    finally { stopBusy(operation); settingsBusy = false; updateButtons(); }
+  });
+  ui.showMcpConfig.addEventListener("click", async () => {
+    ui.showMcpConfig.disabled = true;
+    try {
+      const state = await readJson(await fetch("/api/integrations/mcp"));
+      if (!state.mcpServers?.["yebisu-japanese-editor"]?.command) throw new Error("登録用設定を確認できませんでした。");
+      ui.mcpConfigText.value = JSON.stringify(state, null, 2);
+      ui.mcpConfigBox.hidden = false;
+    } catch (error) { ui.aiConnectionStatus.textContent = `MCP設定を読み取れませんでした。${error.message}`; }
+    finally { updateButtons(); }
+  });
+  ui.copyMcpConfig.addEventListener("click", async () => {
+    if (!ui.mcpConfigText.value) return;
+    ui.mcpConfigText.focus(); ui.mcpConfigText.select();
+    try { await navigator.clipboard.writeText(ui.mcpConfigText.value); ui.aiConnectionStatus.textContent = "MCP設定をコピーしました。AI側の設定へ登録してください。"; }
+    catch { ui.aiConnectionStatus.textContent = "設定を選択しました。Ctrl+C（Macは⌘C）でコピーし、AI側へ登録してください。"; }
+  });
   ui.setupPrompt.addEventListener("click", () => openSettings(true));
   ui.settingsClose.addEventListener("click", () => { if (!settingsBusy) ui.settingsDialog.close(); });
   ui.settingsDialog.addEventListener("click", (event) => { if (event.target === ui.settingsDialog && !settingsBusy) ui.settingsDialog.close(); });

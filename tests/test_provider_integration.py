@@ -211,7 +211,13 @@ class ProviderIntegrationTests(unittest.TestCase):
             def sarashina_boundary(endpoint, body, key, provider):
                 self.assertEqual(key, "offline-fixture-key")
                 captured["sarashina"] = json.loads(json.dumps(body, ensure_ascii=False))["messages"][0]["content"]
-                return {"model": "sarashina3-nano", "choices": [{"finish_reason": "stop", "message": {"content": json.dumps(PROPOSAL)}}]}
+                # The real Sarashina adapter requests a corrected passage;
+                # edits are derived locally after its strict schema check.
+                schema = body["response_format"]["json_schema"]["schema"]
+                self.assertIn("corrected_text", schema["required"])
+                passage = {"corrected_text": "保存してください。上限は3件です。",
+                           "questions": [], "suggestions": []}
+                return {"model": "sarashina3-nano", "choices": [{"finish_reason": "stop", "message": {"content": json.dumps(passage)}}]}
             def claude_boundary(command, **kwargs):
                 captured["claude"] = json.loads(kwargs["input"])["editor_instructions"]
                 self.assertNotIn(guide, " ".join(command))
@@ -227,7 +233,13 @@ class ProviderIntegrationTests(unittest.TestCase):
                     output = self.provider_analyze(provider, profile=profile["id"], model=model)
                     instruction = captured[provider]
                     self.assertTrue(guide in instruction, "Complete guide must reach provider")
-                    self.assertEqual(engine.digest(instruction), output["yomiyasu"]["generation_guidance"]["instruction_sha256"])
+                    expected = engine.generation_instructions(profile, engine.CONFIG["strengths"][1])
+                    # Provenance hashes the shared guidance bundle. Sarashina
+                    # appends its passage-output contract at the transport.
+                    self.assertTrue(instruction.startswith(expected), "The entire guidance bundle must survive serialization")
+                    if provider != "sarashina":
+                        self.assertEqual(instruction, expected)
+                    self.assertEqual(engine.digest(expected), output["yomiyasu"]["generation_guidance"]["instruction_sha256"])
                     for source in output["yomiyasu"]["generation_guidance"]["sources"]:
                         self.assertTrue((engine.VENDOR / source["path"]).read_bytes().decode("utf-8") in instruction,
                                         "Complete reference must reach provider")

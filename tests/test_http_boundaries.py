@@ -72,6 +72,19 @@ class HttpBoundaryTests(unittest.TestCase):
                     self.assertEqual(status, expected)
             analyze.assert_not_called()
 
+    def test_mcp_readiness_probe_is_same_origin_empty_input_and_exclusive(self):
+        headers = {"Content-Type": "application/json"}
+        with patch.object(app.integrations, "check_connection", return_value={"status": "passed"}) as check:
+            self.assertEqual(self.request("POST", "/api/integrations/check", "{}", {
+                **headers, "Origin": "https://other.invalid"})[0], 403)
+            self.assertEqual(self.request("POST", "/api/integrations/check", '{"text":"private"}', headers)[0], 400)
+            check.assert_not_called()
+            with app.Handler.semaphore:
+                self.assertEqual(self.request("POST", "/api/integrations/check", "{}", headers)[0], 409)
+            check.assert_not_called()
+            self.assertEqual(self.request("POST", "/api/integrations/check", "{}", headers), (200, {"status": "passed"}))
+            check.assert_called_once_with()
+
     def test_idle_and_incomplete_headers_expire_and_return_slots(self):
         for prefix in (b"", f"GET /api/health HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\n".encode()):
             with self.subTest(prefix=prefix):

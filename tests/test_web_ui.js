@@ -114,6 +114,8 @@ function harness() {
       data = { status: "saved", device: body.device, backend: body.backend };
     }
     else if (url === "/api/integrations/codex") data = { registered: true, skill_installed: true };
+    else if (url === "/api/integrations/check") data = { status: "passed", version: "test", rules: "executed", generation: "not_requested", decider: "not_run" };
+    else if (url === "/api/integrations/mcp") data = { mcpServers: { "yebisu-japanese-editor": { command: "fixed-local-cli", args: ["mcp"], env: {} } } };
     else if (url === "/api/settings") {
       if (state.settingsGate) await state.settingsGate();
       if (state.settingsError) return { ok: false, status: 500, json: async () => ({ error: "設定の保存に失敗" }) };
@@ -156,6 +158,28 @@ function harness() {
 
 const raw = "😀この機能を利用することが可能です。\r\n保存件数の上限は3件です。\r\n`code` https://example.test";
 const corrected = raw.replace("利用することが可能です", "利用できます");
+
+test("MCP readiness check sends no manuscript, preserves input, and reports its actual scope", async () => {
+  const { state, get, h } = harness(); await h.loadConfig(); h.setSourceText(raw);
+  await get("check-ai-connection").click();
+  const calls = state.requests.filter((r) => r.url === "/api/integrations/check");
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].body, {});
+  assert.equal(h.currentSource(), raw);
+  assert.match(get("ai-connection-status").textContent, /MCP vtest.*規則点検.*AI側/);
+  assert.equal(get("check-ai-connection").disabled, false);
+  assert.equal(state.requests.some((r) => r.url === "/api/analyze"), false);
+});
+
+test("MCP config is fetched explicitly and copied without changing the manuscript", async () => {
+  const { state, get, h } = harness(); await h.loadConfig(); h.setSourceText(raw);
+  assert.equal(state.requests.some((r) => r.url === "/api/integrations/mcp"), false);
+  await get("show-mcp-config").click();
+  assert.equal(get("mcp-config-box").hidden, false);
+  await get("copy-mcp-config").click();
+  assert.equal(JSON.parse(state.clipboard).mcpServers["yebisu-japanese-editor"].command, "fixed-local-cli");
+  assert.equal(h.currentSource(), raw);
+});
 
 test("Q8 capability shows actual partial offload without calling it CPU BF16", async () => {
   const { state, get, h } = harness();

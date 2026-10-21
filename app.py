@@ -16,7 +16,7 @@ from urllib.parse import parse_qs, urlparse
 if getattr(sys, "frozen", False):
     sys.dont_write_bytecode = True
 
-from engine import EditorError, ROOT, CONFIG, analyze, check_final, config, finalize_proposals, review_proposals, validate_unicode_input
+from engine import EditorError, ROOT, CONFIG, VERSION, analyze, check_final, config, finalize_proposals, review_proposals, validate_unicode_input
 from runtime_paths import cli_command, FROZEN
 from decider import prepare as prepare_decider
 import decider_runtime
@@ -143,7 +143,7 @@ def mcp():
                 validate_unicode_input(params)
                 result = {"protocolVersion": params.get("protocolVersion", "2024-11-05"),
                           "capabilities": {"tools": {"listChanged": False}},
-                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.16"},
+                          "serverInfo": {"name": "yomiyasu-studio", "version": VERSION},
                           "instructions": "日本語の校正は用途・強さを選び、ホスト自身が修正候補を作りreview_proposalsで比較する。採用案だけをfinalizeへ渡し返ったtextを最終稿にする。未実行の判定を成功と扱わない。小説・台詞の作風を保つ。generate=trueは外部送信を伴うため通常のホスト校正では不要。"}
             elif method == "ping":
                 result = {}
@@ -299,13 +299,15 @@ class Handler(BaseHTTPRequestHandler):
             except (rpc_auth.AuthenticationError, ValueError):
                 return self.reject(401, "共有サービスの認証要求を確認できません。")
         if path == "/api/health":
-            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.16", "data_id": data_id(), "closing": self.server.closing})
+            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": VERSION, "data_id": data_id(), "closing": self.server.closing})
         if path == "/api/providers":
             return self.send(200, provider_settings.public_config())
         if path == "/api/yomiyasu/status":
             return self.send(200, yomiyasu_updates.public_status())
         if path == "/api/integrations/codex":
             return self.send(200, integrations.status())
+        if path == "/api/integrations/mcp":
+            return self.send(200, integrations.mcp_config())
         if path == "/api/decider/status":
             if self.headers.get(rpc_auth.REQUEST_HEADER) is not None:
                 try:
@@ -340,7 +342,7 @@ class Handler(BaseHTTPRequestHandler):
         if origin and origin not in {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}:
             return self.reject(403, "この画面から操作してください。")
         route = urlparse(self.path).path
-        if route not in ("/api/analyze", "/api/export", "/api/judge", "/api/decider/decide", "/api/decider/stop", "/api/decider/settings", "/api/decider/release", "/api/settings", "/api/integrations/codex", "/api/service/stop", "/api/gemini/login"):
+        if route not in ("/api/analyze", "/api/export", "/api/judge", "/api/decider/decide", "/api/decider/stop", "/api/decider/settings", "/api/decider/release", "/api/settings", "/api/integrations/codex", "/api/integrations/check", "/api/service/stop", "/api/gemini/login"):
             return self.reject(404, "見つかりません。")
         if self.headers.get_content_type() != "application/json":
             return self.reject(415, "JSONで入力してください。")
@@ -354,7 +356,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.reject(413, "入力サイズの上限を超えています。")
         if getattr(self.server, "closing", False) and route not in ("/api/decider/decide", "/api/decider/stop"):
             return self.reject(503, "終了処理中です。現在の点検が終わるまで待っています。")
-        if route in ("/api/settings", "/api/integrations/codex", "/api/service/stop", "/api/gemini/login", "/api/decider/settings", "/api/decider/release"):
+        if route in ("/api/settings", "/api/integrations/codex", "/api/integrations/check", "/api/service/stop", "/api/gemini/login", "/api/decider/settings", "/api/decider/release"):
             try:
                 payload = self._read_json(length)
                 if route in ("/api/decider/settings", "/api/decider/release"):
@@ -384,6 +386,13 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(200, result)
                 if payload:
                     raise EditorError("この操作に追加の入力は不要です。")
+                if route == "/api/integrations/check":
+                    if not self.semaphore.acquire(blocking=False):
+                        return self.reject(409, "校正を実行中です。完了してから接続を点検してください。")
+                    try:
+                        return self.send(200, integrations.check_connection())
+                    finally:
+                        self.semaphore.release()
                 if route == "/api/gemini/login":
                     import cli_login
                     try:
@@ -663,9 +672,7 @@ def main():
                 decider_runtime.stop()
                 result = {"status": "stopped"}
             elif args.command == "mcp-config":
-                command = cli_command("mcp")
-                result = {"mcpServers": {"yebisu-japanese-editor": {"command": command[0], "args": command[1:],
-                          "env": integrations.server_environment()}}}
+                result = integrations.mcp_config()
             elif args.command in ("review", "prepare-decider"):
                 payload = json.loads(sys.stdin.buffer.read().decode("utf-8"))
                 validate_unicode_input(payload)

@@ -405,12 +405,73 @@ def status():
     try:
         server = _read(_config_path()).get("mcp_servers", {}).get(SERVER)
         skill = Path.home() / ".agents/skills" / SKILL / "SKILL.md"
+        registered = isinstance(server, dict)
+        command = cli_command("mcp")
+        current = (registered and server.get("enabled") is not False
+                   and isinstance(server.get("args", []), list)
+                   and [server.get("command"), *server.get("args", [])] == command
+                   and isinstance(server.get("env"), dict)
+                   and all(server["env"].get(key) == value for key, value in server_environment().items()))
         return {"available": codex_executable() is not None, "registered": isinstance(server, dict),
+                "current_registration": current, "needs_update": registered and not current,
                 "skill_installed": skill.is_file(), "server": SERVER,
                 "notice": "登録後は新しいCodexセッションで利用できます。既存の会話はツール一覧の再読込が必要な場合があります。"}
     except (OSError, ValueError):
         return {"available": codex_executable() is not None, "registered": False, "skill_installed": False,
                 "server": SERVER, "error": "Codexの設定を読み取れません。既存設定は変更していません。"}
+
+
+def mcp_config():
+    """Portable stdio registration, containing no provider credentials."""
+    command = cli_command("mcp")
+    return {"mcpServers": {SERVER: {"command": command[0], "args": command[1:],
+                                    "env": server_environment()}}}
+
+
+def check_connection():
+    """Exercise our actual stdio entry point without a model or manuscript."""
+    requests = [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05"}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {
+            "name": "japanese_editor_analyze", "arguments": {
+                "text": "接続確認用の例文です。", "profile": "article", "generate": False, "judge": False}}},
+    ]
+    environment = {**os.environ, **server_environment(), "YEBISU_EDITOR_NO_AUTOSTART": "1",
+                   "YEBISU_YOMIYASU_OFFLINE": "1"}
+    try:
+        result = subprocess.run(cli_command("mcp"),
+                                input="\n".join(json.dumps(item, ensure_ascii=False) for item in requests)+"\n",
+                                capture_output=True, encoding="utf-8", timeout=30,
+                                env=environment, **hidden_process())
+        # This fixed exchange has a small response. Never relay arbitrary
+        # stdout/stderr, provider metadata or paths as an error diagnostic.
+        if result.returncode or len(result.stdout) > 128_000:
+            raise ValueError("entry point failed")
+        responses = [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
+        if len(responses) != 3 or any(not isinstance(row, dict) or row.get("error") for row in responses):
+            raise ValueError("invalid exchange")
+        if [row.get("id") for row in responses] != [1, 2, 3]:
+            raise ValueError("invalid response identity")
+        server = responses[0]["result"]["serverInfo"]
+        tools = responses[1]["result"]["tools"]
+        tool_result = responses[2]["result"]
+        if tool_result.get("isError"):
+            raise ValueError("tool failed")
+        analysis = json.loads(tool_result["content"][0]["text"])
+        if (server.get("name") != "yomiyasu-studio"
+                or not isinstance(tools, list)
+                or "japanese_editor_review_proposals" not in {item.get("name") for item in tools if isinstance(item, dict)}
+                or analysis.get("stages") != {"rules": "executed", "generation": "not_requested", "decider": "not_run"}):
+            raise ValueError("unexpected capability")
+        return {"status": "passed", "transport": "stdio", "version": server["version"],
+                "tools": len(tools), "rules": "executed", "generation": "not_requested", "decider": "not_run",
+                "notice": "MCPの起動と規則点検を確認しました。AI側の登録後、新しい会話でツールが使えるか確認してください。"}
+    except subprocess.TimeoutExpired:
+        raise IntegrationError("MCPの起動確認が30秒以内に終わりませんでした。アプリの実行ファイルとアクセス権を確認してください。原文や外部AIは使っていません。") from None
+    except (OSError, ValueError, KeyError, IndexError, TypeError, AttributeError, UnicodeError):
+        raise IntegrationError("MCPの起動または規則点検を確認できませんでした。アプリを展開し直し、AI連携の導入案内を確認してください。原文や外部AIは使っていません。") from None
 
 
 def install():
