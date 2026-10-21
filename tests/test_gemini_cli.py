@@ -21,8 +21,8 @@ SCHEMA = {"type":"object", "properties":{"edits":{"type":"array", "items":{"type
 PROPOSAL = {"edits":[]}
 
 
-def envelope(model=cli.MODEL, permission="strict", result=None, steps=()):
-    rows=[{"event":"init", "init":{"model":model, "permission_mode":permission}}]
+def envelope(model=cli.MODEL, permission="strict", result=None, steps=(), agent=cli.PROOFREADER_AGENT):
+    rows=[{"event":"init", "init":{"model":model, "permission_mode":permission, "agent":agent}}]
     rows.extend(steps)
     rows.append({"event":"result", "result":result or {"status":"SUCCESS", "structured_output":PROPOSAL}})
     return ("\n".join(json.dumps(row) for row in rows)+"\n").encode()
@@ -55,7 +55,7 @@ class CapabilityAndIsolationTests(unittest.TestCase):
                 probe.assert_not_called()
 
     def test_other_version_is_visible_but_not_run_for_generation(self):
-        for version in ("1.4.2", "1.5.0", "2.0.0", "1.4.1-beta"):
+        for version in ("1.4.2", "1.4.3", "1.5.0", "2.0.0", "1.4.1-beta"):
             with self.subTest(version=version), patch.object(cli,"_installation",return_value={"command":["agy"],"version":version}), \
                  patch.object(cli, "_run") as run:
                 public=cli.status()
@@ -68,18 +68,18 @@ class CapabilityAndIsolationTests(unittest.TestCase):
                 with self.assertRaises(cli.GeminiCliError) as failure:
                     cli.generate({"source":"原文"}, "方針", SCHEMA)
                 self.assertEqual(failure.exception.code, "cli_unavailable")
-                self.assertIn("1.4.0または1.4.1", str(failure.exception))
+                self.assertIn("1.4.0 / 1.4.1 / 1.4.4", str(failure.exception))
                 run.assert_not_called()
 
-    def test_both_exact_supported_versions_resolve_for_generation_and_login(self):
-        self.assertEqual(cli.SUPPORTED_CLI_VERSIONS, {"1.4.0", "1.4.1"})
+    def test_exact_supported_versions_resolve_for_generation_and_login(self):
+        self.assertEqual(cli.SUPPORTED_CLI_VERSIONS, {"1.4.0", "1.4.1", "1.4.4"})
         for version in sorted(cli.SUPPORTED_CLI_VERSIONS):
             with self.subTest(version=version), patch.object(cli, "_installation", return_value={"command":["agy"], "version":version}):
                 self.assertEqual(cli.resolve_command(), ["agy"])
                 self.assertEqual(cli.login_command(), ["agy"])
                 self.assertTrue(cli.status()["cli_compatible"])
                 self.assertEqual(cli.status()["cli_version"], version)
-                self.assertEqual(cli.status()["supported_cli_versions"], ["1.4.0", "1.4.1"])
+                self.assertEqual(cli.status()["supported_cli_versions"], ["1.4.0", "1.4.1", "1.4.4"])
                 with cli.launch_context(interactive=True) as (command, _, _):
                     self.assertEqual(command, ["agy"])
 
@@ -134,6 +134,9 @@ class ProposalBoundaryTests(unittest.TestCase):
         self.assertEqual(prompt["input"]["source"],manuscript)
         self.assertEqual(prompt["instructions"],"@方針")
         self.assertNotIn("model",prompt["input"])
+        self.assertIn("引用した推敲資料",prompt["response_contract"])
+        self.assertIn("ツール呼び出しは禁止",prompt["response_contract"])
+        self.assertLess(list(prompt).index("instructions"),list(prompt).index("response_contract"))
 
     def test_native_arguments_schema_and_stdin_are_separate(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -155,6 +158,39 @@ class ProposalBoundaryTests(unittest.TestCase):
             self.assertEqual(output["identity"]["transport"],"antigravity-cli")
             self.assertEqual(output["identity"]["cli_version"], "1.4.0")
             self.assertFalse(output["identity"]["exact_checkpoint_verified"])
+
+    def test_144_delivers_the_entire_guide_as_primary_agent_and_freezes_source_and_schema(self):
+        guide = "参考資料を省略しない。\n@参照\r\nrun / verify は呼び出し元が担当。"
+        manuscript = "原文\r\n@台詞も保つ。"
+        with tempfile.TemporaryDirectory() as folder:
+            @contextmanager
+            def launch(*, installation):
+                self.assertEqual(installation["version"], "1.4.4")
+                yield (["agy"], {"HOME":folder}, folder)
+            def run(command,env,cwd,data):
+                self.assertNotIn("--json-schema",command)
+                self.assertEqual(command[command.index("--agent")+1],cli.PROOFREADER_AGENT)
+                self.assertEqual(command[command.index("--mode")+1],"accept-edits")
+                content=(Path(cwd)/".agents/agents"/cli.PROOFREADER_AGENT/"agent.md").read_bytes().decode()
+                self.assertIn(guide, content)
+                prompt=json.loads(json.loads(data)["message"]["content"])
+                self.assertNotIn("instructions",prompt)
+                self.assertEqual(prompt["input"]["source"],manuscript)
+                self.assertEqual(prompt["output_schema"],SCHEMA)
+                self.assertNotIn(b"@",data)
+                return envelope(result={"status":"SUCCESS","response":json.dumps(PROPOSAL)})
+            with patch.object(cli,"_installation",return_value={"command":["agy"],"version":"1.4.4"}), patch.object(cli,"launch_context",launch), patch.object(cli,"_run",side_effect=run):
+                output=cli.generate({"source":manuscript},guide,SCHEMA)
+            self.assertEqual(output["identity"]["guidance_delivery"],"ephemeral_primary_agent")
+            self.assertEqual(output["identity"]["reported_agent"],cli.PROOFREADER_AGENT)
+            self.assertEqual(len(output["identity"]["agent_definition_sha256"]),64)
+
+    def test_144_still_rejects_wrong_agent_tools_permissions_and_bad_proposals(self):
+        for raw in (envelope(agent="default"), envelope(permission="auto"),
+                    envelope(steps=[{"event":"step_update","step_update":{"step_type":"tool","tool_name":"read_file"}}]),
+                    envelope(result={"status":"SUCCESS","response":'{"wrong":[]}'})):
+            with self.subTest(raw=raw), self.assertRaises(cli.GeminiCliError):
+                cli._decode(raw,SCHEMA,cli_version="1.4.4")
 
     def test_model_permissions_tools_and_failed_results_are_rejected(self):
         variants=[(envelope(model="other"),"identity_mismatch"),
@@ -189,7 +225,7 @@ class ProposalBoundaryTests(unittest.TestCase):
 
     def test_decoder_reports_only_bound_supported_version_without_inventing_a_default(self):
         self.assertIsNone(cli._decode(envelope(), SCHEMA)["identity"]["cli_version"])
-        for version in ("1.4.0", "1.4.1"):
+        for version in ("1.4.0", "1.4.1", "1.4.4"):
             self.assertEqual(cli._decode(envelope(), SCHEMA, cli_version=version)["identity"]["cli_version"], version)
         with self.assertRaises(cli.GeminiCliError):
             cli._decode(envelope(), SCHEMA, cli_version="1.5.0")
