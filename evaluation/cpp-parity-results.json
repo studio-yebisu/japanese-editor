@@ -1,0 +1,468 @@
+{
+  "date": "2026-10-21",
+  "reference_precision": "CPU BF16 override, not official CPU FP32",
+  "protocol": [
+    {
+      "id": "number-change",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    },
+    {
+      "id": "negation-loss",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    },
+    {
+      "id": "conditional-scope",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    },
+    {
+      "id": "certainty-strengthening",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    },
+    {
+      "id": "invented-actor",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    },
+    {
+      "id": "actor-recipient-swap",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    },
+    {
+      "id": "already-good-noop",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    },
+    {
+      "id": "technical-clear-rewrite",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    },
+    {
+      "id": "fiction-metaphor-retained",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    },
+    {
+      "id": "dialogue-dialect-erased",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    },
+    {
+      "id": "ambiguous-referent",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    },
+    {
+      "id": "auxiliary-kana",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    },
+    {
+      "id": "token-edge-0",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    },
+    {
+      "id": "token-edge-1",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    },
+    {
+      "id": "token-edge-2",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    },
+    {
+      "id": "token-edge-3",
+      "prompt_match": true,
+      "token_ids_match": true,
+      "marker_match": true,
+      "error": null
+    }
+  ],
+  "cpu": {
+    "reference": "pytorch CPU BF16 (not official FP32)",
+    "candidate": "official Q8_0, llama.cpp, CPU; shared core CRT build",
+    "cases": 16,
+    "choice_agreement": 16,
+    "input_token_agreement": 16,
+    "max_probability_delta": 0.012363797167990409,
+    "median_reference_latency_ms": 2664.8,
+    "median_cpp_latency_ms": 4508.755,
+    "rows": [
+      {
+        "id": "number-change",
+        "agree": true,
+        "max_probability_delta": 0.00848751971135775,
+        "tokens_equal": true
+      },
+      {
+        "id": "negation-loss",
+        "agree": true,
+        "max_probability_delta": 0.0014164802461793524,
+        "tokens_equal": true
+      },
+      {
+        "id": "conditional-scope",
+        "agree": true,
+        "max_probability_delta": 0.0002776358506196841,
+        "tokens_equal": true
+      },
+      {
+        "id": "certainty-strengthening",
+        "agree": true,
+        "max_probability_delta": 0.0036439956658053108,
+        "tokens_equal": true
+      },
+      {
+        "id": "invented-actor",
+        "agree": true,
+        "max_probability_delta": 0.005748265627828819,
+        "tokens_equal": true
+      },
+      {
+        "id": "actor-recipient-swap",
+        "agree": true,
+        "max_probability_delta": 0.0008551057564691877,
+        "tokens_equal": true
+      },
+      {
+        "id": "already-good-noop",
+        "agree": true,
+        "max_probability_delta": 0.0006074299633084257,
+        "tokens_equal": true
+      },
+      {
+        "id": "technical-clear-rewrite",
+        "agree": true,
+        "max_probability_delta": 0.001446523632852803,
+        "tokens_equal": true
+      },
+      {
+        "id": "fiction-metaphor-retained",
+        "agree": true,
+        "max_probability_delta": 0.0031383317552537843,
+        "tokens_equal": true
+      },
+      {
+        "id": "dialogue-dialect-erased",
+        "agree": true,
+        "max_probability_delta": 0.012363797167990409,
+        "tokens_equal": true
+      },
+      {
+        "id": "ambiguous-referent",
+        "agree": true,
+        "max_probability_delta": 0.0019964513533611283,
+        "tokens_equal": true
+      },
+      {
+        "id": "auxiliary-kana",
+        "agree": true,
+        "max_probability_delta": 0.005521094051259556,
+        "tokens_equal": true
+      },
+      {
+        "id": "token-edge-0",
+        "agree": true,
+        "max_probability_delta": 0.005573681112741813,
+        "tokens_equal": true
+      },
+      {
+        "id": "token-edge-1",
+        "agree": true,
+        "max_probability_delta": 0.0014072096298775039,
+        "tokens_equal": true
+      },
+      {
+        "id": "token-edge-2",
+        "agree": true,
+        "max_probability_delta": 0.0003190131261969764,
+        "tokens_equal": true
+      },
+      {
+        "id": "token-edge-3",
+        "agree": true,
+        "max_probability_delta": 0.0004198571670056706,
+        "tokens_equal": true
+      }
+    ]
+  },
+  "cuda": {
+    "reference": "pytorch CPU BF16",
+    "candidate": "final portable CUDA worker, shared core CRT and C ABI CUDA plugin, authenticated shared service",
+    "cases": 16,
+    "choice_agreement": 16,
+    "input_token_agreement": 16,
+    "max_probability_delta": 0.01223323349560912,
+    "gpu_layers": [
+      4
+    ],
+    "cpu_q8_vs_cuda_q8_max_delta": 0.003318596439253807,
+    "gpu_margin_mib": 1024,
+    "rows": [
+      {
+        "id": "number-change",
+        "agree": true,
+        "max_probability_delta": 0.00853817825438885,
+        "tokens_equal": true
+      },
+      {
+        "id": "negation-loss",
+        "agree": true,
+        "max_probability_delta": 0.0015425587174467958,
+        "tokens_equal": true
+      },
+      {
+        "id": "conditional-scope",
+        "agree": true,
+        "max_probability_delta": 0.0004985708436274772,
+        "tokens_equal": true
+      },
+      {
+        "id": "certainty-strengthening",
+        "agree": true,
+        "max_probability_delta": 0.003498956393235164,
+        "tokens_equal": true
+      },
+      {
+        "id": "invented-actor",
+        "agree": true,
+        "max_probability_delta": 0.009066862067082626,
+        "tokens_equal": true
+      },
+      {
+        "id": "actor-recipient-swap",
+        "agree": true,
+        "max_probability_delta": 0.0006345592727582394,
+        "tokens_equal": true
+      },
+      {
+        "id": "already-good-noop",
+        "agree": true,
+        "max_probability_delta": 0.0005223833830575453,
+        "tokens_equal": true
+      },
+      {
+        "id": "technical-clear-rewrite",
+        "agree": true,
+        "max_probability_delta": 0.0026438976736695707,
+        "tokens_equal": true
+      },
+      {
+        "id": "fiction-metaphor-retained",
+        "agree": true,
+        "max_probability_delta": 0.00342153612095112,
+        "tokens_equal": true
+      },
+      {
+        "id": "dialogue-dialect-erased",
+        "agree": true,
+        "max_probability_delta": 0.01223323349560912,
+        "tokens_equal": true
+      },
+      {
+        "id": "ambiguous-referent",
+        "agree": true,
+        "max_probability_delta": 0.0010656810792658011,
+        "tokens_equal": true
+      },
+      {
+        "id": "auxiliary-kana",
+        "agree": true,
+        "max_probability_delta": 0.005508967981266544,
+        "tokens_equal": true
+      },
+      {
+        "id": "token-edge-0",
+        "agree": true,
+        "max_probability_delta": 0.003965367283388699,
+        "tokens_equal": true
+      },
+      {
+        "id": "token-edge-1",
+        "agree": true,
+        "max_probability_delta": 0.0018680239535062704,
+        "tokens_equal": true
+      },
+      {
+        "id": "token-edge-2",
+        "agree": true,
+        "max_probability_delta": 0.0003724412495650642,
+        "tokens_equal": true
+      },
+      {
+        "id": "token-edge-3",
+        "agree": true,
+        "max_probability_delta": 0.0005690787890672393,
+        "tokens_equal": true
+      }
+    ]
+  },
+  "limitations": [
+    "Synthetic examples, not a Japanese proofreading quality benchmark.",
+    "CUDA partial offload only: 3 to 4 of 33 offloadable layers. Full GPU load untested.",
+    "Mac Metal build and inference untested."
+  ],
+  "input_recovery": {
+    "unicode_model_path": true,
+    "invalid_question_recoverable": true,
+    "too_long_rejected_without_truncation": true,
+    "same_owned_worker_reused": true
+  },
+  "memory_sample": {
+    "sampled_at_unix": 1792594417.2077277,
+    "rss_bytes": 4836212736,
+    "peak_rss_bytes": 4836212736,
+    "private_commit_bytes": 2370977792,
+    "peak_commit_bytes": 2370985984,
+    "ram_available_bytes": 14198636544,
+    "scope": "CPU Q8, synthetic comparison inputs <=369 tokens, context capacity 2048. Not a maximum-size memory guarantee."
+  },
+  "cuda_initial": {
+    "reference": "pytorch CPU BF16",
+    "candidate": "official Q8_0, CUDA partial offload",
+    "cases": 16,
+    "choice_agreement": 16,
+    "max_probability_delta": 0.012076715873824417,
+    "gpu_layers": [
+      3
+    ],
+    "cpu_q8_vs_cuda_q8_max_delta": 0.0023968480150630134,
+    "gpu_margin_mib": 512,
+    "note": "Validation override only; app default reserve is 1024 MiB. Other GPU work stayed running.",
+    "rows": [
+      {
+        "id": "number-change",
+        "agree": true,
+        "max_probability_delta": 0.007658769935051546,
+        "tokens_equal": true
+      },
+      {
+        "id": "negation-loss",
+        "agree": true,
+        "max_probability_delta": 0.0013283009515614452,
+        "tokens_equal": true
+      },
+      {
+        "id": "conditional-scope",
+        "agree": true,
+        "max_probability_delta": 0.0005296675384874883,
+        "tokens_equal": true
+      },
+      {
+        "id": "certainty-strengthening",
+        "agree": true,
+        "max_probability_delta": 0.0020031159496493034,
+        "tokens_equal": true
+      },
+      {
+        "id": "invented-actor",
+        "agree": true,
+        "max_probability_delta": 0.00806729016729979,
+        "tokens_equal": true
+      },
+      {
+        "id": "actor-recipient-swap",
+        "agree": true,
+        "max_probability_delta": 0.0009140056648552219,
+        "tokens_equal": true
+      },
+      {
+        "id": "already-good-noop",
+        "agree": true,
+        "max_probability_delta": 0.0006097652251558783,
+        "tokens_equal": true
+      },
+      {
+        "id": "technical-clear-rewrite",
+        "agree": true,
+        "max_probability_delta": 0.0009864412650749665,
+        "tokens_equal": true
+      },
+      {
+        "id": "fiction-metaphor-retained",
+        "agree": true,
+        "max_probability_delta": 0.0034121569117837106,
+        "tokens_equal": true
+      },
+      {
+        "id": "dialogue-dialect-erased",
+        "agree": true,
+        "max_probability_delta": 0.012076715873824417,
+        "tokens_equal": true
+      },
+      {
+        "id": "ambiguous-referent",
+        "agree": true,
+        "max_probability_delta": 0.002970220220128106,
+        "tokens_equal": true
+      },
+      {
+        "id": "auxiliary-kana",
+        "agree": true,
+        "max_probability_delta": 0.005204894782203873,
+        "tokens_equal": true
+      },
+      {
+        "id": "token-edge-0",
+        "agree": true,
+        "max_probability_delta": 0.005185436448804537,
+        "tokens_equal": true
+      },
+      {
+        "id": "token-edge-1",
+        "agree": true,
+        "max_probability_delta": 0.0012543846888222188,
+        "tokens_equal": true
+      },
+      {
+        "id": "token-edge-2",
+        "agree": true,
+        "max_probability_delta": 0.00028226222528918155,
+        "tokens_equal": true
+      },
+      {
+        "id": "token-edge-3",
+        "agree": true,
+        "max_probability_delta": 0.0003841647789710502,
+        "tokens_equal": true
+      }
+    ]
+  }
+}

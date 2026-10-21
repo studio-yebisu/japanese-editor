@@ -10,6 +10,7 @@
     geminiLogin: byId("login-gemini"), geminiSettings: byId("gemini-login-settings"), keySettings: byId("api-key-settings"),
     installCodex: byId("install-codex"), codexStatus: byId("codex-status"), releaseDecider: byId("release-decider"),
     deciderDevice: byId("decider-device"), saveDeciderDevice: byId("save-decider-device"), deciderDeviceStatus: byId("decider-device-status"),
+    deciderBackend: byId("decider-backend"), saveDeciderBackend: byId("save-decider-backend"), deciderBackendStatus: byId("decider-backend-status"),
     source: byId("source"), sourceHelp: byId("source-help"), context: byId("context"), profile: byId("profile"), strength: byId("strength"),
     profileDescription: byId("profile-description"), count: byId("character-count"),
     generateButton: byId("analyze-generate"), generationToggle: byId("enable-generation"),
@@ -44,6 +45,7 @@
 
   let config = null;
   let deciderDeviceDirty = false;
+  let deciderBackendDirty = false;
   let run = null;
   let activeRequest = null;
   let activeTask = null;
@@ -405,18 +407,28 @@
   }
 
   function precisionDeviceLabel(identity) {
+    if (identity?.runtime_backend === "llama_cpp" || identity?.quantization === "Q8_0") {
+      const layers = Number.isInteger(identity.gpu_layers) && identity.gpu_layers > 0
+        ? `・GPU ${identity.gpu_layers}/${(identity.total_layers || 32) + 1}層${identity.cpu_assisted ? "・CPU併用" : ""}` : "";
+      return `公式Q8 / ${deviceLabel(identity.device)}${layers}${identity.oom_retries ? `・メモリ不足で${identity.oom_retries}回再試行` : ""}`;
+    }
     return identity?.precision_override === true ? "CPU BF16（精度変更）" : deviceLabel(identity?.device);
   }
 
   function deviceLabel(device) {
     if (device === "cpu") return "CPU";
+    if (device === "auto") return "GPU優先・読み込み時に決定";
+    if (device === "metal") return "Apple GPU（Metal）";
     if (typeof device === "string" && device.startsWith("cuda")) return device.toUpperCase();
     return typeof device === "string" && device ? device : "ローカル";
   }
 
   function renderDeciderCapability() {
     const capability = config?.decider;
-    if (capability?.device && !deciderDeviceDirty) ui.deciderDevice.value = capability.device === "cuda" ? "cuda:0" : capability.device;
+    const backend = capability?.runtime_backend || "pytorch";
+    if (!deciderBackendDirty) ui.deciderBackend.value = backend;
+    if (capability?.device && !deciderDeviceDirty) ui.deciderDevice.value = capability.requested_device || (capability.device === "cuda" ? "cuda:0" : capability.device);
+    for (const option of ui.deciderDevice.querySelectorAll("option")) option.disabled = backend !== "llama_cpp" && ["auto", "metal"].includes(option.value);
     const state = config?.stages.decider;
     const latestError = decisionErrorMessage(capability?.error);
     if (activeTask === "judge") {
@@ -642,6 +654,8 @@
     ui.releaseDecider.disabled = !config?.decider?.loaded || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy;
     ui.deciderDevice.disabled = !deciderConfigured() || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy || refreshingCapability;
     ui.saveDeciderDevice.disabled = ui.deciderDevice.disabled || ["busy", "loading"].includes(config?.decider?.status);
+    ui.deciderBackend.disabled = !config || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy || refreshingCapability;
+    ui.saveDeciderBackend.disabled = ui.deciderBackend.disabled || ["busy", "loading"].includes(config?.decider?.status);
     ui.installCodex.disabled = !codexAvailable || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy;
     ui.copy.disabled = !run || requiredJudgmentPending() || Boolean(activeExport) || Boolean(activeRequest) || settingsBusy;
     ui.download.disabled = ui.copy.disabled;
@@ -1085,7 +1099,9 @@
       } else if (decision.scope === "document") {
         box.append(node("p", "model-decision-meta", "判定範囲：原文の全文と、この候補を反映した文章。"));
       }
-      if (decision.precision_override === true) {
+      if (decision.quantization === "Q8_0") {
+        box.append(node("p", "model-decision-meta", "公式の8bit量子化モデルです。従来版と判定が異なる場合があります。"));
+      } else if (decision.precision_override === true) {
         box.append(node("p", "model-decision-meta", "CPU の標準実行（FP32）と異なる精度です。判定結果が一致するかは未検証です。"));
       }
     } else {
@@ -1361,7 +1377,7 @@
           ? " 「判定モデルのメモリを解放」してから再試行できます。" : "";
         throw new Error(`${result.error || "設定を保存できませんでした。"}${resources.length ? ` ${resources.join(" · ")}。` : ""} 実行先は変更していません。モデルが解放済みの場合は、次の判定時に読み込みます。${releaseHint}`);
       }
-      ui.deciderDeviceStatus.textContent = result.status === "unchanged" ? "この実行先で設定済みです。" : `${device === "cpu" ? "CPU" : "NVIDIA GPU（CUDA）"}に設定しました。次の判定から使います。`;
+      ui.deciderDeviceStatus.textContent = result.status === "unchanged" ? "この実行先で設定済みです。" : `${deviceLabel(device)}に設定しました。次の判定から使います。`;
     } catch (error) { ui.deciderDeviceStatus.textContent = error.message; }
     finally {
       stopBusy(operation); settingsBusy = false; deciderDeviceDirty = false;
@@ -1371,6 +1387,32 @@
   ui.deciderDevice.addEventListener("change", () => {
     deciderDeviceDirty = true;
     ui.deciderDeviceStatus.textContent = "実行先の変更は未保存です。「実行先を保存」で確認して反映します。";
+  });
+  ui.deciderBackend.addEventListener("change", () => {
+    deciderBackendDirty = true;
+    ui.deciderBackendStatus.textContent = "実行方式の変更は未保存です。切り替える方式の準備を先に行ってください。";
+  });
+  ui.saveDeciderBackend.addEventListener("click", async () => {
+    if (activeRequest || activeExport || settingsBusy || refreshingCapability) return;
+    const backend = ui.deciderBackend.value;
+    if (!config?.decider?.prepared_backends?.[backend] && backend !== config?.decider?.runtime_backend) {
+      ui.deciderBackendStatus.textContent = "この実行方式は未準備です。導入案内に従って準備し、接続状態を更新してください。";
+      return;
+    }
+    settingsBusy = true;
+    const operation = startBusy("PPDDの実行方式と空きメモリを確認しています。");
+    ui.deciderBackendStatus.textContent = "現在の判定モデルを解放し、切り替え先を確認しています。";
+    updateButtons();
+    try {
+      const response = await fetch("/api/decider/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ backend }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "実行方式を保存できませんでした。");
+      ui.deciderBackendStatus.textContent = result.status === "unchanged" ? "この実行方式で設定済みです。" : `${backend === "llama_cpp" ? "C++・公式Q8" : "従来版・PyTorch"}に設定しました。次の判定から使います。`;
+    } catch (error) { ui.deciderBackendStatus.textContent = error.message; }
+    finally {
+      stopBusy(operation); settingsBusy = false; deciderBackendDirty = false;
+      await refreshDeciderCapability(false); updateButtons();
+    }
   });
   byId("open-text").addEventListener("change", async (event) => {
     const file = event.target.files?.[0]; if (!file) return;

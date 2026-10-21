@@ -108,9 +108,10 @@ function harness() {
     }
     else if (url === "/api/decider/settings") {
       if (state.deviceError) return { ok: false, status: 422, json: async () => state.deviceError };
-      state.config.decider.device = body.device;
+      if (body.backend) state.config.decider.runtime_backend = body.backend;
+      else state.config.decider.device = body.device;
       state.config.decider.loaded = false;
-      data = { status: "saved", device: body.device };
+      data = { status: "saved", device: body.device, backend: body.backend };
     }
     else if (url === "/api/integrations/codex") data = { registered: true, skill_installed: true };
     else if (url === "/api/settings") {
@@ -155,6 +156,30 @@ function harness() {
 
 const raw = "😀この機能を利用することが可能です。\r\n保存件数の上限は3件です。\r\n`code` https://example.test";
 const corrected = raw.replace("利用することが可能です", "利用できます");
+
+test("Q8 capability shows actual partial offload without calling it CPU BF16", async () => {
+  const { state, get, h } = harness();
+  state.config.decider = { ...state.config.decider, runtime_backend: "llama_cpp", quantization: "Q8_0",
+    device: "cuda:0", requested_device: "auto", gpu_layers: 3, total_layers: 32, cpu_assisted: true, oom_retries: 1 };
+  await h.loadConfig();
+  assert.match(get("decider-note").textContent, /公式Q8.*GPU 3\/33層.*CPU併用.*1回再試行/);
+  assert.doesNotMatch(get("decider-note").textContent, /CPU BF16/);
+  assert.equal(get("decider-device").value, "auto");
+});
+
+test("backend switch requires prepared configuration and preserves source", async () => {
+  const { state, get, h } = harness(); await h.loadConfig(); h.setSourceText(raw);
+  get("decider-backend").value = "llama_cpp";
+  await get("save-decider-backend").click();
+  assert.match(get("decider-backend-status").textContent, /未準備/);
+  assert.equal(state.requests.filter((r) => r.url === "/api/decider/settings").length, 0);
+  state.config.decider.prepared_backends = { llama_cpp: true, pytorch: true };
+  await h.loadConfig(); get("decider-backend").value = "llama_cpp";
+  await get("save-decider-backend").click();
+  assert.deepEqual(state.requests.find((r) => r.url === "/api/decider/settings").body, { backend: "llama_cpp" });
+  assert.equal(h.currentSource(), raw);
+  assert.match(get("decider-backend-status").textContent, /次の判定/);
+});
 
 test("PPDD device settings preserve source and show actual VRAM shortage", async () => {
   const { state, get, h } = harness(); await h.loadConfig();

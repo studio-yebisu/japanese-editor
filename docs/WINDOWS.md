@@ -16,7 +16,7 @@ Windows x64 の配布 ZIP を展開し、`YomiyasuStudio.exe` を起動します
 
 MSIX などによる保存先の仮想化がある環境では、起動元によってユーザー領域の実体が異なる場合があります。その環境で GUI と Codex を共有する場合は、両方へ同じ絶対パスの `YEBISU_EDITOR_DATA_DIR` を指定してください。保存先が違うサービスへ原稿を送ることはありません。
 
-Flash を使う場合は [DECIDER_RUNTIME.md](DECIDER_RUNTIME.md) の専用環境が別途必要です。約9.10 GB のモデルは配布 ZIP に含めません。Gemini の生成には公式 **Antigravity CLI 1.4.0 / 1.4.1 / 1.4.4（`agy`）** を別途導入し、Google でログインします。Node.js / npm は不要です。CLI 本体と認証情報は ZIP に含めません。既存の OS キーリング認証を公式 CLI 自身が使い、アプリはトークンを移しません。Sarashina は API キー、Claude / Codex は既存の認証を使います。[生成先の導入と条件](PROVIDERS.md) を参照してください。
+PPDDは[INSTALL.md](INSTALL.md)の手順で公式Q8モデル約5.16GBを別途取得します。C++ワーカーとCUDA用ライブラリは配布ZIPに含み、モデル重みは含めません。Gemini の生成には公式 **Antigravity CLI 1.4.0 / 1.4.1 / 1.4.4（`agy`）** を別途導入し、Google でログインします。Node.js / npm は不要です。CLI 本体と認証情報は ZIP に含めません。既存の OS キーリング認証を公式 CLI 自身が使い、アプリはトークンを移しません。Sarashina は API キー、Claude / Codex は既存の認証を使います。[生成先の導入と条件](PROVIDERS.md) を参照してください。
 
 CLI はターミナルや MCP ホストから使います。
 
@@ -34,6 +34,7 @@ CLI はターミナルや MCP ホストから使います。
 Windows x64、Python 3.12 以降、`uv` を使います。制作時は Windows 11 / Python 3.13.7、pywebview 6.2.1、PyInstaller 6.22.3 でビルドしました。アプリのディレクトリで実行します。
 
 ```powershell
+python -B tools/build_cpp_decider.py --backend cuda --cuda-root "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8"
 python -B tools/build_windows.py
 python -B tools/build_windows.py --smoke-cli --smoke-gui
 python -B tools/build_release.py
@@ -63,7 +64,7 @@ python3 -m venv .local/desktop-venv
 
 この手順は macOS 実機で未実行です。Windows で測った CPU BF16 の Flash 速度・必要メモリを macOS の保証値として使いません。macOS の配布 `.app` を用意する場合は macOS ランナーで別にビルドし、起動、保存、MCP、終了時のプロセス保全を検証する必要があります。署名・公証は配布方針と証明書の準備後に扱います。
 
-macOS のローカル Flash は`vm_stat` のページサイズと重複しない free / inactive / speculative ページから空き RAM の目安を取り、起動ガードを適用します。Windows / Linux と同じ固定コミット上限を取得できるとは扱わず、結果に `commit_check: not_available_on_macos` を残します。この計算はモックで検証した段階です。実際のモデル読み込みと CPU BF16 演算の対応は macOS 上で別途確認が必要です。
+従来PyTorch版のmacOSローカルFlashは`vm_stat` のページサイズと重複しない free / inactive / speculative ページから空き RAM の目安を取り、起動ガードを適用します。Windows / Linux と同じ固定コミット上限を取得できるとは扱わず、結果に `commit_check: not_available_on_macos` を残します。この計算はモックで検証した段階です。実際のモデル読み込みと CPU BF16 演算の対応は macOS 上で別途確認が必要です。
 
 ## 0.2.2 で確認した範囲
 

@@ -8,7 +8,7 @@ sys.path.insert(0, str(root / 'tools'))
 from build_release import PUBLIC_DOCS, permitted
 generated = root / '.local' / 'build'
 resources = []
-for name in ('web', 'vendor', 'skills', '.claude-plugin', 'evaluation'):
+for name in ('web', 'vendor', 'skills', '.claude-plugin', 'evaluation', 'cpp'):
     for path in sorted((root / name).rglob('*')):
         if not path.is_file() or not permitted(path.relative_to(root)):
             continue
@@ -18,7 +18,23 @@ for name in ('web', 'vendor', 'skills', '.claude-plugin', 'evaluation'):
 resources += [(str(root / 'docs' / name), 'editor/docs') for name in PUBLIC_DOCS if (root / 'docs' / name).is_file()]
 resources += [(str(root / name), 'editor') for name in ('profiles.json', 'LICENSE', 'README.md', 'runtime_paths.py', 'decider_errors.py')]
 resources += [(str(root / name), 'editor') for name in ('verification.json', 'plugin.json', 'THIRD_PARTY_NOTICES.md', 'CONTRIBUTING.md', 'SECURITY.md') if (root / name).is_file()]
-resources += [(str(root / 'tools' / name), 'editor/tools') for name in ('decider_worker.py', 'setup_decider.py', 'download_decider.py')]
+resources += [(str(root / 'tools' / name), 'editor/tools') for name in ('decider_worker.py', 'setup_decider.py', 'download_decider.py', 'setup_cpp_decider.py', 'download_cpp_decider.py', 'build_cpp_decider.py') if (root / 'tools' / name).is_file()]
+cpp_runtime = root / '.local/decider-cpp/runtime'
+if cpp_runtime.is_dir():
+    # Deliberately package the allowlisted sidecar only, never its source clone,
+    # build cache, weights or user settings.
+    import json, hashlib
+    metadata = json.loads((cpp_runtime / 'BUILD.json').read_text('utf-8'))
+    for item in metadata['files']:
+        path = cpp_runtime / 'bin' / item['file']
+        if path.parent != cpp_runtime / 'bin' or not path.is_file():
+            raise ValueError('Invalid C++ runtime inventory')
+        with path.open('rb') as stream:
+            if hashlib.file_digest(stream, 'sha256').hexdigest() != item['sha256']:
+                raise ValueError('C++ runtime hash mismatch')
+        resources.append((str(path), 'editor/cpp/runtime/bin'))
+    resources.append((str(cpp_runtime / 'BUILD.json'), 'editor/cpp/runtime'))
+    resources.append((str(cpp_runtime / 'licenses'), 'editor/cpp/runtime/licenses'))
 notices = generated / 'third_party_licenses'
 if notices.is_dir():
     resources += [(str(notices), 'editor/third_party_licenses')]
@@ -40,6 +56,15 @@ gui = Analysis([str(root / 'desktop.py')], pathex=[str(root), vendor_path],
                excludes=excludes)
 cli = Analysis([str(root / 'app.py')], pathex=[str(root), vendor_path],
                datas=resources, hiddenimports=sorted(vendor_imports), excludes=excludes+['webview'])
+
+# bindepend also discovers the sidecar's PE imports at _internal's root. The
+# external worker resolves its own app-local directory; Python never imports
+# these libraries. Keep one copy beside the worker, retaining the main app's
+# CRT/Python/WebView libraries at the root.
+sidecar_only = {'llama.dll', 'ggml.dll', 'ggml-base.dll', 'ggml-cpu.dll', 'ggml-cuda.dll',
+                'cudart64_12.dll', 'cublas64_12.dll', 'cublasLt64_12.dll'}
+gui.binaries = [row for row in gui.binaries if row[0] not in sidecar_only]
+cli.binaries = [row for row in cli.binaries if row[0] not in sidecar_only]
 gui_exe = EXE(PYZ(gui.pure), gui.scripts, [], exclude_binaries=True, name='YomiyasuStudio',
               console=False, icon=str(generated / 'icon.ico'), uac_admin=False)
 cli_exe = EXE(PYZ(cli.pure), cli.scripts, [], exclude_binaries=True, name='YomiyasuStudioCLI',
