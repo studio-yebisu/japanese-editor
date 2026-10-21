@@ -89,7 +89,7 @@ static uint64_t ram_available() {
     vm_statistics64_data_t state{}; mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
     vm_size_t page = 0; auto host = mach_host_self();
     if (host_page_size(host, &page) != KERN_SUCCESS || host_statistics64(host, HOST_VM_INFO64, reinterpret_cast<host_info64_t>(&state), &count) != KERN_SUCCESS) throw failure("resource_check_failed");
-    return (state.free_count + state.inactive_count + state.speculative_count) * static_cast<uint64_t>(page);
+    return (static_cast<uint64_t>(state.free_count) + state.inactive_count) * page; // Mach free_count already includes speculative pages.
 #else
     std::ifstream source("/proc/meminfo"); std::string key, unit; uint64_t amount;
     while (source >> key >> amount >> unit) if (key == "MemAvailable:") return amount * 1024;
