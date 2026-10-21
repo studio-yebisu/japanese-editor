@@ -7,7 +7,8 @@ import unicodedata
 
 
 MAX_SOURCE_CHARACTERS = 12000
-SARASHINA_CHUNK_CHARACTERS = 2000
+SARASHINA_CHUNK_CHARACTERS = 1200
+MAX_CHUNK_CHARACTERS = 2000
 _NEWLINE = r"(?:\r\n|[\r\n])"
 _PARAGRAPH = re.compile(_NEWLINE + r"(?:[^\S\r\n]*" + _NEWLINE + r")+")
 _LINE = re.compile(_NEWLINE)
@@ -86,7 +87,7 @@ def source_ranges(text, maximum=SARASHINA_CHUNK_CHARACTERS, protected=()):
     """
     if not isinstance(text, str) or not 1 <= len(text) <= MAX_SOURCE_CHARACTERS:
         raise SegmentationError("分割する原文は1〜12,000文字で指定してください。")
-    if type(maximum) is not int or not 1 <= maximum <= SARASHINA_CHUNK_CHARACTERS:
+    if type(maximum) is not int or not 1 <= maximum <= MAX_CHUNK_CHARACTERS:
         raise SegmentationError("文章分割の文字上限が不正です。")
     try:
         text.encode("utf-8")

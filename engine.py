@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from runtime_paths import RESOURCE_ROOT, vendor_command, hidden_process
 import progress
@@ -24,6 +25,10 @@ CONFIG = json.loads((ROOT / "profiles.json").read_text("utf-8"))
 MAX_TEXT = 12000
 MAX_CONTEXT = 2000
 MODEL = "claude-opus-5-5"
+SARASHINA_MAX_CALLS = 24
+SARASHINA_MAX_SPLIT_DEPTH = 2
+SARASHINA_GENERATION_SECONDS = 600
+SARASHINA_MAX_PATCH_CHARACTERS = 600
 
 
 class EditorError(ValueError):
@@ -68,7 +73,7 @@ def config():
     providers = provider_settings.public_config()
     selected = next((item for item in providers["providers"] if item["id"] == providers["provider"]), {})
     return {
-        "version": "0.2.11", "max_text": MAX_TEXT,
+        "version": "0.2.12", "max_text": MAX_TEXT,
         "profiles": CONFIG["profiles"], "strengths": CONFIG["strengths"],
         "stages": {"rules": "ready" if (_vendor_root() / "scripts/yomiyasu_lint.py").is_file() else "unavailable",
                    "generator": "available" if selected.get("available") else "unavailable",
@@ -235,7 +240,6 @@ GENERATOR_SCHEMA = {
     }, "required": ["edits", "questions", "suggestions"],
 }
 
-
 def _guidance_paths(profile):
     reference_paths = ["references/rephrase-test.md", "references/gemini-syntax.md"]
     if profile["doc_type"] == "essay":
@@ -373,6 +377,30 @@ def _validated_generation_proposal(text, proposal, strength, strict_limits=False
     return edits, questions, notes, suggestions
 
 
+def _quote_issues(text):
+    """Count unmatched Japanese quotation marks outside opaque code/URLs.
+
+    This only rejects a newly broken pair; existing fragments are not repaired,
+    and balanced quotations or intentional text are never rewritten here.
+    """
+    opaque = sorted(_protected_ranges(text))
+    stack, unmatched, cursor = [], 0, 0
+    closing = {"「": "」", "『": "』"}
+    for index, character in enumerate(text):
+        while cursor < len(opaque) and opaque[cursor][1] <= index:
+            cursor += 1
+        if cursor < len(opaque) and opaque[cursor][0] <= index < opaque[cursor][1]:
+            continue
+        if character in closing:
+            stack.append(closing[character])
+        elif character in closing.values():
+            if stack and stack[-1] == character:
+                stack.pop()
+            else:
+                unmatched += 1
+    return unmatched + len(stack)
+
+
 def _sarashina_generation(text, strength, context, model, instruction, guidance, maximum):
     import generators
 
@@ -393,8 +421,14 @@ def _sarashina_generation(text, strength, context, model, instruction, guidance,
     protected_utf16 = [(utf16_offsets[left], utf16_offsets[right]) for left, right in protected]
     edits, questions, notes, suggestions = [], [], [], []
     first_identity = None
-    total = len(parts)
-    for index, part in enumerate(parts, 1):
+    initial_total = len(parts)
+    pending = [{**part, "depth": 0} for part in parts]
+    total, completed, calls, resplits = initial_total, 0, 0, 0
+    diagnostics = []
+    deadline = time.monotonic() + SARASHINA_GENERATION_SECONDS
+    while pending:
+        part = pending.pop(0)
+        index = completed + 1
         source = text[part["start"]:part["end"]]
         style_notes = context
         if total > 1:
@@ -403,14 +437,54 @@ def _sarashina_generation(text, strength, context, model, instruction, guidance,
                             "この原文内だけで確実に直せる箇所を提案してください。文脈が足りない場合は本文を保ちquestionsに出してください。")
         progress.report("generation", message="generation_chunk", completed=index-1, total=total,
                         chunk_index=index, chunk_total=total)
+        if calls >= SARASHINA_MAX_CALLS or time.monotonic() >= deadline:
+            raise EditorError("Sarashina校正の回数または時間の上限に達しました。文章を分けて再実行してください。途中の修正案は採用せず、原文を残しています。")
+        calls += 1
         try:
-            generated = generators.generate({"source": source, "style_notes": style_notes,
-                                             "provider": "sarashina", "model": model}, instruction, GENERATOR_SCHEMA)
+            with generators.generation_budget(deadline):
+                generated = generators.generate({"source": source, "style_notes": style_notes,
+                                                 "provider": "sarashina", "model": model}, instruction, GENERATOR_SCHEMA)
+            local_edits, local_questions, local_notes, local_suggestions = _validated_generation_proposal(source, generated["proposal"], strength, strict_limits=True)
+            if any(max(len(edit['before']), len(edit['after'])) > SARASHINA_MAX_PATCH_CHARACTERS
+                   or len(edit['after']) > 2 * len(edit['before']) + 80 for edit in local_edits):
+                raise generators.GenerationError("generation_oversized_patch", "一つの修正範囲が長すぎるため、この部分の案は採用していません。", generated.get("diagnostics"))
+            if _quote_issues(apply_edits(source, local_edits)) > _quote_issues(source):
+                raise generators.GenerationError("invalid_quote_balance", "生成した修正案で引用符の対応が崩れたため、この部分の案は採用していません。", generated.get("diagnostics"))
         except generators.GenerationError as exc:
+            diagnostics.append({"status": exc.code, "source_characters": len(source), "depth": part["depth"],
+                                **(exc.diagnostics or {})})
+            # Retry only a confirmed output cutoff or newly broken quote
+            # pairs. Do not force an unchanged response to invent edits.
+            # Auth, 429, identity, malformed JSON, and network
+            # failures are never split/retried or sent to another provider.
+            if exc.code in ("generation_length", "invalid_quote_balance", "generation_oversized_patch") and part["depth"] < SARASHINA_MAX_SPLIT_DEPTH:
+                smaller = max(1, len(source) // 2)
+                local_protected = [(max(left, part["start"]) - part["start"],
+                                    min(right, part["end"]) - part["start"])
+                                   for left, right in protected if left < part["end"] and part["start"] < right]
+                try:
+                    subranges = segmentation.source_ranges(source, maximum=smaller, protected=local_protected)
+                except segmentation.SegmentationError:
+                    subranges = []
+                replacements = [{"start": part["start"] + sub["start"], "end": part["start"] + sub["end"],
+                                 "depth": part["depth"] + 1} for sub in subranges
+                                if source[sub["start"]:sub["end"]].strip()]
+                # Reserve at least one call for every outstanding part. No
+                # hard cut through a quote, code, URL, CRLF, or grapheme.
+                if (len(replacements) > 1 and calls + len(pending) + len(replacements) <= SARASHINA_MAX_CALLS
+                        and time.monotonic() < deadline):
+                    pending[0:0] = replacements
+                    total += len(replacements) - 1
+                    resplits += 1
+                    progress.report("generation", message="generation_resplit", completed=completed, total=total,
+                                    chunk_index=index, chunk_total=total)
+                    continue
             if total == 1:
                 raise
-            raise generators.GenerationError(exc.code, f"第{index}/{total}部分の生成を完了できませんでした。{exc} 途中の修正案は採用していません。原文は残っています。") from None
-        proposal, identity = generated["proposal"], generated["identity"]
+            raise generators.GenerationError(exc.code, f"第{index}/{total}部分の生成を完了できませんでした。{exc} 途中の修正案は採用していません。原文は残っています。", exc.diagnostics) from None
+        diagnostics.append({"status": "completed", "source_characters": len(source), "depth": part["depth"],
+                            **generated.get("diagnostics", {})})
+        identity = generated["identity"]
         validate_unicode_input(identity, "生成サービスの応答")
         if (not isinstance(identity, dict) or any(identity.get(key) != expected for key, expected in (
                 ("requested_provider", "sarashina"), ("reported_provider", "sarashina"),
@@ -420,7 +494,6 @@ def _sarashina_generation(text, strength, context, model, instruction, guidance,
             first_identity = dict(identity)
         elif identity != first_identity:
             raise EditorError("分割した文章の生成サービス情報が一致しません。途中の修正案は採用していません。")
-        local_edits, local_questions, local_notes, local_suggestions = _validated_generation_proposal(source, proposal, strength, strict_limits=True)
         base = utf16_offsets[part["start"]]
         for edit in local_edits:
             mapped = {**edit, "start": base + edit["start"], "end": base + edit["end"]}
@@ -436,6 +509,7 @@ def _sarashina_generation(text, strength, context, model, instruction, guidance,
             raise EditorError("確認事項または構成提案が文章全体の上限を超えました。文章を分けて再実行してください。途中の修正案は採用していません。")
         progress.report("generation", message="generation_chunk", completed=index, total=total,
                         chunk_index=index, chunk_total=total)
+        completed += 1
     edits.sort(key=lambda edit: edit["start"])
     for index, edit in enumerate(edits, 1):
         edit["id"] = f"e{index}"
@@ -443,7 +517,19 @@ def _sarashina_generation(text, strength, context, model, instruction, guidance,
     # global uniqueness assumption: identical prose may occur in two chunks.
     apply_edits(text, edits)
     identity = {**first_identity, "segmentation": {"strategy": "paragraph_sentence", "chunk_total": total,
-                "max_chunk_characters": maximum, "adjacent_text_sent": False}}
+                "max_chunk_characters": maximum, "adjacent_text_sent": False, "initial_chunk_total": initial_total,
+                "resplit_count": resplits, "api_calls": calls, "max_calls": SARASHINA_MAX_CALLS,
+                "max_split_depth": SARASHINA_MAX_SPLIT_DEPTH, "time_budget_seconds": SARASHINA_GENERATION_SECONDS},
+                "requests": diagnostics}
+    unchanged = sum(row.get("unchanged_edit_count", 0) for row in diagnostics if row["status"] == "completed")
+    unchanged_only = sum(row.get("raw_edit_count", 0) > 0 and row.get("raw_edit_count") == row.get("unchanged_edit_count")
+                         for row in diagnostics if row["status"] == "completed")
+    identity["result"] = "unchanged_proposals_only" if unchanged_only and not edits else "candidates" if edits else "no_candidates"
+    identity["unchanged_proposals_only_chunks"] = unchanged_only
+    if unchanged:
+        notes.append(f"生成結果に含まれた変更のない案{unchanged}件は修正から除外しました。")
+    if unchanged_only:
+        notes.append(f"{unchanged_only}部分ではAIが変更のない文だけを返したため、原文を維持しています。誤字がないと確認した結果ではなく、見逃しの可能性があります。")
     if total > 1:
         notes.append(f"原文を{total}部分に分けて校正しました。前後の部分の本文は追加送信していないため、分割境界をまたぐ文脈は生成時に確認していません。")
     return edits, questions, notes, [model], suggestions, identity, guidance
@@ -510,7 +596,7 @@ def analyze(payload):
     strength = _pick(CONFIG["strengths"], payload.get("strength", "natural"), "強さ")
     progress.report("rules")
     findings = lint(text, profile)
-    output = {"version": "0.2.11", "source_hash": digest(text), "offset_encoding": "utf-16",
+    output = {"version": "0.2.12", "source_hash": digest(text), "offset_encoding": "utf-16",
               "profile": profile["id"], "strength": strength["id"], "findings": findings,
               "edits": [], "questions": [], "suggestions": [], "stages": {"rules": "executed", "generation": "not_requested", "decider": "not_run"},
               "notes": ["指摘は見直し候補です。指摘の有無で文章の品質や意味保持は判定できません。"],
@@ -534,6 +620,8 @@ def analyze(payload):
         output["notes"].extend(notes)
         output["notes"].append("修正理由は修正案を作ったモデルの説明です。")
         output["stages"]["generation"] = "executed"
+        if not edits:
+            output["notes"].append("AIの修正候補は0件でした。誤りがないことや意味保持を確認した結果ではありません。")
         if payload.get("judge", True):
             from decider import attach
             attach(output, text)

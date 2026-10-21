@@ -1,6 +1,6 @@
 {
-  "stage": "implementation_static_review_official_acquisition_and_installed_startup_observed",
-  "verified_on": "2026-10-20",
+  "stage": "source_regressions_and_installed_windows_real_generation_judgment_and_save_observed",
+  "verified_on": "2026-10-21",
   "spec_consultations": [
     {
       "requested": "claude-opus-5-5",
@@ -126,6 +126,24 @@
       ],
       "scope": "Startup official Yomiyasu update specification consultation only; not source/runtime approval",
       "receipt_sha256": "43fa17ca1f897e5aed8ed9e8746a961d69cdea2a8e7503d908c7ea8ca7b993d3",
+      "receipt_published": false
+    },
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "Sarashina fiction diagnosis and bounded recovery consultation; not a full source audit",
+      "receipt_sha256": "4b3ca563eaae2ac46133e0ce0220093984109fcccce0589dbc330877d96ad5fe",
+      "receipt_published": false
+    },
+    {
+      "requested": "claude-opus-5-5",
+      "reported": [
+        "claude-opus-5-5"
+      ],
+      "scope": "Sarashina fiction diagnosis and bounded recovery consultation; not a full source audit",
+      "receipt_sha256": "1263540bab20f9add9134753efb00aabb4b15a9b6d1063593a5e3d66ed15ea6d",
       "receipt_published": false
     }
   ],
@@ -1362,5 +1380,188 @@
       "owned_service_health_version": "0.2.11",
       "feature_runtime_tests": "not_run_at_user_request"
     }
+  },
+  "yomiyasu_studio_v0212": {
+    "date": "2026-10-21",
+    "version": "0.2.12",
+    "status": "source_and_installed_windows_ui_observed",
+    "segmentation": {
+      "max_source_characters": 12000,
+      "max_request_characters": 1200,
+      "max_completion_tokens": 4000,
+      "max_patch_characters": 600,
+      "max_resplit_depth": 2,
+      "max_api_calls": 24,
+      "generation_budget_seconds": 600,
+      "partial_results_applied": false,
+      "recovery_triggers": [
+        "generation_length",
+        "invalid_quote_balance",
+        "generation_oversized_patch"
+      ],
+      "unchanged_result_is_quality_pass": false,
+      "max_patch_expansion": "after_characters <= 2 * before_characters + 80"
+    },
+    "runtime_cases": [
+      {
+        "source_characters": 1100,
+        "source_hash": "940e8ae19608a3caaf1ff5a7ef6f339d37db680435d9185cda6d76d7abcdc707",
+        "final_hash": "b117f7dae3f9a9d57cb0c55525edc03a6d12c344dac7fc40a77057928b1f70f6",
+        "edits": 3,
+        "stages": {
+          "rules": "executed",
+          "generation": "executed",
+          "decider": "executed"
+        },
+        "choices": [
+          "preserved",
+          "preserved",
+          "preserved"
+        ],
+        "run_status": "executed",
+        "verify_status": "executed",
+        "matches_expected_bytes": true,
+        "case": "typos-v7",
+        "seconds": 81.849,
+        "generator": "sarashina3-mini",
+        "profile": "fiction",
+        "strength": "natural",
+        "surface": "Windows source engine",
+        "yomiyasu_version": "2.1.1",
+        "yomiyasu_commit": "fbe02c93877d697cc53d9377b7a45dd8a1dd99b3"
+      },
+      {
+        "source_characters": 2249,
+        "source_hash": "f145ce6e698cc32255f49113ca4a822b6216120162a7047caf16a2ff13bbf804",
+        "final_hash": "f145ce6e698cc32255f49113ca4a822b6216120162a7047caf16a2ff13bbf804",
+        "edits": 0,
+        "stages": {
+          "rules": "executed",
+          "generation": "executed",
+          "decider": "not_run"
+        },
+        "choices": [],
+        "run_status": "executed",
+        "verify_status": "executed",
+        "matches_expected_bytes": true,
+        "case": "original-v7",
+        "seconds": 17.888,
+        "generator": "sarashina3-mini",
+        "profile": "fiction",
+        "strength": "natural",
+        "surface": "Windows source engine",
+        "yomiyasu_version": "2.1.1",
+        "yomiyasu_commit": "fbe02c93877d697cc53d9377b7a45dd8a1dd99b3"
+      },
+      {
+        "source_characters": 89,
+        "source_hash": "8269dba4bb90867ed4dbac52c9256df3ad66e88d8ca86780e34c18891fedab5b",
+        "final_hash": "8269dba4bb90867ed4dbac52c9256df3ad66e88d8ca86780e34c18891fedab5b",
+        "edits": 0,
+        "stages": {
+          "rules": "executed",
+          "generation": "executed",
+          "decider": "not_run"
+        },
+        "choices": [],
+        "run_status": "executed",
+        "verify_status": "executed",
+        "matches_expected_bytes": true,
+        "case": "controls-v7",
+        "seconds": 9.207,
+        "generator": "sarashina3-mini",
+        "profile": "fiction",
+        "strength": "natural",
+        "surface": "Windows source engine",
+        "yomiyasu_version": "2.1.1",
+        "yomiyasu_commit": "fbe02c93877d697cc53d9377b7a45dd8a1dd99b3"
+      }
+    ],
+    "decider": {
+      "model": "pplx-decider-flash-v1.2",
+      "revision": "6d771ad7b5ecff5e93b8fc7b90d4c5ccc341954d",
+      "device": "cpu",
+      "precision": "bfloat16",
+      "precision_override": true,
+      "max_length": 2048,
+      "scope": "excerpt for long-source edits",
+      "quality_guarantee": false
+    },
+    "checks": {
+      "python_regressions": 82,
+      "python_passed": true,
+      "frontend_regressions": 31,
+      "frontend_passed": true
+    },
+    "limits": [
+      "Mac native not tested",
+      "12000-character inference not tested",
+      "No general fiction accuracy claim",
+      "PPDD meaning judgments do not establish spelling correctness or final quality"
+    ],
+    "installed_windows_ui": {
+      "version": "0.2.12",
+      "source_characters": 1100,
+      "edits": 3,
+      "decisions": [
+        "preserved",
+        "preserved",
+        "preserved"
+      ],
+      "stages": {
+        "rules": "executed",
+        "generation": "executed",
+        "decider": "executed"
+      },
+      "run": "executed",
+      "verify": "executed",
+      "source_hash": "940e8ae19608a3caaf1ff5a7ef6f339d37db680435d9185cda6d76d7abcdc707",
+      "final_hash": "b117f7dae3f9a9d57cb0c55525edc03a6d12c344dac7fc40a77057928b1f70f6",
+      "matches_expected_bytes": true,
+      "download_matches": true,
+      "analysis_seconds": 102.3204680000199
+    },
+    "packaging": {
+      "windows_x64": "built",
+      "local_install_and_codex": "updated",
+      "start_menu": "updated",
+      "owned_service_health_version": "0.2.12",
+      "other_codex_config_preserved": true,
+      "managed_yomiyasu_version": "2.1.1",
+      "managed_yomiyasu_commit": "fbe02c93877d697cc53d9377b7a45dd8a1dd99b3",
+      "managed_reference_sync": "current"
+    },
+    "self_copy_checks": [
+      {
+        "document": "README",
+        "characters": 9744,
+        "source_hash": "4c12abe50a4c9ebaef5413b90c46c8bf7f1e56b85e9215bacc948ba0bcf01eb6",
+        "final_hash": "4c12abe50a4c9ebaef5413b90c46c8bf7f1e56b85e9215bacc948ba0bcf01eb6",
+        "run": "executed",
+        "verify": "executed",
+        "external_generation_calls": 0,
+        "quality_guarantee": false
+      },
+      {
+        "document": "new_status_section",
+        "characters": 1798,
+        "source_hash": "9719eb02451834b312a4466483f3e20f085686adebe9b0d96d50dfa6ad5754db",
+        "final_hash": "9719eb02451834b312a4466483f3e20f085686adebe9b0d96d50dfa6ad5754db",
+        "run": "executed",
+        "verify": "executed",
+        "external_generation_calls": 0,
+        "quality_guarantee": false
+      },
+      {
+        "document": "ui_status",
+        "characters": 92,
+        "source_hash": "ef854f8832a2fb6388ac49a727c4dcc32cc4ddd83990abda4b0870b341ccc4bf",
+        "final_hash": "ef854f8832a2fb6388ac49a727c4dcc32cc4ddd83990abda4b0870b341ccc4bf",
+        "run": "executed",
+        "verify": "executed",
+        "external_generation_calls": 0,
+        "quality_guarantee": false
+      }
+    ]
   }
 }

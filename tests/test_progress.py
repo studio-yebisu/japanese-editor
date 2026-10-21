@@ -231,7 +231,7 @@ class EngineProgressTests(unittest.TestCase):
         def checked(*_, **__):
             state = self.registry.get("request-export")
             states.append((state["stage"], state["completed"], state["total"]))
-            payload = {"format": "yomiyasu-check-result", "status": "executed", "run_id": "fixture"}
+            payload = {"format": "yomiyasu-check-result", "format_version": 1, "status": "executed", "run_id": "fixture"}
             if len(states) == 2:
                 payload["final"] = {"sha256": engine.digest(final)}
             return SimpleNamespace(returncode=0, stdout=json.dumps(payload))

@@ -599,7 +599,7 @@
     const provider = selectedGenerator();
     const limit = ui.generationToggle.checked ? provider?.max_document_chars || provider?.max_text_chars || 12000 : config?.max_text || 12000;
     const count = Array.from(currentSource()).length;
-    ui.count.textContent = `${count.toLocaleString("ja-JP")} / ${limit.toLocaleString("ja-JP")} 字${ui.generationToggle.checked && provider?.chunking === "paragraphs" ? " · 2,000字ずつ" : ""}`;
+    ui.count.textContent = `${count.toLocaleString("ja-JP")} / ${limit.toLocaleString("ja-JP")} 字${ui.generationToggle.checked && provider?.chunking === "paragraphs" ? ` · ${provider.max_text_chars.toLocaleString("ja-JP")}字以内ずつ` : ""}`;
     ui.count.setAttribute("data-over-limit", String(count > limit));
   }
 
@@ -817,11 +817,12 @@
       renderResults();
       setStatus(requiredJudgmentPending() ? "修正候補を残しました。意味判定が終わっていないため、コピー・保存はできません。接続状態を確認して、もう一度校正してください。"
         : edits.length ? `${edits.length} 件の変更を右の文章へ反映しました。コピー・保存できます。`
-        : generate ? "校正が終わりました。変更はありません。" : "Yomiyasuの規則点検が終わりました。原文をそのまま右に表示しています。");
+        : data.generator?.result === "unchanged_proposals_only" ? "AIから有効な修正案を得られませんでした。原文のまま表示しています。見逃しの可能性があります。"
+        : generate ? "修正候補は0件でした。原文を表示しています。誤りがないことを保証する結果ではありません。" : "Yomiyasuの規則点検が終わりました。原文をそのまま右に表示しています。");
     } catch (error) {
       if (error.name === "AbortError" || revision !== requestRevision) return;
       showError(`校正できませんでした。${error.message}`, false, generate);
-      setStatus(generate ? "原文は残っています。ログイン状態や、修正案を作るサービスの設定を確認してください。" : "原文は残っています。入力と接続を確認してください。");
+      setStatus(generate ? "原文は残っています。エラーの案内を確認して、必要に応じて文章を分けて再実行してください。" : "原文は残っています。入力と接続を確認してください。");
       ui.reviewCount.textContent = "校正できませんでした";
     } finally {
       if (activeRequest === controller) { activeRequest = null; activeTask = null; }

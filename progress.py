@@ -24,6 +24,7 @@ MESSAGES = {
     "generation_retry": "Gemini校正を自動で再試行しています。",
     "generation_chunk": "文章の修正候補を生成しています。",
     "generation_chunk_wait": "Sarashinaの送信間隔を確保しています。",
+    "generation_resplit": "応答を完了できなかった部分を、段落・文末でさらに分けてやり直します。",
     "decider": "Deciderを準備し、修正候補を判定しています。",
     "decider_running": "Deciderで修正候補を判定しています。",
     "decider_finished": "修正候補の判定を終了しました。",

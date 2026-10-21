@@ -34,6 +34,7 @@ class ProviderIntegrationTests(unittest.TestCase):
     def setUp(self):
         self.stack = ExitStack()
         self.addCleanup(self.stack.close)
+        self.stack.enter_context(patch.object(engine.yomiyasu_updates, "active_root", return_value=engine.VENDOR))
         self.settings = self.stack.enter_context(patch.object(provider_settings, "read_settings", return_value={
             "version": 1, "provider": "gemini", "model": "gemini-3.8-flash-high"}))
         self.keys = self.stack.enter_context(patch.object(provider_settings, "api_key", side_effect=AssertionError("must not read keys")))
@@ -100,8 +101,9 @@ class ProviderIntegrationTests(unittest.TestCase):
         self.assertEqual(output["generator"]["reported_provider"], "sarashina")
         self.assertEqual(output["generator_model"], "sarashina3-nano")
         self.assertEqual(payload["source"], TEXT)
-        self.assertEqual(output["generator"]["segmentation"], {"strategy": "paragraph_sentence", "chunk_total": 1,
-                         "max_chunk_characters": 2000, "adjacent_text_sent": False})
+        for key, expected in {"strategy": "paragraph_sentence", "chunk_total": 1,
+                              "max_chunk_characters": 1200, "adjacent_text_sent": False, "api_calls": 1}.items():
+            self.assertEqual(output["generator"]["segmentation"][key], expected)
         self.claude.assert_not_called()
 
     def test_explicit_claude_keeps_existing_adapter_and_model_receipt(self):
@@ -147,8 +149,8 @@ class ProviderIntegrationTests(unittest.TestCase):
 
     def test_full_upstream_guide_and_required_references_reach_every_provider_and_profile(self):
         guide_bytes = (engine.VENDOR / "SKILL.md").read_bytes()
-        self.assertEqual(len(guide_bytes), 110419)
-        self.assertEqual(hashlib.sha256(guide_bytes).hexdigest(), "b3ca0bd8d1a479eb9789dca2f8e4cf22ad008f0fc8df0e922614ea9ec10aa7ae")
+        self.assertEqual(len(guide_bytes), 116245)
+        self.assertEqual(hashlib.sha256(guide_bytes).hexdigest(), "9895ca044c20d7d186700ac69e0235ed1758a38f2cb500ef7776a65f620e56a4")
         routes = {
             "article": ["references/doc-types/article.md", "references/domains/tech.md"],
             "blog": ["references/doc-types/essay.md", "references/domains/essay.md"],
@@ -179,7 +181,7 @@ class ProviderIntegrationTests(unittest.TestCase):
                         self.assertEqual([item["path"] for item in guidance["sources"]], expected)
                         for item in guidance["sources"]:
                             content = (engine.VENDOR / item["path"]).read_bytes()
-                            self.assertIn(content.decode("utf-8"), instruction)
+                            self.assertTrue(content.decode("utf-8") in instruction, "Complete reference must reach provider")
                             self.assertEqual(item["sha256"], hashlib.sha256(content).hexdigest())
                             self.assertEqual(item["bytes"], len(content))
                         self.assertEqual(self.cloud.call_count, int(provider != "claude"))
@@ -224,10 +226,11 @@ class ProviderIntegrationTests(unittest.TestCase):
                 for provider, model in (("gemini", "gemini-3.8-flash-high"), ("sarashina", "sarashina3-nano"), ("claude", engine.MODEL)):
                     output = self.provider_analyze(provider, profile=profile["id"], model=model)
                     instruction = captured[provider]
-                    self.assertIn(guide, instruction)
+                    self.assertTrue(guide in instruction, "Complete guide must reach provider")
                     self.assertEqual(engine.digest(instruction), output["yomiyasu"]["generation_guidance"]["instruction_sha256"])
                     for source in output["yomiyasu"]["generation_guidance"]["sources"]:
-                        self.assertIn((engine.VENDOR / source["path"]).read_bytes().decode("utf-8"), instruction)
+                        self.assertTrue((engine.VENDOR / source["path"]).read_bytes().decode("utf-8") in instruction,
+                                        "Complete reference must reach provider")
 
     def test_host_supplied_edits_do_not_claim_app_generated_guidance(self):
         output = engine.review_proposals({"text": TEXT, "edits": PROPOSAL["edits"], "judge": False})

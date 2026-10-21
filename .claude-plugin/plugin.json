@@ -1,6 +1,6 @@
 {
   "name": "yomiyasu-studio",
-  "version": "0.2.11",
+  "version": "0.2.12",
   "description": "Yomiyasu Studioの日本語校正スキル。用途と作風を保ち、Yomiyasuと任意のローカルFlashで修正案を比較します。MCPはinstall.pyが出力する設定で登録します。",
   "author": {
     "name": "StudioYebisu"

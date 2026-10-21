@@ -4,14 +4,14 @@ Yomiyasu Studioは日本語の文章を整え、どこを変えたか左右で�
 
 ## ダウンロード
 
-[最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/tag/v0.2.11)
+[最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/tag/v0.2.12)
 
-| 使う環境 | v0.2.11のダウンロード | 提供状況 |
+| 使う環境 | v0.2.12のダウンロード | 提供状況 |
 | --- | --- | --- |
-| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.11/YomiyasuStudio-windows-x64-0.2.11.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
-| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.11/YomiyasuStudio-source-0.2.11.zip) | Pythonで起動する実験版。Mac実機は未検証 |
+| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.12/YomiyasuStudio-windows-x64-0.2.12.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
+| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.12/YomiyasuStudio-source-0.2.12.zip) | Pythonで起動する実験版。Mac実機は未検証 |
 
-ベータ版です。Sarashina APIとローカルDeciderの実推論はv0.2.9でWindows上の確認記録があります。v0.2.11ではYomiyasuの公式資料を実際に取得し、整合性を確認しました。テストスイート・校正API・モデル推論・画面の実行試験は行っていません。版ごとの確認内容は [STATUS.md](docs/STATUS.md) を参照してください。
+ベータ版です。v0.2.12ではSarashinaへの入力の渡し方と長文処理を修正し、Windowsで同じ小説の誤字3か所を修正してローカルDeciderで判定しました。モデルは誤字を見逃したり、誤った修正を提案したりすることがあります。Deciderの意味判定も、誤字がないことや文章品質の保証にはなりません。Mac実機は未検証です。確認した範囲は [STATUS.md](docs/STATUS.md) を参照してください。
 
 起動時にYomiyasu公式の更新を裏で確認し、対応する新版があれば校正方針・参照資料・検査スクリプトをまとめて更新します。同梱版も2.1.0へ更新しました。**旧版からはアプリと共有サービスの両方を更新し、サービスを起動し直してください。** MCPも新版へ登録し直して、新しい会話で使います。[更新と接続の案内](docs/PLUGINS.md#共有サービスの更新)
 
@@ -38,7 +38,7 @@ Mac用の `.app` はまだ用意していません。ブラウザーで使うソ
 3. 「ターミナル」を開きます。ダウンロード先が通常の「ダウンロード」フォルダーなら、次を1行ずつ実行します。
 
 ```sh
-cd "$HOME/Downloads/YomiyasuStudio-source-0.2.11"
+cd "$HOME/Downloads/YomiyasuStudio-source-0.2.12"
 python3 --version
 python3 -B app.py serve
 ```
@@ -109,7 +109,9 @@ Sarashina校正では意味判定を外せません。GeminiやClaudeを選ぶ�
 
 入力した原文や元のファイルを自動で上書きしません。保存前にYomiyasuの全文点検と保存本文の照合を行います。意味の変化が疑われる箇所・判断保留・未判定は別に表示します。判定済みでも、意味保持や文章品質の保証にはなりません。長文の意味判定は変更付近の抜粋が対象です。
 
-入力全体は12,000字までです。Sarashinaはコードで段落・文末を探し、1回2,000字以内に分けて順番に送信します。分割の判断にAPIやAIは使いません。改行や原文はそのまま残し、すべての生成が成功してから修正を統合します。安全に分けられない長い一文やコード等は、途中で切らず短縮の案内を出します。この区切り方だけで意味保持や品質を保証するものではありません。
+入力全体は12,000字までです。Sarashinaはコードで段落・文末を探し、1回1,200字以内に分けて順番に送信します。分割の判断にAPIやAIは使いません。改行や原文はそのまま残し、すべての生成が成功してから修正を統合します。安全に分けられない長い一文やコード等は、途中で切らず短縮の案内を出します。この区切り方だけで意味保持や品質を保証するものではありません。
+
+Sarashinaの出力が上限に達した場合や、修正で引用符の対応が崩れた場合や、一つの修正範囲が600字を超えたり、短い引用へ段落全体を書き足したりした場合は、その部分だけをさらに分けてやり直します。再分割は2段階まで、原稿全体で最大24リクエスト・生成600秒の予算です。各回の出力は4,000トークンまでに抑え、送信間隔の待機も時間に含めます。認証・利用制限・モデル名の不一致・通信障害は別サービスへ回しません。修正候補0件は「誤りなし」の合格ではなく、候補が得られなかった結果として表示します。
 
 Gemini・Claudeは全体を一度に扱います。小説や台詞では、比喩・省略・反復・方言・語尾などを残す方針で校正します。
 
