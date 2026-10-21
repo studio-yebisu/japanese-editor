@@ -143,7 +143,7 @@ def mcp():
                 validate_unicode_input(params)
                 result = {"protocolVersion": params.get("protocolVersion", "2024-11-05"),
                           "capabilities": {"tools": {"listChanged": False}},
-                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.14"},
+                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.15"},
                           "instructions": "日本語の校正は用途・強さを選び、ホスト自身が修正候補を作りreview_proposalsで比較する。採用案だけをfinalizeへ渡し返ったtextを最終稿にする。未実行の判定を成功と扱わない。小説・台詞の作風を保つ。generate=trueは外部送信を伴うため通常のホスト校正では不要。"}
             elif method == "ping":
                 result = {}
@@ -299,7 +299,7 @@ class Handler(BaseHTTPRequestHandler):
             except (rpc_auth.AuthenticationError, ValueError):
                 return self.reject(401, "共有サービスの認証要求を確認できません。")
         if path == "/api/health":
-            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.14", "data_id": data_id(), "closing": self.server.closing})
+            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.15", "data_id": data_id(), "closing": self.server.closing})
         if path == "/api/providers":
             return self.send(200, provider_settings.public_config())
         if path == "/api/yomiyasu/status":
@@ -340,7 +340,7 @@ class Handler(BaseHTTPRequestHandler):
         if origin and origin not in {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}:
             return self.reject(403, "この画面から操作してください。")
         route = urlparse(self.path).path
-        if route not in ("/api/analyze", "/api/export", "/api/judge", "/api/decider/decide", "/api/decider/stop", "/api/settings", "/api/integrations/codex", "/api/service/stop", "/api/gemini/login"):
+        if route not in ("/api/analyze", "/api/export", "/api/judge", "/api/decider/decide", "/api/decider/stop", "/api/decider/settings", "/api/decider/release", "/api/settings", "/api/integrations/codex", "/api/service/stop", "/api/gemini/login"):
             return self.reject(404, "見つかりません。")
         if self.headers.get_content_type() != "application/json":
             return self.reject(415, "JSONで入力してください。")
@@ -352,11 +352,24 @@ class Handler(BaseHTTPRequestHandler):
             return self.reject(400, "入力サイズが不正です。")
         if not 0 < length <= 256000:
             return self.reject(413, "入力サイズの上限を超えています。")
-        if getattr(self.server, "closing", False) and not route.startswith("/api/decider/"):
+        if getattr(self.server, "closing", False) and route not in ("/api/decider/decide", "/api/decider/stop"):
             return self.reject(503, "終了処理中です。現在の点検が終わるまで待っています。")
-        if route in ("/api/settings", "/api/integrations/codex", "/api/service/stop", "/api/gemini/login"):
+        if route in ("/api/settings", "/api/integrations/codex", "/api/service/stop", "/api/gemini/login", "/api/decider/settings", "/api/decider/release"):
             try:
                 payload = self._read_json(length)
+                if route in ("/api/decider/settings", "/api/decider/release"):
+                    if route.endswith("/settings") and set(payload) != {"device"} or route.endswith("/release") and payload:
+                        raise EditorError("PPDDの実行先だけを指定してください。")
+                    if not self.semaphore.acquire(blocking=False):
+                        return self.reject(409, "校正を実行中です。完了してからPPDDの設定を変更してください。")
+                    try:
+                        result = decider_runtime.local_set_device(payload["device"]) if route.endswith("/settings") else decider_runtime.local_release()
+                        return self.send(200, result)
+                    except decider_runtime.DeciderRuntimeError as exc:
+                        return self.send(409 if exc.code in ("busy", "settings_changed") else 422,
+                                         {"error": str(exc), "details": exc.as_dict()})
+                    finally:
+                        self.semaphore.release()
                 if route == "/api/settings":
                     if set(payload) - {"provider", "model", "api_key", "remove_key"}:
                         raise EditorError("生成設定の形式を確認してください。")

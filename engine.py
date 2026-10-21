@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import difflib
 import json
 import re
 import shutil
@@ -75,7 +76,7 @@ def config():
     providers = provider_settings.public_config()
     selected = next((item for item in providers["providers"] if item["id"] == providers["provider"]), {})
     return {
-        "version": "0.2.14", "max_text": MAX_TEXT,
+        "version": "0.2.15", "max_text": MAX_TEXT,
         "profiles": CONFIG["profiles"], "strengths": CONFIG["strengths"],
         "stages": {"rules": "ready" if (_vendor_root() / "scripts/yomiyasu_lint.py").is_file() else "unavailable",
                    "generator": "available" if selected.get("available") else "unavailable",
@@ -242,13 +243,18 @@ def _numeric_values(text):
 
 def validate_edits(text, raw_edits):
     """Require exact unique anchors and independent, non-overlapping patches."""
+    return _validate_edits(text, raw_edits)
+
+
+def _validate_edits(text, raw_edits, positions=None):
+    """Positions are trusted diff offsets, never fields supplied by a model."""
     validate_unicode_input(text, "原文")
     validate_unicode_input(raw_edits, "修正案")
     if not isinstance(raw_edits, list) or len(raw_edits) > 50:
         raise EditorError("修正案は50件以下の配列で指定してください。")
     edits, notes, occupied = [], [], []
     protected = _protected_ranges(text)
-    for raw in raw_edits:
+    for index, raw in enumerate(raw_edits):
         if not isinstance(raw, dict):
             raise EditorError("修正案の形式が不正です。")
         before, after = raw.get("before"), raw.get("after")
@@ -256,10 +262,15 @@ def validate_edits(text, raw_edits):
             raise EditorError("修正案には空でない原文と、置換後の文字列が必要です。")
         if before == after:
             continue
-        positions = [m.start() for m in re.finditer("(?=" + re.escape(before) + ")", text)]
-        if len(positions) != 1:
-            raise EditorError("修正案の原文が一意に特定できません。前後を含めた原文で再提案してください。")
-        start, end = positions[0], positions[0] + len(before)
+        if positions is None:
+            matches = [m.start() for m in re.finditer("(?=" + re.escape(before) + ")", text)]
+            if len(matches) != 1:
+                raise EditorError("修正案の原文が一意に特定できません。前後を含めた原文で再提案してください。")
+            start, end = matches[0], matches[0] + len(before)
+        else:
+            start, end = positions[index]
+            if not 0 <= start < end <= len(text) or text[start:end] != before:
+                raise EditorError("校正結果の差分位置を確認できません。原文は残しています。")
         if any(start < b and a < end for a, b in occupied):
             raise EditorError("重なる修正案があります。依存する修正は一件にまとめてください。")
         if any(start < b and a < end for a, b in protected):
@@ -365,6 +376,68 @@ GENERATOR_SCHEMA = {
             "required": ["quote", "suggestion"]}},
     }, "required": ["edits", "questions", "suggestions"],
 }
+
+SARASHINA_SCHEMA = {
+    "type": "object", "additionalProperties": False,
+    "properties": {
+        "corrected_text": {"type": "string"},
+        "questions": GENERATOR_SCHEMA["properties"]["questions"],
+        "suggestions": GENERATOR_SCHEMA["properties"]["suggestions"],
+    }, "required": ["corrected_text", "questions", "suggestions"],
+}
+
+
+def _passage_patches(source, corrected):
+    """Derive exact local anchors; never trust model-supplied positions."""
+    validate_unicode_input(corrected, "校正結果")
+    if not isinstance(corrected, str) or len(corrected) > MAX_TEXT:
+        raise EditorError("校正結果の形式または長さを確認できません。原文は残しています。")
+    # Preserve Windows line endings when a provider serializes them as LF.
+    if "\r\n" in source and "\n" not in source.replace("\r\n", ""):
+        corrected = corrected.replace("\r\n", "\n").replace("\n", "\r\n")
+    import generators
+    matcher = difflib.SequenceMatcher(None, source, corrected, autojunk=False)
+    if (re.findall(r"\r\n|[\r\n]", source) != re.findall(r"\r\n|[\r\n]", corrected)
+            or len(source) > 80 and (len(corrected) < len(source) * .6 or matcher.ratio() < .55)):
+        raise generators.GenerationError("generation_incomplete_passage", "校正結果で段落や本文の保持を確認できません。この部分の案は採用していません。")
+    ranges = []
+    for kind, left, right, new_left, new_right in matcher.get_opcodes():
+        if kind == "equal":
+            continue
+        if left == right:
+            if left:
+                left -= 1
+                new_left -= 1
+            else:
+                right += 1
+                new_right += 1
+        while (not segmentation._safe_boundary(source, left)
+               or not segmentation._safe_boundary(corrected, new_left)) and left > 0 and new_left > 0:
+            left -= 1
+            new_left -= 1
+        while (not segmentation._safe_boundary(source, right)
+               or not segmentation._safe_boundary(corrected, new_right)) and right < len(source) and new_right < len(corrected):
+            right += 1
+            new_right += 1
+        # Judge interacting changes in the same sentence together. Nearby
+        # accidental character matches must not split one rewrite into votes.
+        if ranges and (left <= ranges[-1][1] or not re.search(r"[。！？!?\r\n]", source[ranges[-1][1]:left])):
+            previous = ranges.pop()
+            ranges.append((previous[0], max(previous[1], right), previous[2], max(previous[3], new_right)))
+        else:
+            ranges.append((left, right, new_left, new_right))
+    raw = [{"before": source[left:right], "after": corrected[new_left:new_right],
+            "reason": "Sarashinaの校正結果から取り出した変更です。", "rule": "yomiyasu_proposal"}
+           for left, right, new_left, new_right in ranges]
+    rebuilt, cursor = [], 0
+    for left, right, new_left, new_right in ranges:
+        rebuilt.extend((source[cursor:left], corrected[new_left:new_right]))
+        cursor = right
+    rebuilt.append(source[cursor:])
+    if "".join(rebuilt) != corrected:
+        raise generators.GenerationError("generation_incomplete_passage", "校正結果の差分を正確に復元できません。この部分の案は採用していません。")
+    return raw, [(left, right) for left, right, _, _ in ranges]
+
 
 def _guidance_paths(profile):
     reference_paths = ["references/rephrase-test.md", "references/gemini-syntax.md"]
@@ -477,7 +550,7 @@ def _generation_selection(provider=None, model=None):
         raise EditorError(str(exc)) from None
 
 
-def _validated_generation_proposal(text, proposal, strength, strict_limits=False):
+def _validated_generation_proposal(text, proposal, strength, strict_limits=False, positions=None):
     validate_unicode_input(proposal, "生成した修正案")
     if not isinstance(proposal, dict) or not isinstance(proposal.get("questions"), list):
         raise EditorError("生成した修正案の形式が不正です。")
@@ -488,7 +561,7 @@ def _validated_generation_proposal(text, proposal, strength, strict_limits=False
         if not isinstance(question, dict) or not all(isinstance(question.get(k), str) for k in ("quote", "question")):
             raise EditorError("確認事項の形式が不正です。")
         questions.append({"quote": question["quote"][:2000], "question": question["question"][:2000]})
-    edits, notes = validate_edits(text, proposal.get("edits"))
+    edits, notes = _validate_edits(text, proposal.get("edits"), positions)
     suggestions = []
     if strength["id"] == "structure":
         proposed_suggestions = proposal.get("suggestions", [])
@@ -537,7 +610,8 @@ def _sarashina_generation(text, strength, context, model, instruction, guidance,
     except segmentation.SegmentationError as exc:
         raise EditorError(str(exc)) from None
     # Whitespace-only ranges need no generation and remain in the untouched
-    # original. All edits are patches; never join rewritten chunk strings.
+    # original. Passage diffs become patches against the untouched original;
+    # rewritten chunk strings are never concatenated into the final text.
     parts = [part for part in ranges if text[part["start"]:part["end"]].strip()]
     if not parts:
         raise EditorError("確認する原文を入力してください。")
@@ -570,11 +644,22 @@ def _sarashina_generation(text, strength, context, model, instruction, guidance,
         try:
             with generators.generation_budget(deadline):
                 generated = generators.generate({"source": source, "style_notes": style_notes,
-                                                 "provider": "sarashina", "model": model}, instruction, GENERATOR_SCHEMA)
-            local_edits, local_questions, local_notes, local_suggestions = _validated_generation_proposal(source, generated["proposal"], strength, strict_limits=True)
-            if any(max(len(edit['before']), len(edit['after'])) > SARASHINA_MAX_PATCH_CHARACTERS
-                   or len(edit['after']) > 2 * len(edit['before']) + 80 for edit in local_edits):
-                raise generators.GenerationError("generation_oversized_patch", "一つの修正範囲が長すぎるため、この部分の案は採用していません。", generated.get("diagnostics"))
+                                                 "provider": "sarashina", "model": model}, instruction, SARASHINA_SCHEMA)
+            proposal = generated["proposal"]
+            positions = None
+            if "corrected_text" in proposal:
+                raw_edits, positions = _passage_patches(source, proposal["corrected_text"])
+                proposal = {**proposal, "edits": raw_edits}
+                generated.setdefault("diagnostics", {}).update(raw_edit_count=len(raw_edits), unchanged_edit_count=0)
+            local_edits, local_questions, local_notes, local_suggestions = _validated_generation_proposal(source, proposal, strength, strict_limits=True, positions=positions)
+            bounded_edits = [edit for edit in local_edits
+                             if max(len(edit['before']), len(edit['after'])) <= SARASHINA_MAX_PATCH_CHARACTERS
+                             and len(edit['after']) <= 2 * len(edit['before']) + 80]
+            if len(bounded_edits) != len(local_edits):
+                if positions is None:
+                    raise generators.GenerationError("generation_oversized_patch", "一つの修正範囲が長すぎるため、この部分の案は採用していません。", generated.get("diagnostics"))
+                local_notes.append("修正範囲が長すぎる案を保留しました。その箇所の原文を残し、他の修正候補を確認します。")
+                local_edits = bounded_edits
             if _quote_issues(apply_edits(source, local_edits)) > _quote_issues(source):
                 raise generators.GenerationError("invalid_quote_balance", "生成した修正案で引用符の対応が崩れたため、この部分の案は採用していません。", generated.get("diagnostics"))
         except generators.GenerationError as exc:
@@ -584,7 +669,7 @@ def _sarashina_generation(text, strength, context, model, instruction, guidance,
             # pairs. Do not force an unchanged response to invent edits.
             # Auth, 429, identity, malformed JSON, and network
             # failures are never split/retried or sent to another provider.
-            if exc.code in ("generation_length", "invalid_quote_balance", "generation_oversized_patch") and part["depth"] < SARASHINA_MAX_SPLIT_DEPTH:
+            if exc.code in ("generation_length", "invalid_quote_balance", "generation_oversized_patch", "generation_incomplete_passage") and part["depth"] < SARASHINA_MAX_SPLIT_DEPTH:
                 smaller = max(1, len(source) // 2)
                 local_protected = [(max(left, part["start"]) - part["start"],
                                     min(right, part["end"]) - part["start"])
@@ -609,7 +694,7 @@ def _sarashina_generation(text, strength, context, model, instruction, guidance,
             if total == 1:
                 raise
             raise generators.GenerationError(exc.code, f"第{index}/{total}部分の生成を完了できませんでした。{exc} 途中の修正案は採用していません。原文は残っています。", exc.diagnostics) from None
-        held_count += _held_count(generated["proposal"]["edits"], local_edits)
+        held_count += _held_count(proposal["edits"], local_edits)
         diagnostics.append({"status": "completed", "source_characters": len(source), "depth": part["depth"],
                             **generated.get("diagnostics", {})})
         identity = generated["identity"]
@@ -736,7 +821,7 @@ def analyze(payload):
     strength = _pick(CONFIG["strengths"], payload.get("strength", "natural"), "強さ")
     progress.report("rules")
     findings = lint(text, profile)
-    output = {"version": "0.2.14", "source_hash": digest(text), "offset_encoding": "utf-16",
+    output = {"version": "0.2.15", "source_hash": digest(text), "offset_encoding": "utf-16",
               "profile": profile["id"], "strength": strength["id"], "findings": findings,
               "edits": [], "held_edit_count": 0, "questions": [], "suggestions": [], "stages": {"rules": "executed", "generation": "not_requested", "decider": "not_run"},
               "notes": ["指摘は見直し候補です。指摘の有無で文章の品質や意味保持は判定できません。"],

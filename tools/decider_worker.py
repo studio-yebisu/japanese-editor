@@ -167,10 +167,34 @@ def preflight(config, torch=None):
         if not torch.cuda.is_available():
             raise WorkerError("device_unavailable", "指定したCUDAデバイスを利用できません。")
         free, total = torch.cuda.mem_get_info(torch.device(config["device"]))
+        if sys.platform == "win32":
+            # WDDM can report a CUDA allocation budget much larger than free
+            # dedicated VRAM. Check the same physical GPU by UUID as well.
+            free = min(free, dedicated_cuda_memory(torch, config["device"]))
         resource.update(cuda_available_bytes=free, cuda_total_bytes=total, cuda_required_bytes=11 * GIB)
         if free < 11 * GIB:
             raise WorkerError("insufficient_memory", "空きVRAMが不足しているため、モデルを読み込みませんでした。", resource)
     return resource
+
+
+def dedicated_cuda_memory(torch, device):
+    try:
+        identity = str(torch.cuda.get_device_properties(torch.device(device)).uuid).removeprefix("GPU-")
+        if not re.fullmatch(r"[a-fA-F0-9]{8}(?:-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12}", identity):
+            raise ValueError("invalid GPU identity")
+        result = subprocess.run(["nvidia-smi", "--id=GPU-" + identity,
+                                 "--query-gpu=memory.free,memory.total", "--format=csv,noheader,nounits"],
+                                capture_output=True, text=True, timeout=5,
+                                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        fields = result.stdout.strip().split(",")
+        if result.returncode or len(fields) != 2:
+            raise ValueError("unknown dedicated VRAM")
+        free, total = (int(value.strip()) for value in fields)
+        if not 0 <= free <= total or total <= 0:
+            raise ValueError("invalid dedicated VRAM")
+        return free * 1024 ** 2
+    except (OSError, ValueError, AttributeError, subprocess.TimeoutExpired):
+        raise WorkerError("resource_check_failed", "NVIDIAドライバーから空きVRAMを確認できません。") from None
 
 
 def precision_identity(config):
@@ -293,6 +317,7 @@ def startup_error(exc):
 def main():
     parser = argparse.ArgumentParser(description="Fixed native Decider Flash worker")
     parser.add_argument("--config", default=os.environ.get("YEBISU_DECIDER_CONFIG"))
+    parser.add_argument("--inspect-device", choices=("cpu", "cuda:0"), help="Check resources without loading model weights")
     args = parser.parse_args()
     # Preserve the original stdout pipe for protocol messages. Redirect even
     # native-library stdout writes to stderr before importing heavy libraries.
@@ -310,6 +335,8 @@ def main():
         if not args.config:
             raise WorkerError("not_configured", "Deciderの設定ファイルが指定されていません。")
         config, model_path, source_path = load_configuration(Path(args.config))
+        if args.inspect_device:
+            config["device"] = args.inspect_device
         identity["device"] = config["device"]
         identity.update(precision_identity(config))
         preflight(config)
@@ -319,6 +346,13 @@ def main():
         sys.path.insert(0, str(source_path))
         import torch
         resources = preflight(config, torch)
+        if args.inspect_device:
+            if config["device"] != "cpu":
+                # Check driver/allocation compatibility too, without a model.
+                torch.empty(1, device=config["device"])
+                torch.cuda.synchronize()
+            emit({"event": "resources", "ok": True, **identity, "resources": resources})
+            return 0
         if identity["precision_override"]:
             check_cpu_bfloat16_ops(torch)
         verify_artifacts(model_path, source_path)

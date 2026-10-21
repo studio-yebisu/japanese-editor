@@ -1742,5 +1742,102 @@
       "No Mac hardware validation or broad proofreading-quality evaluation.",
       "Existing loaded Codex sessions may keep an older MCP process."
     ]
+  },
+  "release_0_2_15": {
+    "version": "0.2.15",
+    "date": "2026-10-21",
+    "state": "beta",
+    "fixes": [
+      "Sarashina full-passage response adapter with deterministic anchored diffs",
+      "same-sentence change grouping and reconstruction invariant",
+      "PPDD CPU / NVIDIA CUDA choice with resource preflight",
+      "Windows WDDM dedicated VRAM cross-check by GPU UUID",
+      "browser model-release control endpoint"
+    ],
+    "actual_source_execution": {
+      "source_characters_lf": 2860,
+      "elapsed_seconds": 100.82,
+      "generated_candidates": 4,
+      "decider_executed": 4,
+      "decider_choices": [
+        "preserved",
+        "preserved",
+        "preserved",
+        "preserved"
+      ],
+      "device": "cpu",
+      "precision": "bfloat16",
+      "precision_override": true
+    },
+    "installed_execution": {
+      "version": "0.2.15",
+      "source_characters": 2896,
+      "stdin_line_endings": "CRLF",
+      "stages": {
+        "rules": "executed",
+        "generation": "executed",
+        "decider": "executed"
+      },
+      "edits": 5,
+      "decider": {
+        "model": "pplx-decider-flash-v1.2",
+        "revision": "6d771ad7b5ecff5e93b8fc7b90d4c5ccc341954d",
+        "backend": "local",
+        "device": "cpu",
+        "executed": 5,
+        "total": 5,
+        "precision": "bfloat16",
+        "precision_override": true,
+        "reference_path": "native_fast_false_cpu_bfloat16_override"
+      },
+      "check": "executed",
+      "verification": "executed",
+      "exact_export": true,
+      "crlf_preserved": true,
+      "seeded_typos_removed": true
+    },
+    "fresh_mcp": {
+      "version": "0.2.15",
+      "check": "executed",
+      "verification": "executed",
+      "exact_crlf_export": true,
+      "external_generation": false,
+      "decider_inference": false
+    },
+    "gpu_settings": {
+      "cuda_dependencies": "torch 2.14.0+cu126 / torchvision 0.29.0+cu126 installed from official PyTorch index",
+      "dedicated_vram_shortage_rejected": true,
+      "required_free_vram_gib": 11,
+      "configuration_preserved_on_rejection": true,
+      "cpu_setting_and_release_endpoints": "passed",
+      "gpu_model_inference": "not_run"
+    },
+    "codex_registration": {
+      "updated": true,
+      "other_configuration_preserved": true,
+      "new_chat_required_for_loaded_mcp": true
+    },
+    "installed_cli_sha256": "86a28501d38a0f4a4cc8d571ce629e25d54225961917269c82ceb555e89e3fa3",
+    "targeted_regressions": {
+      "passage_diff": 6,
+      "device_settings": 5,
+      "sarashina_recovery": 13,
+      "sarashina_requirements": 12,
+      "http_boundaries": 14,
+      "runtime_deadlines": 10,
+      "setup": 27,
+      "engine": 10,
+      "generators": 30,
+      "public_decider_errors": 3,
+      "decider": 45,
+      "desktop_build": 14,
+      "web_ui": 48
+    },
+    "limits": [
+      "GPU model inference not validated with dedicated VRAM below requirement.",
+      "Mac hardware unverified.",
+      "Native GUI launched and accessibility observed; foreground visual recording deferred by user.",
+      "Examples are not a broad proofreading quality guarantee."
+    ]
   }
 }

@@ -9,6 +9,7 @@
     saveProvider: byId("save-provider"), removeKey: byId("remove-api-key"), providerSetup: byId("provider-setup"),
     geminiLogin: byId("login-gemini"), geminiSettings: byId("gemini-login-settings"), keySettings: byId("api-key-settings"),
     installCodex: byId("install-codex"), codexStatus: byId("codex-status"), releaseDecider: byId("release-decider"),
+    deciderDevice: byId("decider-device"), saveDeciderDevice: byId("save-decider-device"), deciderDeviceStatus: byId("decider-device-status"),
     source: byId("source"), sourceHelp: byId("source-help"), context: byId("context"), profile: byId("profile"), strength: byId("strength"),
     profileDescription: byId("profile-description"), count: byId("character-count"),
     generateButton: byId("analyze-generate"), generationToggle: byId("enable-generation"),
@@ -42,6 +43,7 @@
   };
 
   let config = null;
+  let deciderDeviceDirty = false;
   let run = null;
   let activeRequest = null;
   let activeTask = null;
@@ -414,6 +416,7 @@
 
   function renderDeciderCapability() {
     const capability = config?.decider;
+    if (capability?.device && !deciderDeviceDirty) ui.deciderDevice.value = capability.device === "cuda" ? "cuda:0" : capability.device;
     const state = config?.stages.decider;
     const latestError = decisionErrorMessage(capability?.error);
     if (activeTask === "judge") {
@@ -637,6 +640,8 @@
     ui.geminiLogin.disabled = selectedGenerator()?.id !== "gemini" || !selectedGenerator()?.cli_installed || selectedGenerator()?.cli_status === "unsupported_version" || Boolean(activeRequest) || settingsBusy;
     ui.saveProvider.disabled = !config || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy || refreshingCapability;
     ui.releaseDecider.disabled = !config?.decider?.loaded || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy;
+    ui.deciderDevice.disabled = !deciderConfigured() || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy || refreshingCapability;
+    ui.saveDeciderDevice.disabled = ui.deciderDevice.disabled || ["busy", "loading"].includes(config?.decider?.status);
     ui.installCodex.disabled = !codexAvailable || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy;
     ui.copy.disabled = !run || requiredJudgmentPending() || Boolean(activeExport) || Boolean(activeRequest) || settingsBusy;
     ui.download.disabled = ui.copy.disabled;
@@ -1330,11 +1335,42 @@
     const operation = startBusy("判定モデルのメモリを解放しています。");
     updateButtons();
     try {
-      await readJson(await fetch("/api/decider/stop", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }));
+      await readJson(await fetch("/api/decider/release", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }));
       await refreshDeciderCapability(false); setStatus("判定モデルのメモリを解放しました。次の判定時に読み込みます。");
     } catch (error) { showError(error.message); }
     finally { stopBusy(operation); settingsBusy = false; }
     updateButtons();
+  });
+  ui.saveDeciderDevice.addEventListener("click", async () => {
+    if (activeRequest || activeExport || settingsBusy || refreshingCapability) return;
+    const device = ui.deciderDevice.value;
+    settingsBusy = true;
+    ui.deciderDeviceStatus.textContent = "空きメモリと実行環境を確認しています。モデルは読み込みません。";
+    const operation = startBusy("PPDDの実行先と空きメモリを確認しています。");
+    updateButtons();
+    try {
+      const response = await fetch("/api/decider/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ device }) });
+      const result = await response.json();
+      if (!response.ok) {
+        const details = result.details?.details;
+        const resources = [];
+        for (const [label, free, needed] of [["空きRAM", details?.ram_available_bytes, details?.ram_required_bytes], ["空きVRAM", details?.cuda_available_bytes, details?.cuda_required_bytes], ["コミット余裕", details?.commit_available_bytes, details?.commit_required_bytes]]) {
+          if (Number.isFinite(free) && Number.isFinite(needed)) resources.push(`${label} ${(free / 2 ** 30).toFixed(1)}GiB / 必要 ${(needed / 2 ** 30).toFixed(1)}GiB`);
+        }
+        const releaseHint = config?.decider?.loaded && details?.ram_available_bytes < details?.ram_required_bytes
+          ? " 「判定モデルのメモリを解放」してから再試行できます。" : "";
+        throw new Error(`${result.error || "設定を保存できませんでした。"}${resources.length ? ` ${resources.join(" · ")}。` : ""} 実行先は変更していません。モデルが解放済みの場合は、次の判定時に読み込みます。${releaseHint}`);
+      }
+      ui.deciderDeviceStatus.textContent = result.status === "unchanged" ? "この実行先で設定済みです。" : `${device === "cpu" ? "CPU" : "NVIDIA GPU（CUDA）"}に設定しました。次の判定から使います。`;
+    } catch (error) { ui.deciderDeviceStatus.textContent = error.message; }
+    finally {
+      stopBusy(operation); settingsBusy = false; deciderDeviceDirty = false;
+      await refreshDeciderCapability(false); updateButtons();
+    }
+  });
+  ui.deciderDevice.addEventListener("change", () => {
+    deciderDeviceDirty = true;
+    ui.deciderDeviceStatus.textContent = "実行先の変更は未保存です。「実行先を保存」で確認して反映します。";
   });
   byId("open-text").addEventListener("change", async (event) => {
     const file = event.target.files?.[0]; if (!file) return;

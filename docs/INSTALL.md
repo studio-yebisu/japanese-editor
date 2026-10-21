@@ -12,6 +12,16 @@ python -B _internal/editor/tools/setup_decider.py --device cpu --cpu-dtype bfloa
 
 既存設定は上書きしません。初回はモデルと取得中の一時領域、専用依存等を合わせた追加の空きディスク30GiBを目安とし、取得前に容量を確認します。CPU BF16・文脈2048には空きRAM11GiB以上、Windowsではコミット余裕も11GiB以上が必要です。総RAMと空きRAMは別の条件です。詳しい予算と停止方法は [DECIDER_RUNTIME.md](DECIDER_RUNTIME.md) を参照してください。
 
+### NVIDIA GPUを使う場合
+
+校正中の処理が終わってから、設定の「判定モデルのメモリを解放」を押し、次を実行します。モデルは再利用し、固定したPyTorch・torchvisionを[PyTorch公式のCUDA wheel](https://download.pytorch.org/whl/cu126)から導入します。アプリが自動で依存を変更することはありません。
+
+```powershell
+python -B _internal/editor/tools/setup_decider.py --device cuda:0
+```
+
+アプリで「接続状態を更新」を押し、「PPDDの実行先」を「NVIDIA GPU（CUDA）」にして「実行先を保存」を押します。空きVRAM 11GiB・空きRAM 12GiB以上を確認してから保存します。NVIDIAドライバーも必要です。CUDAを利用できない場合やメモリ不足の場合は元の設定を保持します。推論直前にも条件を確認し、CPUへ自動では切り替えません。MacはCPUを選んでください。
+
 ## macOS・Apple Silicon（実験段階）
 
 Mac向け `.app`・署名・公証はまだ用意していません。Python 3.12以降を用意し、ソースのアプリフォルダーで次を実行します。生成サービスとMCPの設定は上記の各文書に従います。

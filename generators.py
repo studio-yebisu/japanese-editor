@@ -29,6 +29,14 @@ SARASHINA_PROMPT = (
     "明確な誤字・脱字・助詞の重複を検出してeditsに入れてください。小説の作風は保ちます。"
     "回答は指定のJSONだけです。editsの各案にはbefore・after・reason・ruleの4項目を書いてください。\n\n"
 )
+SARASHINA_PASSAGE_PROMPT = (
+    "Yomiyasuに基づいてsourceの日本語を校正してください。style_notesは文体の希望です。"
+    "明確な誤字・脱字・助詞や語の重複を見直し、意味と語り口を保ってください。"
+    "corrected_textには校正後のsource全文だけを入れます。説明や修正一覧は入れません。"
+    "sourceの一部だけを返したり、別の文章や資料の例文を追加したりしないでください。"
+    "段落と改行、コードとURLを保ちます。変更不要ならsourceをそのまま返します。"
+    "不明な点はquestions、構成の助言はsuggestionsへ。それ以外は空配列。指定JSONだけを返してください。\n\n"
+)
 
 
 class GenerationError(ValueError):
@@ -241,8 +249,14 @@ def generate(payload, instructions, schema):
     except (ValueError, TypeError, UnicodeError, RecursionError):
         raise GenerationError("invalid_request", "生成用の入力をJSONとして扱えません。") from None
     started = time.monotonic()
+    passage = "corrected_text" in schema.get("properties", {})
+    adapter = SARASHINA_PASSAGE_PROMPT if passage else SARASHINA_PROMPT
+    if passage:
+        instructions += ("\nこの呼出しの出力契約: before/afterの修正一覧は返しません。"
+                         "指定JSONのcorrected_textに校正後のsource全文を返してください。"
+                         "原文の意味・段落・改行・作風を保ち、誤字や重複も点検してください。")
     response = _post_json(SARASHINA_ENDPOINT, {
-        "model": model, "messages": [{"role": "system", "content": instructions}, {"role": "user", "content": SARASHINA_PROMPT + prompt}],
+        "model": model, "messages": [{"role": "system", "content": instructions}, {"role": "user", "content": adapter + prompt}],
         "max_completion_tokens": SARASHINA_OUTPUT_TOKENS, "temperature": 0.7, "n": 1, "stream": False,
         "response_format": {"type": "json_schema", "json_schema": {"name": "japanese_editor", "schema": schema, "strict": True}},
     }, key, provider)
@@ -258,7 +272,7 @@ def generate(payload, instructions, schema):
                    "temperature": 0.7,
                    "max_completion_tokens": SARASHINA_OUTPUT_TOKENS,
                    "finish_reason": finish if finish in ("stop", "length", "tool_calls", "content_filter") else "unknown",
-                   "prompt_adapter_sha256": hashlib.sha256(SARASHINA_PROMPT.encode()).hexdigest(),
+                   "prompt_adapter_sha256": hashlib.sha256(adapter.encode()).hexdigest(),
                    "usage": {name: usage[name] for name in ("prompt_tokens", "completion_tokens", "total_tokens")
                              if isinstance(usage, dict) and type(usage.get(name)) is int and 0 <= usage[name] <= 10000000}}
     if finish == "length":
@@ -277,6 +291,7 @@ def generate(payload, instructions, schema):
     edits = proposal.get("edits", [])
     no_ops = sum(isinstance(edit, dict) and edit.get("before") == edit.get("after") for edit in edits)
     diagnostics.update(raw_edit_count=len(edits), unchanged_edit_count=no_ops,
+                       output_mode="corrected_passage" if passage else "patches",
                        content_characters=len(text), content_sha256=content_hash)
     return {"proposal": proposal, "identity": identity, "diagnostics": diagnostics}
 
