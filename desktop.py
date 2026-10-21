@@ -14,6 +14,7 @@ import urllib.request
 
 from runtime_paths import PERSISTENT_ROOT
 from service_runtime import data_id
+from engine import VERSION
 
 TITLE = "Yomiyasu Studio"
 PORT = 8896
@@ -45,6 +46,8 @@ def service_identity(port=PORT):
             raise DesktopError("保存先の異なるこのアプリが8896番ポートを使用しています。使用中のアプリを確認してください。")
         if value.get("closing"):
             raise DesktopError("共有サービスを終了しています。処理が終わってから、もう一度起動してください。")
+        if value.get("version") != VERSION:
+            raise DesktopError("異なる版の共有サービスが起動しています。旧版の処理を終えた後、READMEの「更新と接続の案内」に従ってサービスを終了し、新版を開き直してください。")
         return value
     except urllib.error.HTTPError as exc:
         raise DesktopError("別のアプリ、またはこのアプリの古いバージョンが8896番ポートを使用しています。先に使用中のアプリを確認してください。") from exc

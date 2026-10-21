@@ -53,6 +53,22 @@ class DesktopLifecycleTests(unittest.TestCase):
             with self.assertRaises(desktop.DesktopError):
                 desktop.service_identity()
 
+    def test_other_versions_are_never_silently_reused_for_the_current_ui(self):
+        response = Mock()
+        response.__enter__ = Mock(return_value=response)
+        response.__exit__ = Mock(return_value=False)
+        opener = Mock()
+        opener.open.return_value = response
+        for version in (desktop.VERSION, "0.2.16", None):
+            response.read.return_value = json.dumps({"application": desktop.APPLICATION, "protocol_version": 1,
+                                                     "data_id": desktop.data_id(), "version": version}).encode()
+            with self.subTest(version=version), patch.object(desktop.urllib.request, "build_opener", return_value=opener):
+                if version == desktop.VERSION:
+                    self.assertEqual(desktop.service_identity()["version"], version)
+                else:
+                    with self.assertRaisesRegex(desktop.DesktopError, "異なる版"):
+                        desktop.service_identity()
+
     def test_owned_close_keeps_http_until_existing_work_finishes(self):
         session = desktop.ServiceSession()
         session.server, session.thread, session.owned = Mock(), Mock(), True

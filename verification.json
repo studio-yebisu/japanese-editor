@@ -1,6 +1,6 @@
 {
-  "stage": "v0_2_14_installed_windows_and_mcp_checks_plus_prior_generation_records",
-  "verified_on": "2026-10-21",
+  "stage": "v0_2_17_windows_qa_with_known_limits",
+  "verified_on": "2026-10-22",
   "spec_consultations": [
     {
       "requested": "claude-opus-5-5",
@@ -2380,5 +2380,230 @@
     },
     "duplicate_cuda_bytes_removed": 792648704,
     "installed_service_executable_verified": true
+  },
+  "v0217": {
+    "date": "2026-10-22",
+    "version": "0.2.17",
+    "platform": "Windows x64 / RTX 4090",
+    "stage": "beta_with_known_limits",
+    "unit_checks": {
+      "python_total": 386,
+      "python_passed": 385,
+      "python_skipped": 1,
+      "skip_reason": "POSIX ownership/mode checks on Windows",
+      "ui_passed": 52
+    },
+    "native_ui": {
+      "status": "passed",
+      "checks": {
+        "real_mcp_readiness_check": true,
+        "over_limit_rejected_before_request": true,
+        "file_loaded_exact": true,
+        "provider_switch_preserves_source": true,
+        "raw_source_preserved": true,
+        "sarashina_and_q8_executed": true,
+        "left_red_right_green": true,
+        "export_exact_and_yomiyasu_verified": true
+      },
+      "sample_characters": 2860,
+      "sarashina_chunks": 3,
+      "generation_and_judgment_seconds": 80.114,
+      "candidates": 5,
+      "seeded_typos_remaining": [],
+      "gpu_layers": 33,
+      "quantization": "Q8_0",
+      "snapshot_build_cli_sha256": "b63855f767e1109fb239f77be7ef6158a0bea004ebbcf6672f70b43bf89e0360"
+    },
+    "cpu_mcp": {
+      "version": "0.2.17",
+      "elapsed_seconds": 88.29,
+      "same_novel_characters": 2860,
+      "host_supplied_sarashina_edits": 5,
+      "choices": [
+        "preserved",
+        "preserved",
+        "preserved",
+        "preserved",
+        "preserved"
+      ],
+      "ui_choices": [
+        "preserved",
+        "preserved",
+        "preserved",
+        "preserved",
+        "preserved"
+      ],
+      "choices_match": true,
+      "cpu_only": true,
+      "gpu_layers": 0,
+      "exact_same_final_as_ui": true,
+      "emoji_crlf_preserved": true,
+      "check": "executed",
+      "verification": "executed"
+    },
+    "long_input": {
+      "status": "passed",
+      "scope": "Repeated original novel for segmentation/load testing, not an independent writing-quality benchmark.",
+      "characters": 11494,
+      "final_characters": 11498,
+      "elapsed_seconds": 218.84,
+      "stages": {
+        "rules": "executed",
+        "generation": "executed",
+        "decider": "executed"
+      },
+      "segmentation": {
+        "strategy": "paragraph_sentence",
+        "chunk_total": 11,
+        "max_chunk_characters": 1200,
+        "adjacent_text_sent": false,
+        "initial_chunk_total": 11,
+        "resplit_count": 0,
+        "api_calls": 11,
+        "max_calls": 24,
+        "max_split_depth": 2,
+        "time_budget_seconds": 600
+      },
+      "edits": 21,
+      "all_four_parts_present": true,
+      "all_decisions_executed": true,
+      "source_hash_exact": true,
+      "seeded_occurrences_remaining": {
+        "名前をを": 0,
+        "読み返して読んだ": 3,
+        "出来なった": 0,
+        "開いだ": 0
+      },
+      "export_exact": true,
+      "check": "executed",
+      "verification": "executed",
+      "decision_counts": {
+        "preserved": 21
+      }
+    },
+    "gemini": {
+      "status": "passed",
+      "transport": "antigravity-cli",
+      "requested_model": "gemini-3.8-flash-high",
+      "reported_model": "gemini-3.8-flash-high",
+      "automatic_retries": 0,
+      "numbers_and_negation_preserved": true,
+      "particle_typo_corrected": true,
+      "decider_executed": true
+    },
+    "claude_host": {
+      "model": "claude-opus-5-5",
+      "app_version": "0.2.17",
+      "actual_mcp_profiles_tool_call": true,
+      "scope": "temporary MCP config; not a permanent Claude installation"
+    },
+    "native_save": {
+      "native_save_dialog_used": true,
+      "saved_bytes": 8502,
+      "exact_ui_output": true,
+      "sha256": "bdf308c88ecc3cd394b55c17ae20a6c27b1b1a1a7e44dcd5206e0b06b88dabaf"
+    },
+    "self_proofreading": {
+      "engine_version": "0.2.17",
+      "status_section_proposals": 3,
+      "decisions": [
+        "preserved",
+        "preserved",
+        "preserved"
+      ],
+      "status_saved_from_finalize": true,
+      "rules_and_byte_verification": [
+        "README.md",
+        "docs/PLUGINS.md",
+        "web/index.html static UI text"
+      ],
+      "scope": "Host reviewed wording; mechanical checks are not an automatic quality or meaning pass for the entire documents."
+    },
+    "final_ui_checks": {
+      "off_toggles_rules_only": true,
+      "copy_reported_success": true,
+      "manual_copy_exact": false,
+      "readiness_actual_mcp": true,
+      "correct_codex_registration": true,
+      "current_mcp_json_without_credentials": true,
+      "status": "passed"
+    },
+    "clipboard": {
+      "actual_os_text_matches": true,
+      "windows_crlf_normalization_checked": true
+    },
+    "yomiyasu_used": {
+      "version": "2.1.1",
+      "commit": "fbe02c93877d697cc53d9377b7a45dd8a1dd99b3"
+    },
+    "playback": {
+      "mobile": {
+        "ended": true,
+        "error": null,
+        "duration": 42,
+        "total_frames": 1260,
+        "dropped_frames": 3,
+        "wall_seconds": 42.147
+      },
+      "desktop": {
+        "ended": true,
+        "duration": 42,
+        "total_frames": 1260,
+        "dropped_frames": 0,
+        "error": null,
+        "wall_seconds": 42.071,
+        "file": "YomiyasuStudio-demo-desktop-0.2.17.mp4"
+      },
+      "raw": {
+        "ended": true,
+        "error": null,
+        "duration": 108.066667,
+        "total_frames": 3242,
+        "dropped_frames": 3,
+        "wall_seconds": 108.213
+      }
+    },
+    "gpu_full_parity": {
+      "cases": 16,
+      "choice_agreement": 16,
+      "tokens_agreement": 16,
+      "max_probability_delta": 0.009588444296607546,
+      "scope": "Same fixed synthetic inputs and prior verified native CPU BF16 reference; no general quality guarantee."
+    },
+    "installed": {
+      "cli_sha256": "15fd4a4856b9e4b94d3b735e4e7020cd249e2f9ce38f63a8c38332069cb5fc32",
+      "verified_files": 245,
+      "other_codex_settings_preserved": true
+    },
+    "known_limits": [
+      "Mac/Metal inference and Mac UI not verified.",
+      "Long load test left three redundant expressions uncorrected.",
+      "One GUI process under the verification tool ended with code -1; cause not established. A repeat outside its job completed the long test.",
+      "Physical GPU OOM was not forced; recovery was covered by process fault injection.",
+      "No long-duration reliability guarantee or universal meaning/quality guarantee."
+    ],
+    "media": [
+      {
+        "file": "YomiyasuStudio-demo-desktop-0.2.17.mp4",
+        "bytes": 2495839,
+        "sha256": "3b8d249f40a897e2e260be0b7967771bd7185e300670511e9e9596a3e91d461d"
+      },
+      {
+        "file": "YomiyasuStudio-demo-poster-0.2.17.png",
+        "bytes": 498120,
+        "sha256": "399f45b008abfba9780b450dcb308fac5ef54d40583211ffcc7bde8f9338055d"
+      },
+      {
+        "file": "YomiyasuStudio-demo-vertical-0.2.17.mp4",
+        "bytes": 2237002,
+        "sha256": "a65f18b68ee91892d022d6e1a1df2d4fe9fb35ee697480d8ba2c3abba1c8bd38"
+      },
+      {
+        "file": "YomiyasuStudio-real-run-0.2.17.mp4",
+        "bytes": 2637031,
+        "sha256": "edfb249211dd746be54b5de959fdc212727102be108d9d51d18b680043559725"
+      }
+    ],
+    "media_scope": "42-second edited actual-app capture, explicit fast-forward, PC-wide RAM/VRAM. Recording used the initial v0.2.17 binary; final binary adds registration-target and shared-version checks without changing inference/editing code."
   }
 }

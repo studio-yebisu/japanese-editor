@@ -4,18 +4,22 @@ Yomiyasu Studioは日本語の文章を整え、どこを変えたか左右で�
 
 ## ダウンロード
 
-[最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/tag/v0.2.16)
+[最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/tag/v0.2.17)
 
-| 使う環境 | v0.2.16のダウンロード | 提供状況 |
+| 使う環境 | v0.2.17のダウンロード | 提供状況 |
 | --- | --- | --- |
-| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.16/YomiyasuStudio-windows-x64-0.2.16.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
-| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.16/YomiyasuStudio-source-0.2.16.zip) | Pythonで起動する実験版。Mac実機は未検証 |
+| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.17/YomiyasuStudio-windows-x64-0.2.17.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
+| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.17/YomiyasuStudio-source-0.2.17.zip) | Pythonで起動する実験版。Mac実機は未検証 |
 
 ベータ版です。v0.2.16では、公式Q8モデルとllama.cppを使うPPDDのC++ワーカーを追加しました。NVIDIA GPUを優先し、空きメモリに合わせてCPUを併用します。Apple Silicon向けのMetalにも対応する実装ですが、Mac実機は未検証です。[準備と必要メモリ](docs/INSTALL.md)を確認してください。画面上部の「校正AI」からSarashinaとGeminiを切り替えられます。モデルは誤字を見逃したり、誤った修正を提案したりすることがあります。意味判定も文章品質の保証にはなりません。[確認した範囲](docs/STATUS.md)
 
 起動時にYomiyasu公式の更新を裏で確認し、対応する新版があれば校正方針・参照資料・検査スクリプトをまとめて更新します。同梱版も2.1.0へ更新しました。**旧版からはアプリと共有サービスの両方を更新し、サービスを起動し直してください。** MCPも新版へ登録し直して、新しい会話で使います。[更新と接続の案内](docs/PLUGINS.md#共有サービスの更新)
 
+v0.2.17では画面上部に「AI連携」を追加しました。MCPの起動・ツール一覧・規則点検を、その場で確認できます。Codexへの登録と、Claude Codeなどに渡すこのPC用の設定も同じ画面にあります。接続点検には固定の例文だけを使い、原稿の送信や外部AIの呼び出し、PPDDの読み込みは行いません。
+
 ![小説の校正例。実画面の一部。左の原文に赤い取り消し線、右の校正後に緑の変更箇所を表示。](https://raw.githubusercontent.com/studio-yebisu/yomiyasu-studio/main/docs/assets/editor.png)
+
+実際に動かした動画：[スマホ向け・42秒](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.17/YomiyasuStudio-demo-vertical-0.2.17.mp4) / [PC向け・42秒](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.17/YomiyasuStudio-demo-desktop-0.2.17.mp4)。処理中は一部早送りです。[検証結果と残る制限](docs/STATUS.md)も公開しています。
 
 ## Windowsで始める
 
@@ -38,7 +42,7 @@ Mac用の `.app` はまだ用意していません。ブラウザーで使うソ
 3. 「ターミナル」を開きます。ダウンロード先が通常の「ダウンロード」フォルダーなら、次を1行ずつ実行します。
 
 ```sh
-cd "$HOME/Downloads/YomiyasuStudio-source-0.2.16"
+cd "$HOME/Downloads/YomiyasuStudio-source-0.2.17"
 python3 --version
 python3 -B app.py serve
 ```

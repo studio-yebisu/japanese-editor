@@ -26,6 +26,62 @@ def native_config(codex_home=FAKE_CODEX_HOME):
             'CODEX_HOME = ' + json.dumps(str(codex_home)) + '\n').encode("utf-8")
 
 
+class ConnectionCheckTests(unittest.TestCase):
+    def test_registration_of_another_binary_or_disabled_server_needs_update(self):
+        env = {"YEBISU_EDITOR_DATA_DIR": "/fixed-data", "CODEX_HOME": "/fixed-codex"}
+        for server, expected in (({"command": COMMAND[0], "args": COMMAND[1:], "env": env}, True),
+                                 ({"command": "old-version-cli", "args": ["mcp"], "env": env}, False),
+                                 ({"command": COMMAND[0], "args": COMMAND[1:], "env": env, "enabled": False}, False),
+                                 ({"command": COMMAND[0], "args": None, "env": env}, False),
+                                 ({"command": COMMAND[0], "args": COMMAND[1:], "env": {}}, False)):
+            with self.subTest(expected=expected), patch.object(integration, "_read", return_value={"mcp_servers": {integration.SERVER: server}}), \
+                    patch.object(integration, "_config_path", return_value=FAKE_CODEX_HOME/"config.toml"), \
+                    patch.object(integration, "cli_command", return_value=COMMAND), \
+                    patch.object(integration, "server_environment", return_value=env), \
+                    patch.object(integration, "codex_executable", return_value="fixed-codex-cli"):
+                result = integration.status()
+                self.assertEqual(result["current_registration"], expected)
+                self.assertEqual(result["needs_update"], not expected)
+
+    def response(self, **changes):
+        rows = [
+            {"id": 1, "result": {"serverInfo": {"name": "yomiyasu-studio", "version": "test"}}},
+            {"id": 2, "result": {"tools": [{"name": "japanese_editor_review_proposals"}]}},
+            {"id": 3, "result": {"content": [{"type": "text", "text": json.dumps({"stages": {
+                "rules": "executed", "generation": "not_requested", "decider": "not_run"}})}]}},
+        ]
+        return Mock(returncode=0, stdout="\n".join(json.dumps(row) for row in rows), **changes)
+
+    def test_fixed_probe_uses_real_mcp_command_without_auth_model_or_manuscript(self):
+        with patch.object(integration, "cli_command", return_value=COMMAND), \
+                patch.object(integration.subprocess, "run", return_value=self.response()) as run:
+            result = integration.check_connection()
+        self.assertEqual(result["status"], "passed")
+        args, kwargs = run.call_args
+        self.assertEqual(args[0], COMMAND)
+        requests = [json.loads(line) for line in kwargs["input"].splitlines()]
+        self.assertEqual(requests[-1]["params"]["arguments"], {
+            "text": "接続確認用の例文です。", "profile": "article", "generate": False, "judge": False})
+        self.assertEqual(kwargs["env"]["YEBISU_EDITOR_NO_AUTOSTART"], "1")
+        self.assertEqual(kwargs["env"]["YEBISU_YOMIYASU_OFFLINE"], "1")
+        self.assertEqual(kwargs["timeout"], 30)
+
+    def test_invalid_or_failed_exchange_is_never_reported_connected_or_echoed(self):
+        for output in ("private-secret", '[]', '{"id":1,"error":{"message":"private-secret"}}',
+                       self.response().stdout.replace('not_run', 'executed')):
+            with self.subTest(output=output), patch.object(integration.subprocess, "run", return_value=Mock(returncode=0, stdout=output)):
+                with self.assertRaises(integration.IntegrationError) as error:
+                    integration.check_connection()
+                self.assertNotIn("private-secret", str(error.exception))
+
+    def test_portable_mcp_config_contains_only_explicit_registration_environment(self):
+        with patch.object(integration, "cli_command", return_value=COMMAND):
+            result = integration.mcp_config()["mcpServers"][integration.SERVER]
+        self.assertEqual(result["command"], COMMAND[0])
+        self.assertEqual(result["args"], COMMAND[1:])
+        self.assertEqual(set(result["env"]), {"YEBISU_EDITOR_DATA_DIR", "CODEX_HOME"})
+
+
 class MergeTests(unittest.TestCase):
     def test_preserves_unrelated_default_fields_comments_and_multiline_content_raw(self):
         original = b'''# user comment retained verbatim
