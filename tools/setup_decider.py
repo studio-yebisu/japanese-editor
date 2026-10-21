@@ -249,6 +249,8 @@ def preflight(args, private):
 
 def main(argv=None):
     args = parse_arguments(argv)
+    if args.device == "cuda:0" and sys.platform == "darwin":
+        raise SystemExit("macOSではCUDAを利用できません。--device cpuで準備してください。")
     private = PERSISTENT_ROOT / "decider"
     if args.check_only or args.preset:
         report = preflight(args, private)
@@ -278,6 +280,12 @@ def main(argv=None):
     subprocess.run([sys.executable, "-B", str(ROOT / "tools/download_decider.py")], check=True)
     model = private / "models" / REVISION
     subprocess.run([uv, "pip", "install", "--python", str(executable), "--link-mode", "copy", "-r", str(model / "requirements.txt")], check=True)
+    if args.device == "cuda:0":
+        # PyPI now supplies CPU wheels on Windows. Explicitly select the
+        # matching official CUDA build; changing a config alone cannot enable it.
+        subprocess.run([uv, "pip", "install", "--python", str(executable), "--link-mode", "copy",
+                        "--index-url", "https://download.pytorch.org/whl/cu126",
+                        "torch==2.14.0+cu126", "torchvision==0.29.0+cu126"], check=True)
     configuration = {"enabled": True, "python": str(executable), "model_path": str(model),
                      "source_path": str(model / "source/src"), "model": "pplx-decider-flash-v1.2",
                      "revision": REVISION, "device": args.device, "cpu_dtype": args.cpu_dtype,

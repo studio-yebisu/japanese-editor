@@ -132,6 +132,9 @@
           </section>
           <section class="settings-section" aria-labelledby="connection-title">
             <h3 id="connection-title">接続状態</h3>
+            <div class="settings-grid"><div class="field-group"><label for="decider-device">PPDDの実行先</label><select id="decider-device"><option value="cpu">CPU（GPU不要）</option><option value="cuda:0">NVIDIA GPU（CUDA）</option></select></div><div class="field-group"><button id="save-decider-device" type="button" class="button button-small button-secondary">実行先を保存</button></div></div>
+            <p id="decider-device-status" class="field-description" role="status" aria-live="polite"></p>
+            <p class="field-description">GPU版は空きVRAM 11GiB・空きRAM 12GiB以上が目安です。保存時と読み込み時に確認します。Apple SiliconはCPUを選んでください。</p>
             <div class="availability-row"><span>Yomiyasuの規則点検</span><span id="rules-stage" class="stage-badge">確認中</span></div><div class="availability-row"><span>修正案の生成</span><span id="generator-stage" class="stage-badge">確認中</span></div><div class="availability-row"><span>Deciderの意味判定</span><span id="decider-stage" class="stage-badge stage-muted">確認中</span></div>
             <p id="decider-note" class="field-description">接続状態を確認しています。</p><div class="settings-actions"><button id="refresh-decider" type="button" class="text-button" disabled>接続状態を更新</button><button id="release-decider" type="button" class="text-button" disabled>判定モデルのメモリを解放</button><a href="https://github.com/studio-yebisu/yomiyasu-studio/blob/main/docs/INSTALL.md" target="_blank" rel="noreferrer noopener">ローカルDeciderの準備</a></div>
             <p id="decider-resource-error" class="resource-error" hidden></p>

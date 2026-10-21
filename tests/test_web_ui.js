@@ -102,6 +102,16 @@ function harness() {
     state.requests.push({ url, body, headers: options.headers, signal: options.signal });
     let data;
     if (url === "/api/config") data = state.config;
+    else if (url === "/api/decider/release") {
+      state.config.decider.loaded = false;
+      data = { status: "stopped" };
+    }
+    else if (url === "/api/decider/settings") {
+      if (state.deviceError) return { ok: false, status: 422, json: async () => state.deviceError };
+      state.config.decider.device = body.device;
+      state.config.decider.loaded = false;
+      data = { status: "saved", device: body.device };
+    }
     else if (url === "/api/integrations/codex") data = { registered: true, skill_installed: true };
     else if (url === "/api/settings") {
       if (state.settingsGate) await state.settingsGate();
@@ -145,6 +155,32 @@ function harness() {
 
 const raw = "😀この機能を利用することが可能です。\r\n保存件数の上限は3件です。\r\n`code` https://example.test";
 const corrected = raw.replace("利用することが可能です", "利用できます");
+
+test("PPDD device settings preserve source and show actual VRAM shortage", async () => {
+  const { state, get, h } = harness(); await h.loadConfig();
+  h.setSourceText(raw);
+  state.deviceError = { error: "空きメモリが不足しています。", details: { details: { cuda_available_bytes: 2 * 2 ** 30, cuda_required_bytes: 11 * 2 ** 30 } } };
+  get("decider-device").value = "cuda:0";
+  await get("save-decider-device").click();
+  assert.equal(h.currentSource(), raw);
+  assert.equal(get("decider-device").value, "cpu");
+  assert.match(get("decider-device-status").textContent, /2\.0GiB.*11\.0GiB.*変更していません/);
+  state.deviceError = null;
+  get("decider-device").value = "cuda:0";
+  await get("save-decider-device").click();
+  assert.equal(get("decider-device").value, "cuda:0");
+  assert.match(get("decider-device-status").textContent, /次の判定/);
+  assert.equal(h.currentSource(), raw);
+});
+
+test("PPDD release uses the browser control endpoint and keeps the manuscript", async () => {
+  const { state, get, h } = harness(); await h.loadConfig(); h.setSourceText(raw);
+  await get("release-decider").click();
+  assert.equal(state.requests.filter((request) => request.url === "/api/decider/release").length, 1);
+  assert.equal(state.requests.filter((request) => request.url === "/api/decider/stop").length, 0);
+  assert.equal(get("release-decider").disabled, true);
+  assert.equal(h.currentSource(), raw);
+});
 
 function useSarashina(state) {
   state.config.generation.provider = "sarashina";

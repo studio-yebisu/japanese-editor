@@ -209,7 +209,11 @@ def attach(output, text):
     output["decider"] = {"model": info["model"], "revision": info["revision"], "backend": "local",
                          "device": info["device"], "executed": successes, "total": len(output["edits"])}
     output["decider"].update({key: info[key] for key in ("precision", "precision_override", "reference_path") if key in info})
-    output["notes"].append("Deciderの結果は意味が変わったかどうかについてのモデルの判定です。修正理由は候補を作ったモデルの説明です。")
+    output["notes"].append("Deciderの結果は意味が変わったかどうかについてのモデルの判定です。")
+    if output.get("generator", {}).get("requested_provider") == "sarashina":
+        output["notes"].append("Sarashinaの校正後の本文と原文をアプリ内で比較し、変更位置を取り出しています。変更の説明はDeciderの判定理由ではありません。")
+    else:
+        output["notes"].append("修正理由は候補を作ったモデルの説明です。")
     output["notes"].append("各修正案を一件ずつ原文に反映した文章を判定します。複数の候補を合わせた最終稿の意味は判定していません。")
     if any(edit.get("decision", {}).get("scope") == "excerpt" for edit in output["edits"]):
         output["notes"].append("長文の判定は変更箇所と前後の抜粋を対象にしています。全文の意味保持を判定したものではありません。")

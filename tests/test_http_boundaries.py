@@ -82,6 +82,29 @@ class HttpBoundaryTests(unittest.TestCase):
                 self.wait_slots(4)
         self.assertEqual(self.request("GET", "/api/health")[0], 200)
 
+    def test_browser_decider_controls_preserve_raw_rpc_auth_boundary(self):
+        headers = {"Content-Type": "application/json", "Origin": f"http://127.0.0.1:{self.port}"}
+        with patch.object(app.decider_runtime, 'local_set_device', return_value={'status': 'saved', 'device': 'cuda:0'}) as device, \
+             patch.object(app.decider_runtime, 'local_release', return_value={'status': 'stopped'}) as release:
+            self.assertEqual(self.request('POST', '/api/decider/settings', '{"device":"cuda:0"}', headers)[0], 200)
+            device.assert_called_once_with('cuda:0')
+            self.assertEqual(self.request('POST', '/api/decider/release', '{}', headers)[0], 200)
+            release.assert_called_once()
+            self.assertEqual(self.request('POST', '/api/decider/stop', '{}', headers)[0], 401)
+            self.assertEqual(self.request('POST', '/api/decider/settings', '{"device":"cpu","python":"other"}', headers)[0], 400)
+            foreign = {**headers, 'Origin': 'https://other.invalid'}
+            self.assertEqual(self.request('POST', '/api/decider/settings', '{"device":"cpu"}', foreign)[0], 403)
+            device.assert_called_once()
+
+    def test_decider_settings_refuse_during_analysis(self):
+        self.assertTrue(app.Handler.semaphore.acquire(blocking=False))
+        try:
+            with patch.object(app.decider_runtime, 'local_set_device') as device:
+                self.assertEqual(self.request('POST', '/api/decider/settings', '{"device":"cuda:0"}', {'Content-Type': 'application/json'})[0], 409)
+                device.assert_not_called()
+        finally:
+            app.Handler.semaphore.release()
+
     def test_body_limit_accepts_exact_maximum_and_rejects_empty_or_negative_lengths(self):
         prefix, suffix = b'{"text":"', b'"}'
         raw = prefix + b"x" * (256000 - len(prefix) - len(suffix)) + suffix

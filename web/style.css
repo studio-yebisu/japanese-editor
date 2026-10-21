@@ -179,6 +179,7 @@ mark.change-added { color: inherit; background: var(--green-light); border-radiu
 .settings-section h3 { font-size: 13px; line-height: 1.8; font-weight: 600; margin-bottom: 13px; }
 .settings-section p { margin-top: 9px; }
 .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.settings-grid .field-group > .button { margin-top: 23px; }
 .field-group label, .settings-section > label, #api-key-settings > label { display: block; font-size: 11px; color: #697588; margin-bottom: 7px; }
 .field-description { font-size: 11px; color: var(--muted); line-height: 1.9; overflow-wrap: anywhere; }
 .settings-section .field-description:empty { display: none; }

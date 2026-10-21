@@ -19,6 +19,7 @@ from pathlib import Path
 import queue
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import uuid
@@ -392,7 +393,8 @@ class DeciderRuntime:
             raise DeciderRuntimeError("timeout", "", recoverable=True)
         try:
             try:
-                cfg = _configuration(self.config_path) if cfg is None else cfg
+                # Settings can change while this request waits for ownership.
+                cfg = _configuration(self.config_path)
                 _remaining(deadline, recoverable=True)
                 previous_process = self._process
                 self._start(cfg, deadline=deadline)
@@ -542,6 +544,86 @@ _RUNTIME = DeciderRuntime()
 atexit.register(_RUNTIME.stop)
 
 
+def _inspect_device(cfg, config_path, device):
+    environment = _external_environment(os.environ)
+    environment.update(PYTHONIOENCODING="utf-8", PYTHONDONTWRITEBYTECODE="1", HF_HUB_OFFLINE="1",
+                       TRANSFORMERS_OFFLINE="1", HF_HUB_DISABLE_TELEMETRY="1")
+    try:
+        with _external_dll_search():
+            result = subprocess.run([cfg["python"], "-B", "-u", str(WORKER_PATH), "--config", str(config_path),
+                                     "--inspect-device", device], stdin=subprocess.DEVNULL,
+                                    capture_output=True, encoding="utf-8", timeout=30, cwd=ROOT, env=environment,
+                                    creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
+        output = json.loads(result.stdout)
+        if not isinstance(output, dict) or output.get("device") != device or output.get("model") != MODEL or output.get("revision") != REVISION:
+            raise ValueError("invalid inspection identity")
+        if result.returncode or output.get("ok") is not True:
+            error = public_error(output.get("error"))
+            raise DeciderRuntimeError(error["code"], "", error["details"])
+        resources = output.get("resources")
+        if not isinstance(resources, dict) or output.get("event") != "resources":
+            raise ValueError("invalid inspection result")
+        # Reuse the public numeric-resource allowlist; no paths/argv/output.
+        return public_error({"details": resources})["details"]
+    except DeciderRuntimeError:
+        raise
+    except (OSError, subprocess.TimeoutExpired, ValueError, UnicodeError):
+        raise DeciderRuntimeError("resource_check_failed", "") from None
+
+
+def local_set_device(device):
+    """UI-only device choice. Runtime lock prevents a second model owner."""
+    if device not in ("cpu", "cuda:0"):
+        raise DeciderRuntimeError("invalid_config", "")
+    if not _RUNTIME._lock.acquire(blocking=False):
+        raise DeciderRuntimeError("busy", "")
+    temporary = None
+    try:
+        path = _RUNTIME.config_path
+        cfg = _configuration(path)
+        if cfg["device"] == device:
+            return {"status": "unchanged", "device": device}
+        original = path.read_bytes()
+        # Inspect the other device before releasing a useful waiting model.
+        resources = _inspect_device(cfg, path, device)
+        if path.read_bytes() != original:
+            raise DeciderRuntimeError("settings_changed", "")
+        _RUNTIME.stop()
+        # A released model is loaded lazily next time. Failed changes retain
+        # the old configuration and never silently select a different device.
+        resources = _inspect_device(cfg, path, device)
+        if path.read_bytes() != original:
+            raise DeciderRuntimeError("settings_changed", "")
+        saved = json.loads(original.decode("utf-8-sig"))
+        saved["device"] = device
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, prefix=".device-", suffix=".tmp", delete=False) as stream:
+            temporary = Path(stream.name)
+            json.dump(saved, stream, ensure_ascii=False, indent=2, allow_nan=False)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        for attempt in range(3):
+            try:
+                os.replace(temporary, path)
+                temporary = None
+                break
+            except PermissionError:
+                if attempt == 2:
+                    raise
+                time.sleep(.05)
+        _RUNTIME._last_error = None
+        _RUNTIME._cache_status(_configuration(path))
+        return {"status": "saved", "device": device, "resources": resources}
+    except DeciderRuntimeError:
+        raise
+    except (OSError, ValueError):
+        raise DeciderRuntimeError("settings_save_failed", "") from None
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+        _RUNTIME._lock.release()
+
+
 def local_status():
     """HTTP raw endpoints use this function, avoiding service recursion."""
     return _RUNTIME.status()
@@ -554,6 +636,15 @@ def local_decide(request, timeout=None):
 def local_stop():
     _RUNTIME.stop()
     return {"status": "stopped", "phase": "idle", "loaded": False, "model": MODEL, "revision": REVISION}
+
+
+def local_release():
+    if not _RUNTIME._lock.acquire(blocking=False):
+        raise DeciderRuntimeError("busy", "")
+    try:
+        return local_stop()
+    finally:
+        _RUNTIME._lock.release()
 
 
 def _service_configuration():
