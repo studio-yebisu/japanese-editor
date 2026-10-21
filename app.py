@@ -143,7 +143,7 @@ def mcp():
                 validate_unicode_input(params)
                 result = {"protocolVersion": params.get("protocolVersion", "2024-11-05"),
                           "capabilities": {"tools": {"listChanged": False}},
-                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.12"},
+                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.13"},
                           "instructions": "日本語の校正は用途・強さを選び、ホスト自身が修正候補を作りreview_proposalsで比較する。採用案だけをfinalizeへ渡し返ったtextを最終稿にする。未実行の判定を成功と扱わない。小説・台詞の作風を保つ。generate=trueは外部送信を伴うため通常のホスト校正では不要。"}
             elif method == "ping":
                 result = {}
@@ -299,7 +299,7 @@ class Handler(BaseHTTPRequestHandler):
             except (rpc_auth.AuthenticationError, ValueError):
                 return self.reject(401, "共有サービスの認証要求を確認できません。")
         if path == "/api/health":
-            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.12", "data_id": data_id(), "closing": self.server.closing})
+            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.13", "data_id": data_id(), "closing": self.server.closing})
         if path == "/api/providers":
             return self.send(200, provider_settings.public_config())
         if path == "/api/yomiyasu/status":

@@ -73,7 +73,7 @@ def config():
     providers = provider_settings.public_config()
     selected = next((item for item in providers["providers"] if item["id"] == providers["provider"]), {})
     return {
-        "version": "0.2.12", "max_text": MAX_TEXT,
+        "version": "0.2.13", "max_text": MAX_TEXT,
         "profiles": CONFIG["profiles"], "strengths": CONFIG["strengths"],
         "stages": {"rules": "ready" if (_vendor_root() / "scripts/yomiyasu_lint.py").is_file() else "unavailable",
                    "generator": "available" if selected.get("available") else "unavailable",
@@ -596,7 +596,7 @@ def analyze(payload):
     strength = _pick(CONFIG["strengths"], payload.get("strength", "natural"), "強さ")
     progress.report("rules")
     findings = lint(text, profile)
-    output = {"version": "0.2.12", "source_hash": digest(text), "offset_encoding": "utf-16",
+    output = {"version": "0.2.13", "source_hash": digest(text), "offset_encoding": "utf-16",
               "profile": profile["id"], "strength": strength["id"], "findings": findings,
               "edits": [], "questions": [], "suggestions": [], "stages": {"rules": "executed", "generation": "not_requested", "decider": "not_run"},
               "notes": ["指摘は見直し候補です。指摘の有無で文章の品質や意味保持は判定できません。"],

@@ -3,6 +3,7 @@
 (() => {
   const byId = (id) => document.getElementById(id);
   const ui = {
+    quickProvider: byId("quick-provider"),
     provider: byId("provider"), providerModel: byId("provider-model"), apiKey: byId("api-key"),
     providerNotice: byId("provider-notice"), credentialStatus: byId("credential-status"),
     saveProvider: byId("save-provider"), removeKey: byId("remove-api-key"), providerSetup: byId("provider-setup"),
@@ -46,6 +47,7 @@
   let activeExport = null;
   let refreshingCapability = false;
   let settingsBusy = false;
+  let pendingQuickSwitch = null;
   let codexAvailable = false;
   let revision = 0;
   let sourceRaw = ui.source.value;
@@ -491,6 +493,7 @@
 
   function renderGenerator() {
     const provider = selectedGenerator();
+    ui.quickProvider.value = ui.provider.value;
     const ready = provider?.available === true;
     const gemini = provider?.id === "gemini";
     const api = provider?.auth_method === "api_key";
@@ -547,8 +550,51 @@
   function loadProviders(generation) {
     const selected = ui.provider.value || generation.provider;
     fillOptions(ui.provider, generation.providers);
+    fillOptions(ui.quickProvider, generation.providers.map((provider) => ({
+      id: provider.id, label: { sarashina: "Sarashina", gemini: "Gemini", claude: "Claude" }[provider.id] || provider.label,
+    })));
     ui.provider.value = generation.providers.some((item) => item.id === selected) ? selected : generation.provider;
     fillProviderModels(generation.provider === ui.provider.value ? generation.model : undefined);
+  }
+
+  async function switchQuickProvider() {
+    const previous = { provider: ui.provider.value, model: ui.providerModel.value, judge: ui.deciderToggle.checked };
+    const target = config?.generation?.providers.find((item) => item.id === ui.quickProvider.value);
+    if (!target || settingsBusy || activeRequest || activeExport || refreshingCapability || target.id === previous.provider) {
+      ui.quickProvider.value = previous.provider;
+      return;
+    }
+    const preferred = target.models.includes(target.model) ? target.model : target.models[0];
+    if (!target.available || (target.id === "sarashina" && !deciderConfigured())) {
+      pendingQuickSwitch = previous;
+      ui.provider.value = target.id;
+      fillProviderModels(preferred);
+      setStatus(`${generatorLabel()}を使うための設定を確認してください。原文はそのままです。`);
+      openSettings(true);
+      updateButtons();
+      return;
+    }
+    settingsBusy = true;
+    updateButtons(); clearError();
+    const operation = startBusy("校正AIを切り替えています。");
+    try {
+      // Switching never submits an API key or manuscript. Only explicit setup
+      // can change credentials; the current result stays intact on failure.
+      const generation = await readJson(await fetch("/api/settings", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: target.id, model: preferred }),
+      }));
+      config.generation = generation;
+      ui.provider.value = generation.provider;
+      loadProviders(generation);
+      invalidate();
+      setStatus(`校正AIを${generatorLabel()}に切り替えました。原文はそのままです。`);
+    } catch (error) {
+      ui.quickProvider.value = previous.provider;
+      showError(`校正AIを切り替えられませんでした。${error.message}`);
+    } finally {
+      stopBusy(operation); settingsBusy = false; renderGenerator(); updateButtons();
+    }
   }
 
   async function saveProvider(remove = false) {
@@ -561,6 +607,7 @@
     try {
       const generation = await readJson(await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }));
       config.generation = generation; loadProviders(generation);
+      if (pendingQuickSwitch) { pendingQuickSwitch = null; invalidate(); }
       setStatus(remove ? "保存したAPIキーを削除しました。環境変数のキーは変更していません。" : "修正案を作るサービスの設定を保存しました。原文はそのままです。");
     } catch (error) { showError(error.message); }
     finally { stopBusy(operation); ui.apiKey.value = ""; settingsBusy = false; renderGenerator(); updateButtons(); }
@@ -581,13 +628,16 @@
     ui.generateButton.querySelector(".button-main").textContent = "校正する";
     ui.generationToggle.disabled = !config || settingsBusy;
     syncDeciderRequirement();
-    ui.provider.disabled = !config || Boolean(activeRequest) || settingsBusy;
-    ui.providerModel.disabled = !config || Boolean(activeRequest) || settingsBusy;
+    const providerLocked = !config || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy || refreshingCapability;
+    ui.quickProvider.disabled = providerLocked;
+    ui.provider.disabled = providerLocked;
+    ui.providerModel.disabled = providerLocked;
+    ui.settingsClose.disabled = settingsBusy;
     ui.geminiLogin.disabled = selectedGenerator()?.id !== "gemini" || !selectedGenerator()?.cli_installed || selectedGenerator()?.cli_status === "unsupported_version" || Boolean(activeRequest) || settingsBusy;
     ui.saveProvider.disabled = !config || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy || refreshingCapability;
     ui.releaseDecider.disabled = !config?.decider?.loaded || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy;
     ui.installCodex.disabled = !codexAvailable || Boolean(activeRequest) || Boolean(activeExport) || settingsBusy;
-    ui.copy.disabled = !run || requiredJudgmentPending() || Boolean(activeExport) || Boolean(activeRequest);
+    ui.copy.disabled = !run || requiredJudgmentPending() || Boolean(activeExport) || Boolean(activeRequest) || settingsBusy;
     ui.download.disabled = ui.copy.disabled;
     ui.refreshDecider.disabled = !config || Boolean(activeRequest) || Boolean(activeExport) || refreshingCapability || settingsBusy;
     ui.edits.querySelectorAll("button").forEach((button) => { button.disabled = Boolean(activeRequest); });
@@ -1083,12 +1133,22 @@
   ui.retryConfig.addEventListener("click", loadConfig);
   ui.settingsOpen.addEventListener("click", () => openSettings());
   ui.setupPrompt.addEventListener("click", () => openSettings(true));
-  ui.settingsClose.addEventListener("click", () => ui.settingsDialog.close());
-  ui.settingsDialog.addEventListener("click", (event) => { if (event.target === ui.settingsDialog) ui.settingsDialog.close(); });
+  ui.settingsClose.addEventListener("click", () => { if (!settingsBusy) ui.settingsDialog.close(); });
+  ui.settingsDialog.addEventListener("click", (event) => { if (event.target === ui.settingsDialog && !settingsBusy) ui.settingsDialog.close(); });
+  ui.settingsDialog.addEventListener("cancel", (event) => { if (settingsBusy) event.preventDefault(); });
+  ui.settingsDialog.addEventListener("close", () => {
+    if (!pendingQuickSwitch) return;
+    ui.provider.value = pendingQuickSwitch.provider;
+    ui.deciderToggle.checked = pendingQuickSwitch.judge;
+    fillProviderModels(pendingQuickSwitch.model);
+    pendingQuickSwitch = null;
+    renderDeciderCapability(); updateButtons();
+    setStatus("校正AIの切り替えをやめました。原文と校正結果はそのままです。");
+  });
   ui.errorSettings.addEventListener("click", () => openSettings(true));
   ui.errorLogin.addEventListener("click", () => { openSettings(); ui.geminiLogin.focus(); });
   async function exportResult(kind) {
-    if (!run || requiredJudgmentPending() || activeExport || activeRequest) return;
+    if (!run || requiredJudgmentPending() || activeExport || activeRequest || settingsBusy) return;
     const exportRun = run;
     const exportRevision = revision;
     const finalText = outputRaw;
@@ -1143,6 +1203,7 @@
     }
   }
 
+  ui.quickProvider.addEventListener("change", switchQuickProvider);
   ui.provider.addEventListener("change", () => { fillProviderModels(); invalidate(); updateButtons(); });
   ui.providerModel.addEventListener("change", () => invalidate());
   ui.saveProvider.addEventListener("click", () => saveProvider());

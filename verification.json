@@ -1563,5 +1563,140 @@
         "quality_guarantee": false
       }
     ]
+  },
+  "v0_2_13": {
+    "version": "0.2.13",
+    "date": "2026-10-21",
+    "status": "installed_windows_ui_switch_generation_and_export_observed",
+    "tests": {
+      "web_ui": 36,
+      "gemini_cli": 33,
+      "generation_boundary": 30
+    },
+    "provider_switch": {
+      "directions": [
+        "sarashina_to_gemini",
+        "gemini_to_sarashina"
+      ],
+      "source_preserved": true,
+      "settings_transaction_and_cancel_regressions": true
+    },
+    "installed_gemini": {
+      "identity": {
+        "requested_provider": "gemini",
+        "reported_provider": "gemini",
+        "requested_model": "gemini-3.8-flash-high",
+        "reported_model": "gemini-3.8-flash-high",
+        "transport": "antigravity-cli",
+        "identity_basis": "cli_stream_init_model",
+        "exact_checkpoint_verified": false,
+        "model_version_differs": false,
+        "cli_version": "1.4.4",
+        "tool_steps": 0,
+        "output_field": "response_json",
+        "reported_agent": "yomiyasu-proofreader",
+        "guidance_delivery": "ephemeral_primary_agent",
+        "agent_definition_sha256": "4c755224f0f727c1d65502bd9bc88ae45321e89d32dbbab747cf6cdcbdfedcb1",
+        "attempts": 1,
+        "automatic_retries": 0,
+        "attempt_error_codes": []
+      },
+      "stages": {
+        "rules": "executed",
+        "generation": "executed",
+        "decider": "not_run"
+      },
+      "changes_in_this_sample": 4,
+      "yomiyasu": {
+        "version": "2.1.1",
+        "guide_sha256": "f678e189f33cccda25a54847940a4f21cf1807f025f5ae8e4edad2dfd69a8d88",
+        "guide_bytes": 116245,
+        "commit": "fbe02c93877d697cc53d9377b7a45dd8a1dd99b3",
+        "rules": "executed",
+        "generation_guidance": {
+          "status": "included",
+          "instruction_sha256": "450546d81d4a72889cb63a62eccdee53e58ad59e8ab6e3e0b47dd7b4e1ebea83",
+          "sources": [
+            {
+              "path": "SKILL.md",
+              "sha256": "f678e189f33cccda25a54847940a4f21cf1807f025f5ae8e4edad2dfd69a8d88",
+              "bytes": 116245
+            },
+            {
+              "path": "references/rephrase-test.md",
+              "sha256": "65f5c8fc5d0f4cc42a1f951a863e3b6ef4947e31e29793c2f63bb1094a381693",
+              "bytes": 9038
+            },
+            {
+              "path": "references/gemini-syntax.md",
+              "sha256": "6ee93c503fa9b3d81bbff7f2b6058a10a7c236de5d642c344df166d54b62df58",
+              "bytes": 57865
+            },
+            {
+              "path": "references/doc-types/essay.md",
+              "sha256": "0f937b0dc89094813f83cdc51bc89c1eb3c9dc99a6ab08302941825ac1f54646",
+              "bytes": 4399
+            },
+            {
+              "path": "references/domains/essay.md",
+              "sha256": "aeeeb9f9c842d68fa0fcf2e956bd2f87c5f450bc820df931f3f94b903a8a8c7a",
+              "bytes": 4696
+            }
+          ]
+        }
+      },
+      "export_check": "executed",
+      "export_verification": "executed",
+      "export_text_hash_matches": true,
+      "file_save_initiated_from_ui": true
+    },
+    "self_copy_checks": {
+      "readme": {
+        "characters": 9854,
+        "check": "executed",
+        "verification": "executed",
+        "applied_edits": 0
+      },
+      "status": {
+        "characters": 794,
+        "check": "executed",
+        "verification": "executed",
+        "applied_edits": 1
+      },
+      "ui": {
+        "characters": 79,
+        "check": "executed",
+        "verification": "executed",
+        "applied_edits": 0
+      },
+      "movie": {
+        "characters": 463,
+        "check": "executed",
+        "verification": "executed",
+        "applied_edits": 0
+      }
+    },
+    "spec_consultation": {
+      "model": "claude-opus-5-5",
+      "scope": "UI and explainer storyboard",
+      "receipt_sha256": "e419d087d3fceb44707cb0f02a46cc8cd0c8b102f58740680ad7f2eca133e5fe"
+    },
+    "sarashina_trial": {
+      "generation": "executed",
+      "decider": "unavailable",
+      "reason": "insufficient_memory",
+      "export_blocked": true,
+      "prior_successful_ppdd_run": "v0.2.12, documented below"
+    },
+    "limits": [
+      "This Gemini UI run deliberately disabled optional meaning judgment.",
+      "No Mac hardware validation or broad proofreading-quality claim.",
+      "Video uses genuine completed v0.2.12 Sarashina/PPDD result footage."
+    ],
+    "canonical_dirty_baseline": {
+      "files": 8,
+      "unchanged": true
+    },
+    "other_codex_config_preserved": true
   }
 }

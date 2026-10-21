@@ -4,14 +4,14 @@ Yomiyasu Studioは日本語の文章を整え、どこを変えたか左右で�
 
 ## ダウンロード
 
-[最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/tag/v0.2.12)
+[最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/tag/v0.2.13)
 
-| 使う環境 | v0.2.12のダウンロード | 提供状況 |
+| 使う環境 | v0.2.13のダウンロード | 提供状況 |
 | --- | --- | --- |
-| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.12/YomiyasuStudio-windows-x64-0.2.12.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
-| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.12/YomiyasuStudio-source-0.2.12.zip) | Pythonで起動する実験版。Mac実機は未検証 |
+| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.13/YomiyasuStudio-windows-x64-0.2.13.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
+| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.13/YomiyasuStudio-source-0.2.13.zip) | Pythonで起動する実験版。Mac実機は未検証 |
 
-ベータ版です。v0.2.12ではSarashinaへの入力の渡し方と長文処理を修正し、Windowsで同じ小説の誤字3か所を修正してローカルDeciderで判定しました。モデルは誤字を見逃したり、誤った修正を提案したりすることがあります。Deciderの意味判定も、誤字がないことや文章品質の保証にはなりません。Mac実機は未検証です。確認した範囲は [STATUS.md](docs/STATUS.md) を参照してください。
+ベータ版です。v0.2.13では画面上部の「校正AI」からSarashinaとGeminiを切り替えられます。モデルは誤字を見逃したり、誤った修正を提案したりすることがあります。Deciderの意味判定も、誤字がないことや文章品質の保証にはなりません。Mac実機は未検証です。確認した範囲は [STATUS.md](docs/STATUS.md) を参照してください。
 
 起動時にYomiyasu公式の更新を裏で確認し、対応する新版があれば校正方針・参照資料・検査スクリプトをまとめて更新します。同梱版も2.1.0へ更新しました。**旧版からはアプリと共有サービスの両方を更新し、サービスを起動し直してください。** MCPも新版へ登録し直して、新しい会話で使います。[更新と接続の案内](docs/PLUGINS.md#共有サービスの更新)
 
@@ -38,7 +38,7 @@ Mac用の `.app` はまだ用意していません。ブラウザーで使うソ
 3. 「ターミナル」を開きます。ダウンロード先が通常の「ダウンロード」フォルダーなら、次を1行ずつ実行します。
 
 ```sh
-cd "$HOME/Downloads/YomiyasuStudio-source-0.2.12"
+cd "$HOME/Downloads/YomiyasuStudio-source-0.2.13"
 python3 --version
 python3 -B app.py serve
 ```
@@ -58,11 +58,11 @@ python3 -B app.py serve
 
 生成前にDeciderの設定を確認し、未設定なら原文をSarashinaへ送信しません。生成後に意味判定が失敗した場合は、原文と修正候補を残し、コピー・保存を止めます。原文を変更したり、古い判定を新しい文章へ流用したりしません。
 
-初回の生成先だけをSarashinaにします。更新前から使っている生成先を切り替える場合は、設定で自分で選びます。
+初回の生成先だけをSarashinaにします。更新前から使っている生成先は保持します。切り替えるときは、画面上部の「校正AI」で選びます。接続が設定済みならそのまま保存し、未設定なら設定画面を開きます。設定せず閉じると元のAIに戻ります。切り替えても原文は残り、切り替え後はもう一度「校正する」を押します。処理中と保存中はAIを切り替えられません。
 
 ## Geminiを使う場合（オプション）
 
-Gemini 3.8 Flash（High）も選べます。Google公式の **Antigravity CLI 1.4.0 / 1.4.1（`agy`）** を使い、Googleアカウントでログインします。Gemini用のAPIキーは不要です。`gemini` コマンドを使う従来のGemini CLIとは別の製品です。
+Gemini 3.8 Flash（High）も選べます。Google公式の **Antigravity CLI 1.4.0 / 1.4.1 / 1.4.4（`agy`）** を使い、Googleアカウントでログインします。Gemini用のAPIキーは不要です。`gemini` コマンドを使う従来のGemini CLIとは別の製品です。
 
 [Google公式の導入手順](https://antigravity.google/docs/getting-started?tab=cli)に沿ってCLIを導入します。公式のインストールコマンドは次のとおりです。
 
@@ -80,9 +80,9 @@ curl -fsSL https://antigravity.google/cli/install.sh | bash
 agy --version
 ```
 
-このアプリが対応するCLIの版は1.4.0と1.4.1です。 `agy --version` で確認してください。別の版は未対応として扱います。導入後、アプリを起動し直します。Macでは別のターミナルで導入し、アプリ用サーバーを起動し直してください。
+このアプリが対応するCLIの版は1.4.0・1.4.1・1.4.4です。 `agy --version` で確認してください。別の版は未対応として扱います。導入後、アプリを起動し直します。Macでは別のターミナルで導入し、アプリ用サーバーを起動し直してください。
 
-1. アプリ右上の「設定」を開き、「サービス」でGeminiを選びます。
+1. 画面上部の「校正AI」でGeminiを選びます。接続が未設定なら設定画面が開きます。
 2. 「**Googleアカウントでログイン**」を押し、公式CLIとブラウザーの案内に従います。
 3. ブラウザーだけでなく、CLI側にもログイン完了が出るまで待ちます。
 4. アプリの「接続状態を更新」と「設定を保存」を押します。

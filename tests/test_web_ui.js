@@ -50,7 +50,7 @@ class Element {
   setAttribute(name, value) { this.attributes[name] = String(value); this[name] = value; }
   removeAttribute(name) { delete this.attributes[name]; delete this[name]; }
   hasAttribute(name) { return Object.hasOwn(this.attributes, name); }
-  focus() {} showModal() { this.open = true; } close() { this.open = false; }
+  focus() {} showModal() { this.open = true; } close() { this.open = false; this.listeners.close?.(); }
   click() { return this.listeners.click?.({ target: this }); } remove() {}
 }
 
@@ -96,13 +96,19 @@ function harness() {
     }
     return elements.get(id);
   };
-  const state = { config: configFixture(), analysis: null, analysisError: null, exportMutator: null, exportGate: null, requests: [], clipboard: null, progress: null };
+  const state = { config: configFixture(), analysis: null, analysisError: null, exportMutator: null, exportGate: null, settingsGate: null, settingsError: false, requests: [], clipboard: null, progress: null };
   const fetch = async (url, options = {}) => {
     const body = options.body ? JSON.parse(options.body) : null;
     state.requests.push({ url, body, headers: options.headers, signal: options.signal });
     let data;
     if (url === "/api/config") data = state.config;
     else if (url === "/api/integrations/codex") data = { registered: true, skill_installed: true };
+    else if (url === "/api/settings") {
+      if (state.settingsGate) await state.settingsGate();
+      if (state.settingsError) return { ok: false, status: 500, json: async () => ({ error: "設定の保存に失敗" }) };
+      state.config.generation = { ...state.config.generation, provider: body.provider, model: body.model };
+      data = state.config.generation;
+    }
     else if (url === "/api/analyze") {
       if (state.analysisError) return { ok: false, status: 401, json: async () => ({ error: state.analysisError }) };
       data = typeof state.analysis === "function" ? await state.analysis() : state.analysis;
@@ -142,6 +148,70 @@ function useSarashina(state) {
   state.config.generation.provider = "sarashina";
   state.config.generation.model = "sarashina3-mini";
 }
+
+test("quick provider switch saves only provider/model, preserves the manuscript and invalidates the old result", async () => {
+  const { state, get, h } = harness(); await h.loadConfig();
+  h.setSourceText(raw); h.invalidate(); state.analysis = analysisFixture(raw); await h.analyze();
+  get("api-key").value = "unsaved-key-must-not-be-submitted";
+  get("quick-provider").value = "sarashina";
+  await get("quick-provider").listeners.change();
+  assert.deepEqual(state.requests.find((item) => item.url === "/api/settings").body, { provider: "sarashina", model: "sarashina3-mini" });
+  assert.equal(h.currentSource(), raw); assert.equal(h.getRun(), null);
+  assert.equal(get("quick-provider").value, "sarashina"); assert.equal(get("provider").value, "sarashina");
+  assert.equal(get("enable-decider").disabled, true); assert.equal(get("settings-dialog").open, false);
+  assert.match(get("status-text").textContent, /切り替えました/);
+});
+
+test("failed quick switch retains the previous result, provider and source", async () => {
+  const { state, get, h } = harness(); await h.loadConfig();
+  h.setSourceText(raw); h.invalidate(); state.analysis = analysisFixture(raw); await h.analyze();
+  const result = h.getRun(); state.settingsError = true;
+  get("quick-provider").value = "sarashina"; await get("quick-provider").listeners.change();
+  assert.equal(get("quick-provider").value, "gemini"); assert.equal(get("provider").value, "gemini");
+  assert.equal(h.getRun(), result); assert.equal(h.getOutput(), corrected); assert.equal(h.currentSource(), raw);
+  assert.equal(get("copy-result").disabled, false); assert.match(get("error-message").textContent, /切り替えられませんでした/);
+});
+
+test("unconfigured quick switch opens setup and cancelling restores provider, judgment and result", async () => {
+  for (const missing of ["key", "decider"]) {
+    const { state, get, h, toggle } = harness();
+    if (missing === "key") state.config.generation.providers[0].available = false;
+    else state.config.decider = { available: false, status: "not_configured" };
+    await h.loadConfig(); h.setSourceText(raw); toggle("enable-decider", false);
+    state.analysis = analysisFixture(raw); await h.analyze(); const result = h.getRun();
+    get("quick-provider").value = "sarashina"; await get("quick-provider").listeners.change();
+    assert.equal(get("settings-dialog").open, true); assert.equal(get("provider").value, "sarashina");
+    assert.equal(state.requests.filter((item) => item.url === "/api/settings").length, 0);
+    get("settings-dialog").close();
+    assert.equal(get("quick-provider").value, "gemini"); assert.equal(get("provider").value, "gemini");
+    assert.equal(get("enable-decider").checked, false); assert.equal(h.currentSource(), raw); assert.equal(h.getRun(), result);
+  }
+});
+
+test("saving an unconfigured quick switch commits the choice and clears the old result", async () => {
+  const { state, get, h } = harness(); state.config.generation.providers[0].available = false;
+  await h.loadConfig(); h.setSourceText(raw); h.invalidate();
+  state.analysis = analysisFixture(raw); await h.analyze();
+  get("quick-provider").value = "sarashina"; await get("quick-provider").listeners.change();
+  await get("save-provider").click(); get("settings-dialog").close();
+  assert.equal(get("quick-provider").value, "sarashina"); assert.equal(h.getRun(), null); assert.equal(h.currentSource(), raw);
+});
+
+test("quick provider selection is locked during generation, saving and export", async () => {
+  const { state, get, h } = harness(); await h.loadConfig(); h.setSourceText(raw); h.invalidate();
+  let finishAnalysis; state.analysis = () => new Promise((resolve) => { finishAnalysis = resolve; });
+  const analyzing = h.analyze(); assert.equal(get("quick-provider").disabled, true);
+  get("quick-provider").value = "sarashina"; await get("quick-provider").listeners.change();
+  assert.equal(state.requests.filter((item) => item.url === "/api/settings").length, 0);
+  finishAnalysis(analysisFixture(raw)); await analyzing;
+  let finishExport; state.exportGate = () => new Promise((resolve) => { finishExport = resolve; });
+  const exporting = h.exportResult("copy"); assert.equal(get("quick-provider").disabled, true);
+  finishExport(); await exporting;
+  let finishSave; state.settingsGate = () => new Promise((resolve) => { finishSave = resolve; });
+  get("quick-provider").value = "sarashina"; const saving = get("quick-provider").listeners.change();
+  assert.equal(get("quick-provider").disabled, true); assert.equal(get("copy-result").disabled, true);
+  finishSave(); await saving; assert.equal(get("quick-provider").disabled, false);
+});
 
 test("fresh Sarashina configuration selects mini, shows key setup, and requires meaning judgment", async () => {
   const { state, get, h, toggle } = harness(); useSarashina(state);

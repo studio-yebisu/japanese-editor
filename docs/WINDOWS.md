@@ -16,7 +16,7 @@ Windows x64 の配布 ZIP を展開し、`YomiyasuStudio.exe` を起動します
 
 MSIX などによる保存先の仮想化がある環境では、起動元によってユーザー領域の実体が異なる場合があります。その環境で GUI と Codex を共有する場合は、両方へ同じ絶対パスの `YEBISU_EDITOR_DATA_DIR` を指定してください。保存先が違うサービスへ原稿を送ることはありません。
 
-Flash を使う場合は [DECIDER_RUNTIME.md](DECIDER_RUNTIME.md) の専用環境が別途必要です。約9.10 GB のモデルは配布 ZIP に含めません。Gemini の生成には公式 **Antigravity CLI 1.4.0 / 1.4.1（`agy`）** を別途導入し、Google でログインします。Node.js / npm は不要です。CLI 本体と認証情報は ZIP に含めません。既存の OS キーリング認証を公式 CLI 自身が使い、アプリはトークンを移しません。Sarashina は API キー、Claude / Codex は既存の認証を使います。[生成先の導入と条件](PROVIDERS.md) を参照してください。
+Flash を使う場合は [DECIDER_RUNTIME.md](DECIDER_RUNTIME.md) の専用環境が別途必要です。約9.10 GB のモデルは配布 ZIP に含めません。Gemini の生成には公式 **Antigravity CLI 1.4.0 / 1.4.1 / 1.4.4（`agy`）** を別途導入し、Google でログインします。Node.js / npm は不要です。CLI 本体と認証情報は ZIP に含めません。既存の OS キーリング認証を公式 CLI 自身が使い、アプリはトークンを移しません。Sarashina は API キー、Claude / Codex は既存の認証を使います。[生成先の導入と条件](PROVIDERS.md) を参照してください。
 
 CLI はターミナルや MCP ホストから使います。
 
