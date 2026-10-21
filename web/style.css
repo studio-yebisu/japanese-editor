@@ -99,9 +99,11 @@ mark.change-added { color: inherit; background: var(--green-light); border-radiu
 .pane-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 51px; padding: 9px 22px; border-top: 1px solid #edf0f4; }
 .source-meta { font-size: 11px; color: #8a929e; }
 .source-meta #character-count { white-space: nowrap; }
+.source-meta #character-count.is-over { color: #b0473b; font-weight: 600; }
 .output-actions { justify-content: flex-end; }
 .export-actions { display: flex; align-items: center; gap: 7px; }
 .meaning-warning { border-bottom: 1px solid #ead7b4; padding: 10px 22px; background: #fff6e7; color: #885f2c; font-size: 12px; line-height: 1.8; }
+.meaning-warning .warning-link { padding: 0; color: #7a4f1d; text-decoration: underline; text-underline-offset: 3px; }
 .output-note { min-height: 35px; padding: 0 22px 12px; font-size: 10px; line-height: 1.8; color: #8a929e; }
 .export-note { margin-top: 6px; color: #526d59; overflow-wrap: anywhere; }
 .comparison-status { min-height: 34px; padding: 9px 1px 5px; font-size: 11px; line-height: 1.8; color: var(--muted); }
@@ -127,6 +129,8 @@ mark.change-added { color: inherit; background: var(--green-light); border-radiu
 .edit-card { border: 1px solid #dce1e8; border-radius: 8px; overflow: hidden; background: #fff; }
 .edit-card.is-applied { border-color: #c4d7ca; }
 .edit-card.has-attention { border-color: #dec59d; }
+.edit-card.has-risk { box-shadow: inset 3px 0 0 #d9a35f; }
+.held-note { grid-column: 1 / -1; padding: 9px 12px; border-radius: 4px; background: #fff6e7; color: #885f2c; }
 .edit-card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: #f4f6f9; }
 .edit-label { font-size: 11px; font-weight: 600; color: #718097; }
 .edit-state { font-size: 10px; color: #8a7d69; }
@@ -282,3 +286,6 @@ mark.change-added { color: inherit; background: var(--green-light); border-radiu
 @keyframes pen-scan { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @keyframes rewrite-settle { from { opacity: .2; filter: blur(2px); } to { opacity: 1; filter: blur(0); } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+.manual-copy { padding: 14px 18px; border-top: 1px solid var(--line, #ddd); }
+.manual-copy label { display: block; margin-bottom: 8px; font-size: 12px; }
+.manual-copy textarea { width: 100%; box-sizing: border-box; padding: 10px; font: inherit; resize: vertical; }

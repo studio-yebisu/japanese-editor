@@ -26,7 +26,7 @@ class Element {
   get value() { return this.tagName === "PROGRESS" ? this.attributes.value ?? 0 : this._value; }
   set value(value) {
     if (this.tagName === "PROGRESS") { this.attributes.value = Number(value); return; }
-    this._value = ["source", "output", "context"].includes(this.id)
+    this._value = this.tagName === "TEXTAREA" || ["source", "output", "context"].includes(this.id)
       ? String(value).replace(/\r\n?/g, "\n") : String(value);
   }
   get textContent() { return this._text + this.children.map((child) => child.textContent || "").join(""); }
@@ -50,7 +50,7 @@ class Element {
   setAttribute(name, value) { this.attributes[name] = String(value); this[name] = value; }
   removeAttribute(name) { delete this.attributes[name]; delete this[name]; }
   hasAttribute(name) { return Object.hasOwn(this.attributes, name); }
-  focus() {} showModal() { this.open = true; } close() { this.open = false; this.listeners.close?.(); }
+  focus() {} select() { this.selected = true; } showModal() { this.open = true; } close() { this.open = false; this.listeners.close?.(); }
   click() { return this.listeners.click?.({ target: this }); } remove() {}
 }
 
@@ -96,7 +96,7 @@ function harness() {
     }
     return elements.get(id);
   };
-  const state = { config: configFixture(), analysis: null, analysisError: null, exportMutator: null, exportGate: null, settingsGate: null, settingsError: false, requests: [], clipboard: null, progress: null };
+  const state = { config: configFixture(), analysis: null, analysisError: null, exportMutator: null, exportGate: null, settingsGate: null, settingsError: false, requests: [], clipboard: null, progress: null, clipboardGate: null, fastClipboardTimeout: false };
   const fetch = async (url, options = {}) => {
     const body = options.body ? JSON.parse(options.body) : null;
     state.requests.push({ url, body, headers: options.headers, signal: options.signal });
@@ -123,8 +123,10 @@ function harness() {
     return { ok: true, status: 200, json: async () => structuredClone(data) };
   };
   const context = {
-    AbortController, Blob, URL, performance, setTimeout, clearTimeout, setInterval, clearInterval, fetch,
-    navigator: { clipboard: { writeText: async (text) => { state.clipboard = text; } } },
+    AbortController, Blob, URL, performance,
+    setTimeout: (fn, delay) => setTimeout(fn, delay === 15000 && state.fastClipboardTimeout ? 0 : delay),
+    clearTimeout, setInterval, clearInterval, fetch,
+    navigator: { clipboard: { writeText: async (text) => { if (state.clipboardGate) await state.clipboardGate(); state.clipboard = text; } } },
     document: { getElementById: get, createElement: (tag) => new Element(tag), createTextNode: (text) => ({ textContent: text }), body: new Element("body") },
     window: { addEventListener() {} },
   };
@@ -327,6 +329,181 @@ test("unchanged-only Sarashina responses preserve original and explicitly warn a
   assert.equal(h.getOutput(), raw);
   assert.match(get("status-text").textContent, /有効な修正案を得られませんでした/);
   assert.match(get("status-text").textContent, /見逃し/);
+});
+
+test("pending clipboard permission cannot lock export forever or discard the result", async () => {
+  const { state, get, h } = harness(); await h.loadConfig();
+  h.setSourceText(raw); h.invalidate(); state.analysis = analysisFixture(raw); await h.analyze();
+  state.clipboardGate = () => new Promise(() => {});
+  state.fastClipboardTimeout = true;
+  await h.exportResult("copy");
+  assert.equal(state.clipboard, null);
+  assert.equal(h.getOutput(), corrected);
+  assert.match(get("error-message").textContent, /クリップボード.*コピーが完了しません/);
+  assert.equal(get("download-result").disabled, false);
+  assert.equal(get("operation-progress").hidden, true);
+  assert.equal(get("manual-copy").hidden, false);
+  assert.equal(get("manual-copy-text").value, corrected.replace(/\r\n/g, "\n"));
+  get("select-copy-text").click();
+  assert.equal(get("manual-copy-text").selected, true);
+  await h.exportResult("download");
+  assert.match(get("status-text").textContent, /保存を開始/);
+  h.setSourceText("別の原文"); h.invalidate();
+  assert.equal(get("manual-copy").hidden, true);
+  assert.equal(get("manual-copy-text").value, "");
+});
+
+test("oversized corrected response never replaces the source or enables export", async () => {
+  const { state, get, h } = harness(); await h.loadConfig();
+  const source = "あ".repeat(11999) + "語";
+  h.setSourceText(source); h.invalidate();
+  state.analysis = { ...analysisFixture(raw), edits: [{ id: "e1", start: 11999, end: 12000,
+    before: "語", after: "単語", reason: "test" }] };
+  await h.analyze();
+  assert.equal(h.currentSource(), source);
+  assert.equal(h.getRun(), null);
+  assert.equal(get("copy-result").disabled, true);
+  assert.equal(get("download-result").disabled, true);
+  assert.match(get("error-message").textContent, /修正後.*12,000/);
+});
+
+test("held overflow keeps its explanation and exports the unchanged original", async () => {
+  const { state, get, h } = harness(); await h.loadConfig();
+  const source = "🙂".repeat(11999) + "語";
+  h.setSourceText(source); h.invalidate();
+  state.analysis = { ...analysisFixture(raw), edits: [], notes: ["12,000字を超える修正案を保留しました。原文は残しています。"] };
+  await h.analyze();
+  assert.equal(h.currentSource(), source);
+  assert.equal(h.getOutput(), source);
+  assert.match(get("run-notes").textContent, /12,000.*保留/);
+  await h.exportResult("copy");
+  assert.equal(state.clipboard, source);
+});
+
+test("structured held_edit_count is surfaced on the main view and leads to the existing notes", async () => {
+  const { state, get, h } = harness(); await h.loadConfig(); h.setSourceText(raw); h.invalidate();
+  state.analysis = { ...analysisFixture(raw), edits: [], held_edit_count: 2, notes: ["コードまたはURLに重なる修正案を保留しました。"] };
+  await h.analyze();
+  assert.equal(h.getOutput(), raw); assert.equal(get("copy-result").disabled, false);
+  assert.equal(get("meaning-warning").hidden, false);
+  assert.match(get("meaning-warning").textContent, /保留した修正案 2 件は反映せず/);
+  assert.match(get("changed-count").textContent, /保留 2 件/);
+  assert.match(get("output-summary").textContent, /保留した修正案 2 件/);
+  assert.doesNotMatch(get("output-summary").textContent, /変更はありません/);
+  assert.match(get("status-text").textContent, /保留した修正案が 2 件/);
+  assert.doesNotMatch(get("status-text").textContent, /変更はありません/);
+  assert.match(get("comparison-summary").textContent, /保留 2 件は判定対象外/);
+  assert.match(get("edits-list").textContent, /保留した修正案が 2 件/);
+  assert.equal(get("review-details").open, true);
+  assert.match(get("run-notes").textContent, /コードまたはURLに重なる修正案を保留/);
+  get("review-details").open = false;
+  const link = get("meaning-warning").querySelectorAll("button")[0];
+  assert.equal(link.textContent, "保留の理由を見る"); link.click();
+  assert.equal(get("review-details").open, true);
+  assert.equal(get("edits-list").querySelectorAll("button").length, 0);
+});
+
+test("held proposals alongside applied edits are counted without blocking automatic output", async () => {
+  const { state, get, h } = harness(); await h.loadConfig(); h.setSourceText(raw); h.invalidate();
+  state.analysis = { ...analysisFixture(raw), held_edit_count: 1 }; await h.analyze();
+  assert.equal(h.getOutput(), corrected); assert.equal(get("copy-result").disabled, false);
+  assert.match(get("meaning-warning").textContent, /保留した修正案 1 件/);
+  assert.doesNotMatch(get("meaning-warning").textContent, /反映済み/);
+  assert.match(get("status-text").textContent, /1 件の変更を右の文章へ反映しました。保留した修正案が 1 件/);
+  assert.match(get("edits-list").textContent, /保留した修正案が 1 件/);
+  assert.match(get("review-count").textContent, /変更 1 件 · 保留 1 件/);
+});
+
+test("held wording in notes or a malformed count never invents held proposals", async () => {
+  const { state, get, h } = harness(); await h.loadConfig(); h.setSourceText(raw); h.invalidate();
+  state.analysis = { ...analysisFixture(raw), edits: [], held_edit_count: "2", notes: ["修正案を保留しました。"] };
+  await h.analyze();
+  assert.equal(get("meaning-warning").hidden, true); assert.equal(get("review-details").open, false);
+  assert.doesNotMatch(get("changed-count").textContent, /保留/);
+  assert.match(get("comparison-summary").textContent, /^修正案がないため.*実行していません/);
+});
+
+test("risk flags stay visible when Decider says preserved; decision and automatic output are unchanged", async () => {
+  const { state, get, h } = harness(); await h.loadConfig(); h.setSourceText(raw); h.invalidate();
+  state.analysis = analysisFixture(raw); state.analysis.edits[0].risk_flags = ["数値の変化"];
+  await h.analyze();
+  assert.equal(h.getOutput(), corrected); assert.equal(get("copy-result").disabled, false);
+  assert.equal(h.getRun().data.edits[0].decision.choice, "preserved");
+  assert.equal(get("meaning-warning").hidden, false);
+  assert.match(get("meaning-warning").textContent, /確認したい変化を検知 1 件。これらの変更も反映済み/);
+  assert.match(get("comparison-summary").textContent, /1 件で意味を保っていると判定（うち 1 件は/);
+  const card = get("edits-list").children.find((child) => child.tagName === "ARTICLE");
+  assert.match(card.className, /has-attention/); assert.match(card.className, /has-risk/);
+  assert.match(card.textContent, /Decider：意味を保っていると判定/);
+  assert.match(card.textContent, /変更済み · 検知した変化を確認/);
+  assert.match(card.textContent, /意味の保持を保証しません/);
+  assert.match(card.textContent, /数値の変化/);
+  assert.equal(get("edits-list").querySelectorAll("button").length, 0);
+});
+
+test("a failed retry with unchanged inputs restores the previous success and says this attempt failed", async () => {
+  const { state, get, h } = harness(); await h.loadConfig(); h.setSourceText(raw); h.invalidate();
+  state.analysis = analysisFixture(raw); await h.analyze();
+  const first = h.getRun();
+  state.analysisError = "一時的に利用できません。"; await h.analyze();
+  assert.equal(state.requests.filter((item) => item.url === "/api/analyze").length, 2);
+  assert.equal(h.getRun().restored, true); assert.equal(h.getRun().snapshot, first.snapshot);
+  assert.equal(h.getOutput(), corrected); assert.equal(h.currentSource(), raw);
+  assert.match(get("output-title").textContent, /前回の結果/);
+  assert.match(get("output-summary").textContent, /今回の校正は失敗したため、前回成功した結果/);
+  assert.match(get("error-message").textContent, /今回の校正は失敗しました。一時的に利用できません。/);
+  assert.match(get("status-text").textContent, /前回成功した結果に戻しました/);
+  assert.match(get("review-count").textContent, /^前回の結果/);
+  assert.equal(get("copy-result").disabled, false);
+  await h.exportResult("copy"); assert.equal(state.clipboard, corrected);
+  state.analysisError = null; await h.analyze();
+  assert.equal(h.getRun().restored, undefined); assert.equal(get("output-title").textContent, "校正後");
+});
+
+test("previous results never return after edits, setting changes, stale failures, or a first failure", async () => {
+  {
+    const { state, get, h } = harness(); await h.loadConfig(); h.setSourceText(raw); h.invalidate();
+    state.analysisError = "失敗"; await h.analyze();
+    assert.equal(h.getRun(), null); assert.equal(h.getOutput(), ""); assert.equal(get("copy-result").disabled, true);
+    assert.match(get("error-message").textContent, /^校正できませんでした/);
+  }
+  {
+    const { state, get, h } = harness(); await h.loadConfig(); h.setSourceText(raw); h.invalidate();
+    state.analysis = analysisFixture(raw); await h.analyze();
+    get("source").value = get("source").value.replace("3件", "4件"); get("source").listeners.input();
+    state.analysisError = "失敗"; await h.analyze();
+    assert.equal(h.getRun(), null); assert.equal(h.getOutput(), "");
+    assert.doesNotMatch(get("error-message").textContent, /前回/);
+  }
+  {
+    const { state, get, h, toggle } = harness(); await h.loadConfig(); h.setSourceText(raw); h.invalidate();
+    state.analysis = analysisFixture(raw); await h.analyze();
+    toggle("enable-decider", false); toggle("enable-decider", true);
+    state.analysisError = "失敗"; await h.analyze();
+    assert.equal(h.getRun(), null); assert.equal(get("copy-result").disabled, true);
+  }
+  {
+    const { state, get, h, toggle } = harness(); await h.loadConfig(); h.setSourceText(raw); h.invalidate();
+    state.analysis = analysisFixture(raw); await h.analyze();
+    let fail; state.analysis = () => new Promise((_, reject) => { fail = reject; });
+    const pending = h.analyze(); toggle("enable-decider", false); toggle("enable-decider", true);
+    fail(new Error("late")); await pending;
+    assert.equal(h.getRun(), null); assert.equal(h.getOutput(), "");
+    assert.equal(get("error-box").hidden, true); assert.equal(get("output-title").textContent, "校正後");
+  }
+});
+
+test("settings button keeps an accessible name and the selected service limit is shown before sending", async () => {
+  assert.match(html, /<button id="settings-open"[^>]*\baria-label="設定"/);
+  const { get, h, toggle } = harness(); await h.loadConfig();
+  h.setSourceText("あ".repeat(12001));
+  get("provider").value = "sarashina"; get("provider").listeners.change();
+  assert.equal(get("character-count").textContent, "12,001 / 12,000 字（上限超過） · 2,000字以内ずつ");
+  assert.equal(get("character-count").className, "is-over");
+  h.setSourceText("あ".repeat(4001)); get("source").listeners.input();
+  toggle("enable-generation", false);
+  assert.equal(get("character-count").textContent, "4,001 / 12,000 字");
+  assert.equal(get("character-count").className, "");
 });
 
 test("saved Gemini settings retain independent toggles and export exact corrected raw text", async () => {

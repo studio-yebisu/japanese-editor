@@ -183,7 +183,9 @@ class AttachmentTests(unittest.TestCase):
     def test_long_source_uses_bounded_excerpt_without_changing_source_or_proposal(self):
         sentence = "保存して下さい。"
         prefix = "🙂" + "前" * 5899
-        text = prefix + sentence + "後" * (12000 - len(prefix) - len(sentence))
+        # Leave room for the one-character expansion; the final document must
+        # now satisfy the same limit as export and request preparation.
+        text = prefix + sentence + "後" * (11999 - len(prefix) - len(sentence))
         output = output_for(text, [proposal("下さい", "ください")])
         original_edit = copy.deepcopy(output["edits"][0])
         original_hash = output["source_hash"]
@@ -193,7 +195,8 @@ class AttachmentTests(unittest.TestCase):
         request = self.infer.call_args.args[0]
         bounded_original = request["state"]["original"]
         bounded_candidate = request["state"]["candidate"]
-        self.assertEqual(len(text), 12000)
+        self.assertEqual(len(text), 11999)
+        self.assertEqual(len(engine.apply_edits(text, output["edits"])), 12000)
         self.assertLessEqual(len(bounded_original), 2200)
         self.assertLessEqual(len(bounded_candidate), 3000)
         self.assertIn(sentence, bounded_original)
@@ -209,7 +212,8 @@ class AttachmentTests(unittest.TestCase):
         self.infer.assert_called_once()
 
     def test_expanding_an_excerpt_past_its_budget_preserves_proposal_without_inference(self):
-        text = "前" * 5900 + "。" + "後" * 6099
+        # Fit the document limit while exceeding the separate excerpt budget.
+        text = "前" * 4700 + "。" + "後" * 5099
         replacement = "新" * 2200
         output = output_for(text, [proposal("。", replacement)])
         decider.attach(output, text)

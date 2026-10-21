@@ -2,7 +2,7 @@
 from __future__ import annotations
 import time
 
-from engine import CONFIG, EditorError, _pick, apply_edits, digest, validate_edits
+from engine import CONFIG, MAX_TEXT, EditorError, _pick, apply_edits, digest, validate_edits
 import decider_runtime
 import progress
 
@@ -12,7 +12,7 @@ JUDGMENT_BUDGET_SECONDS = 480
 
 def request_for_pair(original, candidate, profile_id="article", model=MODELS[1], edit=None):
     profile = _pick(CONFIG["profiles"], profile_id, "用途")
-    if not all(isinstance(value, str) and len(value) <= 12000 for value in (original, candidate)):
+    if not all(isinstance(value, str) and len(value) <= MAX_TEXT for value in (original, candidate)):
         raise EditorError("原文と候補は12,000文字以内で指定してください。")
     if model not in MODELS:
         raise EditorError("指定されたDeciderモデルは対象外です。")
@@ -60,7 +60,7 @@ def prepare(payload):
     if not isinstance(payload, dict) or not isinstance(payload.get("text"), str):
         raise EditorError("原文と修正候補を指定してください。")
     text = payload["text"]
-    if not text.strip() or len(text) > 12000:
+    if not text.strip() or len(text) > MAX_TEXT:
         raise EditorError("判定用の原文は1〜12,000文字で指定してください。")
     model = payload.get("model", MODELS[1])
     if model not in MODELS:
