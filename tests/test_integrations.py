@@ -13,6 +13,7 @@ from unittest.mock import Mock, patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 import integrations as integration
+import yomiyasu_updates
 
 COMMAND = ["python-native", "-B", "/application/app.py", "mcp"]
 FAKE_CODEX_HOME = ROOT / "test-only-codex-home"
@@ -128,6 +129,7 @@ class InstallerTests(unittest.TestCase):
         (self.resources / "docs/PRIVATE_CONSULTATION.md").write_text("private development snapshot", "utf-8")
         (self.resources / "evaluation/private-receipt.json").write_text("not public", "utf-8")
         self.stack.enter_context(patch.object(integration, "RESOURCE_ROOT", self.resources))
+        self.stack.enter_context(patch.object(yomiyasu_updates, "current_root", return_value=vendor))
         self.stack.enter_context(patch.object(integration, "PERSISTENT_ROOT", self.data))
         self.stack.enter_context(patch.object(integration, "MANIFEST", self.data / "codex-integration.json"))
         self.stack.enter_context(patch.object(integration, "_config_path", return_value=self.config))
