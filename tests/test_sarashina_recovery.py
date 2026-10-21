@@ -25,6 +25,27 @@ def run(source, maximum=2000):
 
 
 class RecoveryTests(unittest.TestCase):
+    def test_combined_document_growth_is_held_and_non_growing_edits_survive(self):
+        prefix = '甲' + 'あ。' * 598 + '\n\n' + '乙' + 'い。' * 598 + '\n\n' + '丙' + 'う。' * 598 + '\n\n'
+        source = prefix + ('え。' * 6000)[:11999 - len(prefix)]
+        def generate(payload, *_args):
+            return result([{'before': before, 'after': after, 'reason': 'fixture', 'rule': 'fixture'}
+                           for before, after in (('甲', '甲一'), ('乙', '乙二'), ('丙', '丁'))
+                           if before in payload['source']])
+        with patch.object(generators, 'generate', side_effect=generate):
+            output = run(source)
+        self.assertEqual(engine.apply_edits(source, output[0]), source.replace('丙', '丁'))
+        self.assertEqual(output[7], 2)
+        self.assertEqual(output[0][0]['id'], 'e1')
+        self.assertTrue(any('合わせる' in note for note in output[2]))
+
+    def test_chunk_proposals_held_for_protected_text_are_counted(self):
+        with patch.object(generators, 'generate', return_value=result([
+            {'before': 'code', 'after': 'CODE', 'reason': 'fixture', 'rule': 'fixture'}])):
+            output = run('`code` を残す。')
+        self.assertEqual(output[0], [])
+        self.assertEqual(output[7], 1)
+
     def test_cutoff_splits_only_failed_range_and_maps_utf16_crlf_and_protection(self):
         source = ('👩🏽\u200d💻が見ていた。\r\n\r\n'
                   '「風車がからから回る。うち、捨てへんねん」\r\n\r\n'

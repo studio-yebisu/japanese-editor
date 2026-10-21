@@ -9,6 +9,8 @@ import subprocess
 import sys
 import tempfile
 import time
+import unicodedata
+from decimal import Decimal, InvalidOperation, localcontext
 from pathlib import Path
 from runtime_paths import RESOURCE_ROOT, vendor_command, hidden_process
 import progress
@@ -99,6 +101,31 @@ def _utf16(text):
     return len(text.encode("utf-16-le")) // 2
 
 
+def _paragraph_ranges(text):
+    """Bound inline pairing at common Markdown blocks, without changing offsets."""
+    start, offset, quote_depth = None, 0, None
+    for line in text.splitlines(keepends=True):
+        body = line.rstrip("\r\n")
+        prefix = re.match(r"^[ \t]*(?:>[ \t]*)*", body)[0]
+        depth, content = prefix.count(">"), body[len(prefix):]
+        heading = bool(re.match(r"#{1,6}(?:[ \t]+|$)", content))
+        separator = bool(re.fullmatch(r"=+[ \t]*|(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}", content))
+        new_item = bool(re.match(r"(?:[-+*]|\d+[.)])[ \t]+", content))
+        if start is not None and (not body.strip() or heading or separator or new_item or depth != quote_depth):
+            yield start, offset
+            start = None
+        if body.strip():
+            if start is None:
+                start = offset
+            if heading or separator:
+                yield start, offset + len(line)
+                start = None
+        quote_depth = depth
+        offset += len(line)
+    if start is not None:
+        yield start, len(text)
+
+
 def _protected_ranges(text):
     # Conservative protection for indented/quoted fences and inline code using
     # arbitrary equal-length backtick delimiters, including unclosed fences.
@@ -117,18 +144,100 @@ def _protected_ranges(text):
         offset += len(line)
     if fence:
         spans.append((fence[2], len(text)))
-    runs = list(re.finditer(r"`+", text))
-    index = 0
-    while index < len(runs):
-        opening = runs[index]
-        closing = next((j for j in range(index+1, len(runs)) if len(runs[j][0]) == len(opening[0])), None)
-        if closing is not None:
-            spans.append((opening.start(), runs[closing].end()))
-            index = closing + 1
-        else:
-            index += 1
-    spans.extend((m.start(), m.end()) for m in re.finditer(r"https?://[^\s<>\]\)]+|www\.[^\s<>]+|\]\((?:\\.|[^)\n])+\)", text))
+    # Inline delimiters cannot pair with backticks inside a code block or in a
+    # different paragraph. Keep offsets in the original text (including CRLF).
+    cursor = 0
+    for left, right in sorted(spans) + [(len(text), len(text))]:
+        prose = text[cursor:left]
+        for paragraph_start, paragraph_end in _paragraph_ranges(prose):
+            paragraph = prose[paragraph_start:paragraph_end]
+            runs = list(re.finditer(r"`+", paragraph))
+            index = 0
+            while index < len(runs):
+                opening = runs[index]
+                # A backslash escapes an opening delimiter outside code.
+                prefix = paragraph[:opening.start()]
+                if (len(prefix) - len(prefix.rstrip("\\"))) % 2:
+                    index += 1
+                    continue
+                closing = next((j for j in range(index + 1, len(runs)) if len(runs[j][0]) == len(opening[0])), None)
+                if closing is not None:
+                    base = cursor + paragraph_start
+                    spans.append((base + opening.start(), base + runs[closing].end()))
+                    index = closing + 1
+                else:
+                    index += 1
+        cursor = max(cursor, right)
+    # Parentheses/brackets may be part of a URL (including IPv6 hosts). Only
+    # unmatched closing delimiters end it; scheme matching is case insensitive.
+    for match in re.finditer(r"(?<![A-Za-z0-9_])(?:https?://|www\.)", text, re.IGNORECASE):
+        stack, end = [], match.end()
+        while end < len(text):
+            char = text[end]
+            if char.isspace() or char in '<>「」『』（）':
+                break
+            if char in "([":
+                stack.append(")" if char == "(" else "]")
+            elif char in ")]":
+                if not stack or stack[-1] != char:
+                    break
+                stack.pop()
+            end += 1
+        spans.append((match.start(), end))
+    # Also protect relative/other-scheme Markdown destinations, balancing nested
+    # parentheses and respecting escaped delimiters.
+    for match in re.finditer(r"\]\(", text):
+        depth, end = 1, match.end()
+        while end < len(text) and text[end] not in "\r\n":
+            if text[end] == "\\" and end + 1 < len(text):
+                end += 2
+                continue
+            if text[end] == "(":
+                depth += 1
+            elif text[end] == ")":
+                depth -= 1
+                if depth == 0:
+                    end += 1
+                    break
+            end += 1
+        spans.append((match.start(), end))
     return spans
+
+
+def _numeric_values(text):
+    """Compare common numeral spellings, not arbitrary Japanese word meanings."""
+    text = unicodedata.normalize("NFKC", text)
+    digits = {char: value for value, char in enumerate("零一二三四五六七八九")}
+    digits["〇"] = 0
+    small = {"十": 10, "百": 100, "千": 1000}
+    large = {"万": 10000, "億": 100000000, "兆": 1000000000000}
+    pattern = r"[0-9]+(?:[,.][0-9]+)*(?:[十百千万億兆])?|[〇零一二三四五六七八九十百千万億兆]+(?=[件人名つ日週月年個回本枚台冊円歳時分秒倍割%]|[\s、。，．,.!?！？：:]|$)"
+    values = []
+    for match in re.finditer(pattern, text):
+        token = match[0]
+        if token[0].isdigit() and token[0] not in digits:
+            multiplier = {**small, **large}.get(token[-1], 1)
+            numeric = token[:-1] if token[-1] in small or token[-1] in large else token
+            try:
+                with localcontext() as context:
+                    context.prec = len(numeric) + 50
+                    values.append(Decimal(numeric.replace(",", "")) * multiplier)
+            except InvalidOperation:
+                # Dotted identifiers such as version 1.2.3 are not decimals.
+                values.append(token)
+            continue
+        number = section = total = 0
+        for char in token:
+            if char in digits:
+                number = number * 10 + digits[char]
+            elif char in small:
+                section += (number or 1) * small[char]
+                number = 0
+            else:
+                total += (section + number or 1) * large[char]
+                section = number = 0
+        values.append(Decimal(total + section + number))
+    return values
 
 
 def validate_edits(text, raw_edits):
@@ -156,22 +265,34 @@ def validate_edits(text, raw_edits):
         if any(start < b and a < end for a, b in protected):
             notes.append("コードまたはURLに重なる修正案を保留しました。")
             continue
+        if len(text) + len(after) - len(before) > MAX_TEXT:
+            notes.append("修正案を単独で反映すると12,000字を超えるため、その案を保留しました。原文は残しています。")
+            continue
         occupied.append((start, end))
         risks = []
-        if re.findall(r"[0-9０-９]+(?:[.,．，][0-9０-９]+)*", before) != re.findall(r"[0-9０-９]+(?:[.,．，][0-9０-９]+)*", after):
+        if _numeric_values(before) != _numeric_values(after):
             risks.append("数値の変化")
+        negative = r"ない|なかった|なく|なけれ|ません|せず|ずに|禁止|不可|不要|無効"
+        if bool(re.search(negative, before)) != bool(re.search(negative, after)):
+            risks.append("否定表現の変化")
         for label, words in [
-            ("否定表現の変化", ("ない", "ません", "ずに", "禁止", "不可")),
             ("条件表現の変化", ("場合", "のみ", "限り", "ただし", "なければ")),
-            ("確度・時制の変化", ("かもしれ", "可能性", "予定", "未定", "未確認", "らしい", "と思")),
+            ("確度・時制の変化", ("かもしれ", "可能性", "予定", "未定", "未確認", "らしい", "と思", "でしょう", "だろう", "おそらく", "はず")),
         ]:
-            if {w for w in words if w in before} != {w for w in words if w in after}:
+            # Polite questions such as 「いかがでしたでしょうか」 are not
+            # assertions of likelihood. These remain advisory lexical checks.
+            def markers(value):
+                return {w for w in words if re.search(re.escape(w) + (r"(?!か)" if w in ("でしょう", "だろう") else ""), value)}
+            if markers(before) != markers(after):
                 risks.append(label)
         edits.append({"id": f"e{len(edits)+1}", "start": _utf16(text[:start]),
                       "end": _utf16(text[:end]), "before": before, "after": after,
                       "reason": str(raw.get("reason", "変更の意図を原文と照らして確認してください。"))[:1500],
                       "rule": str(raw.get("rule", "proposal"))[:120],
                       "review_required": True, "risk_flags": risks})
+    if len(text) + sum(len(edit["after"]) - len(edit["before"]) for edit in edits) > MAX_TEXT:
+        edits = [edit for edit in edits if len(edit["after"]) <= len(edit["before"])]
+        notes.append("修正案を合わせると12,000字を超えるため、字数が増える案を保留しました。増えない案だけを反映します。")
     return sorted(edits, key=lambda edit: edit["start"]), notes
 
 
@@ -194,6 +315,11 @@ def apply_edits(text, edits):
         encoded = encoded[:start*2] + edit["after"].encode("utf-16-le") + encoded[end*2:]
         previous = start
     return encoded.decode("utf-16-le")
+
+
+def _held_count(raw_edits, edits):
+    # Called only after validate_edits has checked the proposal structure.
+    return sum(item["before"] != item["after"] for item in raw_edits) - len(edits)
 
 
 def _checker_failure(message):
@@ -420,6 +546,7 @@ def _sarashina_generation(text, strength, context, model, instruction, guidance,
         utf16_offsets.append(utf16_offsets[-1] + (2 if ord(character) > 0xFFFF else 1))
     protected_utf16 = [(utf16_offsets[left], utf16_offsets[right]) for left, right in protected]
     edits, questions, notes, suggestions = [], [], [], []
+    held_count = 0
     first_identity = None
     initial_total = len(parts)
     pending = [{**part, "depth": 0} for part in parts]
@@ -482,6 +609,7 @@ def _sarashina_generation(text, strength, context, model, instruction, guidance,
             if total == 1:
                 raise
             raise generators.GenerationError(exc.code, f"第{index}/{total}部分の生成を完了できませんでした。{exc} 途中の修正案は採用していません。原文は残っています。", exc.diagnostics) from None
+        held_count += _held_count(generated["proposal"]["edits"], local_edits)
         diagnostics.append({"status": "completed", "source_characters": len(source), "depth": part["depth"],
                             **generated.get("diagnostics", {})})
         identity = generated["identity"]
@@ -510,12 +638,24 @@ def _sarashina_generation(text, strength, context, model, instruction, guidance,
         progress.report("generation", message="generation_chunk", completed=index, total=total,
                         chunk_index=index, chunk_total=total)
         completed += 1
+    # Local chunks may fit while their combined rewrite exceeds the document
+    # limit. Hold growing patches before PPDD; retain valid non-growing ones.
+    bounded = [edit for edit in edits if len(text) + len(edit["after"]) - len(edit["before"]) <= MAX_TEXT]
+    if len(bounded) != len(edits):
+        notes.append("修正案を単独で反映すると12,000字を超えるため、その案を保留しました。原文は残しています。")
+    if len(text) + sum(len(edit["after"]) - len(edit["before"]) for edit in bounded) > MAX_TEXT:
+        bounded = [edit for edit in bounded if len(edit["after"]) <= len(edit["before"])]
+        notes.append("修正案を合わせると12,000字を超えるため、字数が増える案を保留しました。増えない案だけを反映します。")
+    held_count += len(edits) - len(bounded)
+    edits = bounded
     edits.sort(key=lambda edit: edit["start"])
     for index, edit in enumerate(edits, 1):
         edit["id"] = f"e{index}"
     # Validate exact full-source UTF-16 anchors and non-overlap without the
     # global uniqueness assumption: identical prose may occur in two chunks.
-    apply_edits(text, edits)
+    candidate = apply_edits(text, edits)
+    if _quote_issues(candidate) > _quote_issues(text):
+        raise EditorError("修正案を合わせると引用符の対応が崩れるため、原文を残しています。文章を分けて再実行してください。")
     identity = {**first_identity, "segmentation": {"strategy": "paragraph_sentence", "chunk_total": total,
                 "max_chunk_characters": maximum, "adjacent_text_sent": False, "initial_chunk_total": initial_total,
                 "resplit_count": resplits, "api_calls": calls, "max_calls": SARASHINA_MAX_CALLS,
@@ -532,7 +672,7 @@ def _sarashina_generation(text, strength, context, model, instruction, guidance,
         notes.append(f"{unchanged_only}部分ではAIが変更のない文だけを返したため、原文を維持しています。誤字がないと確認した結果ではなく、見逃しの可能性があります。")
     if total > 1:
         notes.append(f"原文を{total}部分に分けて校正しました。前後の部分の本文は追加送信していないため、分割境界をまたぐ文脈は生成時に確認していません。")
-    return edits, questions, notes, [model], suggestions, identity, guidance
+    return edits, questions, notes, [model], suggestions, identity, guidance, held_count
 
 
 @yomiyasu_updates.pinned
@@ -559,7 +699,7 @@ def generate(text, profile, strength, context, provider=None, model=None):
     validate_unicode_input(identity, "生成サービスの応答")
     validate_unicode_input(models, "生成サービスの応答")
     edits, questions, notes, suggestions = _validated_generation_proposal(text, proposal, strength)
-    return edits, questions, notes, models, suggestions, identity, guidance
+    return edits, questions, notes, models, suggestions, identity, guidance, _held_count(proposal["edits"], edits)
 
 
 @yomiyasu_updates.pinned
@@ -598,7 +738,7 @@ def analyze(payload):
     findings = lint(text, profile)
     output = {"version": "0.2.13", "source_hash": digest(text), "offset_encoding": "utf-16",
               "profile": profile["id"], "strength": strength["id"], "findings": findings,
-              "edits": [], "questions": [], "suggestions": [], "stages": {"rules": "executed", "generation": "not_requested", "decider": "not_run"},
+              "edits": [], "held_edit_count": 0, "questions": [], "suggestions": [], "stages": {"rules": "executed", "generation": "not_requested", "decider": "not_run"},
               "notes": ["指摘は見直し候補です。指摘の有無で文章の品質や意味保持は判定できません。"],
               "yomiyasu": {**_guide_identity(), "rules": "executed", "generation_guidance": {"status": "not_sent", "sources": []}}}
     if needs_decider:
@@ -617,6 +757,8 @@ def analyze(payload):
             output["generator"] = generated[5]
         if len(generated) > 6:
             output["yomiyasu"].update(generated[6])
+        if len(generated) > 7:
+            output["held_edit_count"] = generated[7]
         output["notes"].extend(notes)
         output["notes"].append("修正理由は修正案を作ったモデルの説明です。")
         output["stages"]["generation"] = "executed"
@@ -643,6 +785,7 @@ def review_proposals(payload):
     output = analyze(clean)
     edits, notes = validate_edits(clean["text"], clean.get("edits"))
     output["edits"] = edits
+    output["held_edit_count"] = _held_count(clean["edits"], edits)
     output["stages"]["generation"] = "host_supplied"
     output["notes"].extend(notes)
     output["notes"].append("修正案と理由は呼出し元が提供しました。")

@@ -17,7 +17,7 @@
         <div class="header-actions">
           <div class="quick-provider-field"><label for="quick-provider">校正AI</label><select id="quick-provider" aria-label="修正案を作るAIを切り替える" disabled><option value="">読み込み中</option></select></div>
           <button id="setup-prompt" type="button" class="setup-prompt" hidden>設定してください</button>
-          <button id="settings-open" type="button" class="settings-button" aria-haspopup="dialog" aria-controls="settings-dialog">
+          <button id="settings-open" type="button" class="settings-button" aria-label="設定" aria-haspopup="dialog" aria-controls="settings-dialog">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.6 3-.7 2.1-1.5.9-2.2-.5-2.4 4.1 1.5 1.6v1.7l-1.5 1.6 2.4 4.1 2.2-.5 1.5.9.7 2.1h4.8l.7-2.1 1.5-.9 2.2.5 2.4-4.1-1.5-1.6v-1.7l1.5-1.6-2.4-4.1-2.2.5-1.5-.9L14.4 3Z"/><circle cx="12" cy="12" r="3.2"/></svg>
             <span>設定</span>
           </button>
@@ -74,6 +74,12 @@
               <div class="export-actions"><button id="copy-result" type="button" class="button button-small button-secondary" disabled>コピー</button><button id="download-result" type="button" class="button button-small button-secondary" disabled>保存</button></div>
             </div>
             <div class="output-note"><p id="output-summary">校正後の文章をコピー・保存できます。</p><p id="export-note" class="export-note" hidden></p></div>
+            <div id="manual-copy" class="manual-copy" hidden>
+              <label for="manual-copy-text">コピーできないときの本文（点検・照合済み）</label>
+              <textarea id="manual-copy-text" rows="5" readonly spellcheck="false"></textarea>
+              <button id="select-copy-text" type="button" class="text-button">本文を選択</button>
+              <p class="field-description">選択後、Ctrl+C（Macは⌘C）でコピーできます。改行形式をそのまま残す場合は「保存」を使ってください。</p>
+            </div>
           </section>
         </div>
         <div class="comparison-status"><span id="comparison-summary"></span></div>
@@ -90,7 +96,7 @@
             </section>
             <section id="suggestions-section" aria-labelledby="suggestions-title" class="review-section" hidden><div class="review-section-heading"><h3 id="suggestions-title">構成の提案</h3><span id="suggestions-count" class="count-badge">0</span></div><p class="section-description">本文には自動で反映しません。</p><div id="suggestions-list"></div></section>
             <section id="questions-section" aria-labelledby="questions-title" class="review-section" hidden><div class="review-section-heading"><h3 id="questions-title">意図を確認したいところ</h3><span id="questions-count" class="count-badge">0</span></div><div id="questions-list"></div></section>
-            <div id="run-notes" class="run-notes" hidden></div>
+            <div id="run-notes" class="run-notes" tabindex="-1" hidden></div>
           </div>
         </details>
       </main>

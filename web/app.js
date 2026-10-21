@@ -29,6 +29,7 @@
     notes: byId("run-notes"), outputPanel: byId("output-panel"), output: byId("output"),
     outputSummary: byId("output-summary"), changedCount: byId("changed-count"), meaningWarning: byId("meaning-warning"),
     copy: byId("copy-result"), download: byId("download-result"), exportNote: byId("export-note"),
+    manualCopy: byId("manual-copy"), manualCopyText: byId("manual-copy-text"), selectCopyText: byId("select-copy-text"),
     settingsOpen: byId("settings-open"), settingsClose: byId("settings-close"), settingsDialog: byId("settings-dialog"),
     setupPrompt: byId("setup-prompt"), sourceHighlight: byId("source-highlight"), preview: byId("output-preview"),
     outputTitle: byId("output-title"), comparisonSummary: byId("comparison-summary"), reviewDetails: byId("review-details"),
@@ -645,12 +646,39 @@
     byId("load-sample").title = ui.source.value ? "入力欄が空のときに例文を入れられます。" : "例文を入力する";
   }
 
+  // The selected service may accept less text than local rules (e.g. Sarashina).
+  function textLimit() {
+    const provider = selectedGenerator();
+    return ui.generationToggle.checked ? provider?.max_document_chars || provider?.max_text_chars || 12000 : config?.max_text || 12000;
+  }
+
   function updateCount() {
     const provider = selectedGenerator();
-    const limit = ui.generationToggle.checked ? provider?.max_document_chars || provider?.max_text_chars || 12000 : config?.max_text || 12000;
     const count = Array.from(currentSource()).length;
-    ui.count.textContent = `${count.toLocaleString("ja-JP")} / ${limit.toLocaleString("ja-JP")} 字${ui.generationToggle.checked && provider?.chunking === "paragraphs" ? ` · ${provider.max_text_chars.toLocaleString("ja-JP")}字以内ずつ` : ""}`;
-    ui.count.setAttribute("data-over-limit", String(count > limit));
+    const limit = config ? textLimit() : 0;
+    const over = Boolean(limit) && count > limit;
+    const chunk = ui.generationToggle.checked && provider?.chunking === "paragraphs"
+      ? ` · ${provider.max_text_chars.toLocaleString("ja-JP")}字以内ずつ` : "";
+    ui.count.textContent = limit
+      ? `${count.toLocaleString("ja-JP")} / ${limit.toLocaleString("ja-JP")} 字${over ? "（上限超過）" : ""}${chunk}`
+      : `${count.toLocaleString("ja-JP")} 字`;
+    ui.count.className = over ? "is-over" : "";
+    ui.count.setAttribute("data-over-limit", String(over));
+  }
+
+  // Structured counts only; never infer held proposals from note wording.
+  function heldCount(data) {
+    return Number.isInteger(data?.held_edit_count) && data.held_edit_count > 0 ? data.held_edit_count : 0;
+  }
+
+  function riskFlags(edit) {
+    return Array.isArray(edit.risk_flags) ? edit.risk_flags.filter((flag) => typeof flag === "string") : [];
+  }
+
+  function showHeldNotes() {
+    ui.reviewDetails.open = true;
+    ui.notes.scrollIntoView?.({ block: "nearest" });
+    ui.notes.focus({ preventScroll: true });
   }
 
   function invalidate(message = "原文または設定が変わりました。もう一度「校正する」を押してください。") {
@@ -686,6 +714,8 @@
     ui.comparisonSummary.textContent = "";
     ui.exportNote.hidden = true;
     ui.exportNote.textContent = "";
+    ui.manualCopy.hidden = true;
+    ui.manualCopyText.value = "";
     clearError();
     renderDeciderCapability();
     updateButtons();
@@ -795,6 +825,9 @@
         throw new Error("同じ箇所に重なる修正があるため、結果を反映できません。もう一度校正してください。");
       }
     }
+    if (Array.from(applyEdits(source, validated)).length > (config?.max_text || 12000)) {
+      throw new Error("修正後の文章が12,000字を超えるため、反映できません。原文は残っています。");
+    }
     return validated;
   }
 
@@ -814,11 +847,15 @@
       openSettings();
       return;
     }
-    const limit = generate ? selectedGenerator()?.max_document_chars || selectedGenerator()?.max_text_chars || 12000 : config.max_text || 12000;
+    const limit = textLimit();
     if (Array.from(currentSource()).length > limit) {
       showError(`この処理では ${limit.toLocaleString("ja-JP")} 字までです。原文を分けてください。`);
       return;
     }
+    // Any input or setting change clears `run` through invalidate(), so a run
+    // still shown here belongs to the current inputs. Keep it only to recover
+    // from this attempt's failure; stale or aborted responses never restore it.
+    const previous = requiredJudgmentPending() ? null : run;
     invalidate();
     const requestRevision = revision;
     const source = currentSource();
@@ -827,6 +864,8 @@
     const context = ui.context.value;
     const provider = ui.provider.value;
     const model = ui.providerModel.value;
+    const current = { source, profile, strength, context, generate, judge, provider, model };
+    const restorable = previous && Object.keys(current).every((key) => previous.snapshot[key] === current[key]) ? previous : null;
     const controller = new AbortController();
     activeRequest = controller;
     activeTask = "analyze";
@@ -843,7 +882,7 @@
     ui.reviewCount.textContent = "確認しています";
     setStatus(generate
       ? judge
-        ? `${generatorLabel()} に原文を送り、修正後に Perplexity Decider で意味の変化を確認します。`
+        ? `${generatorLabel()} に原文を送り、修正後に Decider で意味の変化を確認します。`
         : `${generatorLabel()} に原文を送り、校正しています。意味判定はオフです。`
       : "外部へ送信せず、この PC で規則を確認しています。修正案の生成と意味判定は実行しません。");
     try {
@@ -865,12 +904,22 @@
         data: { ...data, edits },
       };
       renderResults();
+      const held = heldCount(data);
+      const heldText = held ? `保留した修正案が ${held} 件あり、その箇所は原文のままです。理由は「変更の詳細」の注記をご覧ください。` : "";
       setStatus(requiredJudgmentPending() ? "修正候補を残しました。意味判定が終わっていないため、コピー・保存はできません。接続状態を確認して、もう一度校正してください。"
-        : edits.length ? `${edits.length} 件の変更を右の文章へ反映しました。コピー・保存できます。`
+        : edits.length ? `${edits.length} 件の変更を右の文章へ反映しました。${heldText}コピー・保存できます。`
+        : held ? `校正が終わりました。${heldText}`
         : data.generator?.result === "unchanged_proposals_only" ? "AIから有効な修正案を得られませんでした。原文のまま表示しています。見逃しの可能性があります。"
         : generate ? "修正候補は0件でした。原文を表示しています。誤りがないことを保証する結果ではありません。" : "Yomiyasuの規則点検が終わりました。原文をそのまま右に表示しています。");
     } catch (error) {
       if (error.name === "AbortError" || revision !== requestRevision) return;
+      if (restorable) {
+        run = { ...restorable, restored: true };
+        renderResults();
+        showError(`今回の校正は失敗しました。${error.message} 右には、同じ原文と設定で前回成功した結果を表示しています。`, false, generate);
+        setStatus("今回の校正は失敗したため、前回成功した結果に戻しました。原文と設定は変わっていません。");
+        return;
+      }
       showError(`校正できませんでした。${error.message}`, false, generate);
       setStatus(generate ? "原文は残っています。エラーの案内を確認して、必要に応じて文章を分けて再実行してください。" : "原文は残っています。入力と接続を確認してください。");
       ui.reviewCount.textContent = "校正できませんでした";
@@ -889,12 +938,17 @@
     ui.reviewDetails.hidden = false;
     const { data } = run;
     const judgmentPending = requiredJudgmentPending();
-    ui.reviewCount.textContent = judgmentPending ? `意味判定が未完了 · 候補 ${data.edits.length} 件` : `変更 ${data.edits.length} 件`;
+    const held = heldCount(data);
+    ui.reviewCount.textContent = `${run.restored ? "前回の結果 · " : ""}${judgmentPending ? "意味判定が未完了 · 候補" : "変更"} ${data.edits.length} 件${held ? ` · 保留 ${held} 件` : ""}`;
+    if (held) ui.reviewDetails.open = true;
     const executed = data.edits.filter((edit) => edit.decision?.status === "executed").length;
     const preserved = data.edits.filter((edit) => edit.decision?.status === "executed" && edit.decision.choice === "preserved").length;
+    const risky = data.edits.filter((edit) => riskFlags(edit).length).length;
     ui.comparisonSummary.textContent = !data.edits.length ? ""
       : executed === data.edits.length
-        ? preserved === executed ? `Decider：${executed} 件で意味を保っていると判定` : `Decider：${executed} 件を判定・詳細を確認`
+        ? preserved === executed
+          ? `Decider：${executed} 件で意味を保っていると判定${risky ? `（うち ${risky} 件は数値・否定などの変化を検知。詳細を確認）` : ""}`
+          : `Decider：${executed} 件を判定・詳細を確認`
         : executed ? `Decider：${executed} / ${data.edits.length} 件を判定` : "Decider：判定未実行";
     const generationLabels = {
       executed: "作成した修正案を右の文章に反映しました。",
@@ -965,19 +1019,25 @@
     ui.editGuidance.textContent = judgmentPending
       ? "修正候補を右に表示しています。意味判定が終わるまでコピー・保存はできません。"
       : "変更は右の文章に反映済みです。理由と意味判定を確認できます。";
+    const held = heldCount(run.data);
+    const heldNote = held ? `保留した修正案が ${held} 件あります。その箇所は原文のままで、右の文章には反映していません。理由は下の注記をご覧ください。` : "";
     if (!edits.length) {
-      ui.edits.append(node("p", "empty-note", run.data.stages.generation === "not_requested"
-        ? "今回は文章を置き換える修正案はありません。サービスを設定すると、修正案の作成も依頼できます。"
-        : "文章を置き換える修正案はありません。確認したい点があれば、上の指摘をご覧ください。"));
+      ui.edits.append(node("p", "empty-note", held ? `反映した修正案はありません。${heldNote}`
+        : run.data.stages.generation === "not_requested"
+          ? "今回は文章を置き換える修正案はありません。サービスを設定すると、修正案の作成も依頼できます。"
+          : "文章を置き換える修正案はありません。確認したい点があれば、上の指摘をご覧ください。"));
       return;
     }
+    if (held) ui.edits.append(node("p", "empty-note held-note", heldNote));
     edits.forEach((edit, index) => {
-      const attention = edit.decision?.status !== "executed" || edit.decision?.choice !== "preserved";
-      const card = node("article", `edit-card is-applied${attention ? " has-attention" : ""}`);
+      const preserved = edit.decision?.status === "executed" && edit.decision?.choice === "preserved";
+      const risks = riskFlags(edit);
+      const attention = !preserved || risks.length > 0;
+      const card = node("article", `edit-card is-applied${attention ? " has-attention" : ""}${risks.length ? " has-risk" : ""}`);
       card.dataset.editId = edit.id;
       const top = node("div", "edit-card-top");
       top.append(node("h4", "edit-label", `${judgmentPending ? "修正候補" : "変更"} ${index + 1}${edit.rule ? ` · ${edit.rule}` : ""}`));
-      top.append(node("span", "edit-state", judgmentPending ? "候補を表示 · 意味判定が未完了" : attention ? "変更済み · 意味判定を確認" : "変更済み"));
+      top.append(node("span", "edit-state", judgmentPending ? "候補を表示 · 意味判定が未完了" : !preserved ? "変更済み · 意味判定を確認" : risks.length ? "変更済み · 検知した変化を確認" : "変更済み"));
       const diff = node("div", "edit-diff");
       const before = node("div", "diff-part");
       before.append(node("span", "diff-label", "原文"), node("del", "diff-before", edit.before || "（挿入位置）"));
@@ -990,7 +1050,9 @@
       if (edit.decision?.status === "executed" && ["shifted", "needs_review"].includes(edit.decision.choice)) {
         card.append(node("p", "edit-warning", "意味の変化に注意：この変更も右の文章に反映しています。前後の文と読み比べてください。"));
       }
-      const risks = Array.isArray(edit.risk_flags) ? edit.risk_flags.filter((flag) => typeof flag === "string") : [];
+      if (preserved && risks.length) {
+        card.append(node("p", "edit-warning", "Decider は意味を保つと判定しましたが、下の変化を機械的に検知しました。判定は意味の保持を保証しません。この変更も右の文章に反映しています。前後の文と読み比べてください。"));
+      }
       if (risks.length) {
         const riskNotes = node("div", "risk-notes");
         riskNotes.append(node("p", "risk-notes-title", "確認したい変化"));
@@ -1071,44 +1133,57 @@
     if (!run) return;
     const edits = run.data.edits;
     const judgmentPending = requiredJudgmentPending();
+    const held = heldCount(run.data);
     outputRaw = applyEdits(run.snapshot.source, edits);
     ui.output.value = outputRaw;
     paintComparison(ui.preview, comparisonParts(run.snapshot.source, edits, "after"), "change-added");
     paintComparison(ui.sourceHighlight, comparisonParts(run.snapshot.source, edits, "before"), "change-removed");
     ui.sourceHighlight.append(document.createTextNode("\n"));
     syncSourceScroll();
-    ui.outputTitle.textContent = judgmentPending ? "修正候補（意味判定が未完了）" : "校正後";
-    ui.preview.setAttribute("aria-label", judgmentPending ? "意味判定が未完了の修正候補の全文" : "変更を反映した文章の全文");
-    ui.changedCount.textContent = `${judgmentPending ? "候補" : "変更"} ${edits.length} 件`;
-    ui.outputSummary.textContent = judgmentPending
+    ui.outputTitle.textContent = judgmentPending ? "修正候補（意味判定が未完了）" : run.restored ? "校正後（前回の結果）" : "校正後";
+    ui.preview.setAttribute("aria-label", judgmentPending ? "意味判定が未完了の修正候補の全文" : run.restored ? "前回成功した校正結果の全文" : "変更を反映した文章の全文");
+    ui.changedCount.textContent = `${judgmentPending ? "候補" : "変更"} ${edits.length} 件${held ? ` · 保留 ${held} 件` : ""}`;
+    const restored = run.restored ? "今回の校正は失敗したため、前回成功した結果を表示しています。" : "";
+    ui.outputSummary.textContent = restored + (judgmentPending
       ? "修正候補を表示しています。意味判定が終わるまでコピー・保存はできません。"
-      : edits.length
-      ? "変更を反映しました。原文は左に残っています。"
-      : "変更はありません。原文と同じ文章です。";
+      : edits.length ? "変更を反映しました。原文は左に残っています。"
+      : held ? `保留した修正案 ${held} 件の箇所を含め、原文のまま表示しています。`
+      : "変更はありません。原文と同じ文章です。");
     const shifted = edits.filter((edit) => edit.decision?.status === "executed" && edit.decision.choice === "shifted").length;
     const deferred = edits.filter((edit) => edit.decision?.status === "executed" && edit.decision.choice === "needs_review").length;
     const errors = edits.filter((edit) => edit.decision?.status === "error").length;
     const judged = edits.filter((edit) => edit.decision?.status === "executed"
       && ["preserved", "shifted", "needs_review"].includes(edit.decision.choice)).length;
     const unrun = edits.length - judged - errors;
+    const risky = edits.filter((edit) => riskFlags(edit).length).length;
     const notices = [];
     if (shifted) notices.push(`意味が変わる可能性 ${shifted} 件`);
     if (deferred) notices.push(`判断保留 ${deferred} 件`);
     if (errors) notices.push(`意味判定エラー ${errors} 件`);
     if (unrun) notices.push(`意味判定未実行 ${unrun} 件`);
-    ui.meaningWarning.hidden = notices.length === 0;
-    ui.meaningWarning.textContent = notices.length
-      ? `${notices.join(" · ")}。これらの変更も反映済みです。詳細で原文と理由を確認できます。` : "";
+    if (risky) notices.push(`確認したい変化を検知 ${risky} 件`);
+    const messages = [];
+    if (judgmentPending) messages.push("修正候補は意味判定が未完了です。コピー・保存は保留しています。詳細で判定できなかった理由を確認できます。");
+    else if (notices.length) messages.push(`${notices.join(" · ")}。これらの変更も反映済みです。`);
+    if (held) messages.push(`保留した修正案 ${held} 件は反映せず、原文のままにしています。`);
+    if (!judgmentPending && messages.length) messages.push(held ? "理由は「変更の詳細」の注記で確認できます。" : "詳細で原文と理由を確認できます。");
+    ui.meaningWarning.hidden = messages.length === 0;
+    ui.meaningWarning.textContent = messages.join("");
+    if (held) {
+      const link = node("button", "text-button warning-link", "保留の理由を見る");
+      link.type = "button";
+      link.addEventListener("click", showHeldNotes);
+      ui.meaningWarning.append(document.createTextNode(" "), link);
+    }
     if (judgmentPending) {
-      ui.meaningWarning.hidden = false;
-      ui.meaningWarning.textContent = "修正候補は意味判定が未完了です。コピー・保存は保留しています。詳細で判定できなかった理由を確認できます。";
       ui.comparisonSummary.textContent = `Decider：${judged} / ${edits.length} 件を判定。未完了のためコピー・保存は保留`;
     } else if (!edits.length) {
       ui.comparisonSummary.textContent = run.snapshot.judge
-        ? "修正案がないため、Perplexity Decider の意味判定は実行していません。"
-        : "Perplexity Decider の意味判定はオフです。";
+        ? held ? `反映した修正案がないため、Decider の意味判定は実行していません（保留 ${held} 件は判定対象外）。`
+          : "修正案がないため、Decider の意味判定は実行していません。"
+        : "Decider の意味判定はオフです。";
     } else if (!run.snapshot.judge) {
-      ui.comparisonSummary.textContent = "Perplexity Decider の意味判定はオフです。変更の意味は未判定です。";
+      ui.comparisonSummary.textContent = "Decider の意味判定はオフです。変更の意味は未判定です。";
     }
     updateButtons();
   }
@@ -1158,8 +1233,11 @@
     const operation = startBusy("Yomiyasuで全文を点検しています。原文と校正後の文章を確認しています。", { requestId, controller });
     clearError();
     ui.exportNote.hidden = true;
+    ui.manualCopy.hidden = true;
+    ui.manualCopyText.value = "";
     updateButtons();
     setStatus("Yomiyasuで書き出す文章を点検し、本文を照合しています。");
+    let verifiedText = null;
     try {
       const response = await fetch("/api/export", {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json", "X-Yebisu-Request-Id": requestId },
@@ -1175,9 +1253,20 @@
       }
       ui.exportNote.textContent = typeof data.note === "string" ? data.note : "Yomiyasuの全文点検と本文照合が完了しました。意味保持や読みやすさの合格判定ではありません。";
       ui.exportNote.hidden = false;
+      verifiedText = data.text;
       if (kind === "copy") {
         if (!navigator.clipboard?.writeText) throw new Error("このブラウザーではクリップボードを利用できません。テキストファイルでの保存をお試しください。");
-        await navigator.clipboard.writeText(data.text);
+        let clipboardTimer;
+        try {
+          await Promise.race([
+            navigator.clipboard.writeText(data.text),
+            new Promise((_, reject) => {
+              clipboardTimer = setTimeout(() => reject(new Error("クリップボードへのコピーが完了しませんでした。このタブを開いてブラウザーの許可を確認するか、テキストファイルで保存してください。")), 15000);
+            }),
+          ]);
+        } finally {
+          clearTimeout(clipboardTimer);
+        }
         if (run !== exportRun || revision !== exportRevision || controller.signal.aborted) return;
         setStatus("Yomiyasuの全文点検・本文照合を実行し、校正後の文章をコピーしました。");
       } else {
@@ -1194,6 +1283,10 @@
       }
     } catch (error) {
       if (error.name === "AbortError" || run !== exportRun || revision !== exportRevision) return;
+      if (kind === "copy" && verifiedText !== null) {
+        ui.manualCopyText.value = verifiedText;
+        ui.manualCopy.hidden = false;
+      }
       showError(`書き出せませんでした。${error.message} 原文と校正結果は残っています。`);
       setStatus("文章は書き出していません。エラーの内容を確認し、もう一度お試しください。");
     } finally {
@@ -1256,6 +1349,7 @@
 
   ui.copy.addEventListener("click", () => exportResult("copy"));
   ui.download.addEventListener("click", () => exportResult("download"));
+  ui.selectCopyText.addEventListener("click", () => { ui.manualCopyText.focus(); ui.manualCopyText.select(); });
 
   updateCount();
   updateButtons();
