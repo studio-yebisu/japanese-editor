@@ -117,6 +117,9 @@ class InstallerTests(unittest.TestCase):
             "docs/SOURCES.md": "Sources\n", "docs/STATUS.md": "Status\n", "docs/WINDOWS.md": "Windows\n", "docs/INSTALL.md": "Setup\n",
             "evaluation/cases.json": "[]\n", "verification.json": "{}\n", "LICENSE": "MIT notice\n",
             "evaluation/controls.json": "[]\n", "evaluation/runtime-results.json": "{}\n", "evaluation/README.md": "Public examples\n",
+            "evaluation/cpp-parity-inputs.json": "[]\n", "evaluation/cpp-parity-results.json": "{}\n",
+            "cpp/README.md": "[manifest](manifest.json) [license](PERPLEXITY-LICENSE.txt)\n",
+            "cpp/manifest.json": "{}\n", "cpp/PERPLEXITY-LICENSE.txt": "Apache-2.0\n", "cpp/PERPLEXITY-NOTICE.txt": "Notice\n",
             "vendor/yomiyasu/UNICODE-LICENSE.txt": "Unicode notice\n",
         }.items():
             path = self.resources / name

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "worker_protocol": "yomiyasu-ppdd-jsonl-v1",
+  "llama_commit": "0a1ef309cdbb9f2024f58a38fb4c42352c5db569",
+  "llama_release": "b11796",
+  "model": "pplx-decider-flash-v1.2",
+  "reference_revision": "6d771ad7b5ecff5e93b8fc7b90d4c5ccc341954d",
+  "gguf_repo": "perplexity-ai/pplx-decider-flash-gguf-v1.2",
+  "gguf_revision": "2514d5f0b7fbbe1ee1bfec9ffb5801a60289b4cc",
+  "gguf_file": "decider-flash-v1.2-q8_0.gguf",
+  "gguf_bytes": 5157837472,
+  "gguf_sha256": "ffb27ade8976765b0e6943a0b7f5f3fd0f7042d45ad90256a76d608bcd3942c2",
+  "quantization": "Q8_0",
+  "decision_protocol_version": 3,
+  "model_license": "Apache-2.0",
+  "runtime_license": "MIT"
+}

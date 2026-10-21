@@ -1,8 +1,20 @@
-# Decider Flash の実行方法と確認結果
+# Decider Flashの実行方法と確認結果
 
-固定版 Flash を Windows のローカル CPU で実行した構成です。ブラウザ、CLI、MCP は一つのアプリサーバーでモデルを共有し、MCPは必要に応じてそのサービスを起動します。macOS向けの共通入口も実装していますが、Mac実機での推論は未検証です。実装・検証の状況は [STATUS.md](STATUS.md)、原典と利用条件は [SOURCES.md](SOURCES.md) を参照してください。
+v0.2.16では公式Q8とllama.cppを使うC++ワーカーを追加しました。ブラウザー・CLI・MCPは従来どおり一つの共有サービスを使います。新規導入は[INSTALL.md](INSTALL.md)のQ8手順を参照してください。固定したモデルの元チェックポイント、GGUFのSHA、llama.cppのコミットは[cpp/manifest.json](../cpp/manifest.json)にあります。
 
-## 固定した実行条件
+## C++・公式Q8版
+
+公式`perplexity-ai/pplx-decider-flash-gguf-v1.2`の`decider-flash-v1.2-q8_0.gguf`（5,157,837,472 bytes）を使います。専用ワーカーがprotocol v3を実装し、文字列・トークン列・readout位置を従来版と照合しています。llama-serverや文章生成APIで判定を代用しません。文脈上限は既定2048トークン、空きRAMの起動ガードは8GiBです。長文の分割と判定する抜粋はアプリ側で決め、ワーカーは入力を切り捨てません。
+
+NVIDIA CUDAを優先し、GPUに入る層だけを載せます。空きが少なければCPUを使います。WindowsではNVMLの専用VRAM空きも確認します。MacはMetalを使う実装で、共有メモリをRAMとVRAMの別容量として足しません。Mac実機は未検証です。
+
+OOM時は所有するワーカーを停止してからGPU層数を半減し、最後はCPUで元の要求を再試行します。合計3試行までで、要求全体の待ち時間上限は延ばしません。2方式のモデルを同時には読み込みません。設定で実行方式を選び、応答に`runtime_backend`、`quantization`、`gguf_sha256`、`llama_commit`、実デバイス・GPU層数・CPU併用・OOM再試行回数を記録します。
+
+2026-10-21、16件の同一合成入力で従来CPU BF16とQ8 CPUの判定が16/16一致し、確率の差は最大0.012364でした。CUDA3層＋CPUでも16/16一致し、従来BF16との差は最大0.012077でした。特殊トークン・日本語・emoji・CRLFを含む入力のprompt・token IDs・marker位置も16/16一致しました。これは日本語校正全体や公式FP32との一致を保証する結果ではありません。[入力と実測](../evaluation/cpp-parity-results.json)、[再現用コマンドと契約](../cpp/README.md)
+
+以下は、比較・復帰用に維持している従来PyTorch版の手順です。Q8版の必要容量やMetalの条件とは異なります。
+
+## 従来版（PyTorch）の実行条件
 
 | 項目 | 現在の設定・実測環境 |
 | --- | --- |

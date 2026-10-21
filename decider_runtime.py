@@ -138,6 +138,12 @@ def _settings(path):
 
 def _configuration(path):
     data = _settings(path)
+    backend = data.get("backend", "pytorch")
+    if backend == "llama_cpp":
+        import cpp_decider
+        return cpp_decider.configuration(data)
+    if backend != "pytorch":
+        raise DeciderRuntimeError("invalid_config", "")
     data["cpu_dtype"] = data.get("cpu_dtype", "float32")
     if data["cpu_dtype"] not in ("float32", "bfloat16"):
         raise DeciderRuntimeError("invalid_config", "cpu_dtypeはfloat32またはbfloat16で指定してください。")
@@ -163,6 +169,9 @@ def _configuration(path):
 
 
 def _precision_identity(cfg):
+    if cfg.get("backend") == "llama_cpp":
+        import cpp_decider
+        return dict(cpp_decider.IDENTITY)
     override = cfg.get("device") == "cpu" and cfg.get("cpu_dtype", "float32") == "bfloat16"
     return {"precision": "bfloat16" if override or cfg.get("device") in ("cuda", "cuda:0") else "float32",
             "precision_override": override, "reference_path": CPU_BFLOAT16_MODE if override else True}
@@ -216,6 +225,9 @@ class DeciderRuntime:
             output["last_error"] = _safe_error(self._last_error)
         if loaded:
             output["runtime"] = self._ready
+            if cfg and cfg.get("backend") == "llama_cpp":
+                import cpp_decider
+                output.update({key: self._ready[key] for key in ("device", *cpp_decider.PUBLIC_IDENTITY_FIELDS) if key in self._ready})
         self._last_status = output
         return dict(output)
 
@@ -255,12 +267,17 @@ class DeciderRuntime:
                 closed.set()
             messages.put(None)
 
-    def _read_stderr(self, process):
+    def _read_stderr(self, process, events=None):
         try:
             for line in process.stderr:
                 self._stderr.append(line.rstrip()[:2000])
+                if events is not None and line.strip() == "YEBISU_PPDD_OOM":
+                    events["oom"].set()
         except (OSError, ValueError):
             pass
+        finally:
+            if events is not None:
+                events["stderr_closed"].set()
 
     def _receive(self, timeout):
         try:
@@ -278,6 +295,9 @@ class DeciderRuntime:
         return message
 
     def _start(self, cfg, deadline=None):
+        if cfg.get("backend") == "llama_cpp":
+            import cpp_decider
+            return cpp_decider.start(self, cfg, deadline or time.monotonic() + cfg["startup_timeout_seconds"])
         signature = json.dumps(cfg, sort_keys=True)
         if self._process is not None and self._process.poll() is None and self._signature == signature and self._ready:
             return
@@ -396,6 +416,9 @@ class DeciderRuntime:
                 # Settings can change while this request waits for ownership.
                 cfg = _configuration(self.config_path)
                 _remaining(deadline, recoverable=True)
+                if cfg.get("backend") == "llama_cpp":
+                    import cpp_decider
+                    return cpp_decider.decide(self, cfg, serialized, deadline)
                 previous_process = self._process
                 self._start(cfg, deadline=deadline)
                 _remaining(deadline, recoverable=self._process is previous_process and self._ready is not None)
@@ -545,6 +568,9 @@ atexit.register(_RUNTIME.stop)
 
 
 def _inspect_device(cfg, config_path, device):
+    if cfg.get("backend") == "llama_cpp":
+        import cpp_decider
+        return cpp_decider.inspect(cfg, device)
     environment = _external_environment(os.environ)
     environment.update(PYTHONIOENCODING="utf-8", PYTHONDONTWRITEBYTECODE="1", HF_HUB_OFFLINE="1",
                        TRANSFORMERS_OFFLINE="1", HF_HUB_DISABLE_TELEMETRY="1")
@@ -573,7 +599,7 @@ def _inspect_device(cfg, config_path, device):
 
 def local_set_device(device):
     """UI-only device choice. Runtime lock prevents a second model owner."""
-    if device not in ("cpu", "cuda:0"):
+    if device not in ("auto", "cpu", "cuda:0", "metal"):
         raise DeciderRuntimeError("invalid_config", "")
     if not _RUNTIME._lock.acquire(blocking=False):
         raise DeciderRuntimeError("busy", "")
@@ -581,6 +607,8 @@ def local_set_device(device):
     try:
         path = _RUNTIME.config_path
         cfg = _configuration(path)
+        if cfg.get("backend") != "llama_cpp" and device not in ("cpu", "cuda:0"):
+            raise DeciderRuntimeError("invalid_config", "")
         if cfg["device"] == device:
             return {"status": "unchanged", "device": device}
         original = path.read_bytes()
@@ -621,6 +649,95 @@ def local_set_device(device):
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
+        _RUNTIME._lock.release()
+
+
+def prepared_backends():
+    """Expose names/readiness only; local paths never cross the HTTP boundary."""
+    choices = {}
+    for backend in ("llama_cpp", "pytorch"):
+        choices[backend] = False
+        for path in (_RUNTIME.config_path, _RUNTIME.config_path.with_name(backend + "-config.json")):
+            try:
+                if _configuration(path).get("backend", "pytorch") == backend:
+                    choices[backend] = True
+                    break
+            except DeciderRuntimeError:
+                pass
+    return choices
+
+
+def _atomic_settings(path, data):
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, prefix=".backend-", suffix=".tmp", delete=False) as stream:
+            temporary = Path(stream.name)
+            json.dump(data, stream, ensure_ascii=False, indent=2, allow_nan=False)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        temporary = None
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def local_set_backend(backend):
+    """Switch only between locally prepared, fixed workers; never accept argv."""
+    if backend not in ("llama_cpp", "pytorch"):
+        raise DeciderRuntimeError("invalid_config", "")
+    if not _RUNTIME._lock.acquire(blocking=False):
+        raise DeciderRuntimeError("busy", "")
+    try:
+        path = _RUNTIME.config_path
+        original = path.read_bytes()
+        current = _settings(path)
+        current_backend = current.get("backend", "pytorch")
+        if current_backend not in ("llama_cpp", "pytorch"):
+            raise DeciderRuntimeError("invalid_config", "")
+        candidate = path.with_name(backend + "-config.json")
+        if current_backend == backend and not candidate.is_file():
+            return {"status": "unchanged", "backend": backend}
+        candidate_bytes = candidate.read_bytes()
+        cfg = _configuration(candidate)
+        if cfg.get("backend", "pytorch") != backend:
+            raise DeciderRuntimeError("invalid_config", "")
+        if current_backend == backend:
+            paths = ("cpp_executable", "gguf_path") if backend == "llama_cpp" else ("python", "model_path", "source_path")
+            if all(current.get(key) == cfg.get(key) for key in paths):
+                return {"status": "unchanged", "backend": backend}
+            for key in ("device", "max_length", "cpu_threads", "gpu_margin_mib", "cpu_dtype"):
+                if key in current:
+                    cfg[key] = current[key]
+            if backend == "llama_cpp":
+                import cpp_decider
+                cfg = cpp_decider.configuration(cfg)
+        # The old worker must be gone before checking/starting another backend.
+        _RUNTIME.stop()
+        resources = _inspect_device(cfg, candidate, cfg["device"])
+        if path.read_bytes() != original or candidate.read_bytes() != candidate_bytes:
+            raise DeciderRuntimeError("settings_changed", "")
+        saved = json.loads(candidate_bytes.decode("utf-8-sig"))
+        if current_backend == backend:
+            for key in ("device", "max_length", "cpu_threads", "gpu_margin_mib", "cpu_dtype"):
+                if key in cfg:
+                    saved[key] = cfg[key]
+        old = json.loads(original.decode("utf-8-sig"))
+        for key in ("service_url", "service_timeout_seconds"):
+            if key in old:
+                saved[key] = old[key]
+        backup = current_backend + ("-previous-config.json" if current_backend == backend else "-config.json")
+        _atomic_settings(path.with_name(backup), old)
+        _atomic_settings(path, saved)
+        _RUNTIME._last_error = None
+        _RUNTIME._cache_status(_configuration(path))
+        return {"status": "saved", "backend": backend, "device": cfg["device"], "resources": resources}
+    except DeciderRuntimeError:
+        raise
+    except (OSError, ValueError):
+        raise DeciderRuntimeError("settings_save_failed", "") from None
+    finally:
         _RUNTIME._lock.release()
 
 
@@ -678,7 +795,7 @@ def _service_configuration():
     startup = _seconds(data.get("startup_timeout_seconds"), 300, "起動待ち時間")
     inference = _seconds(data.get("request_timeout_seconds"), 180, "推論待ち時間")
     remote = _seconds(data.get("remote_timeout_seconds"), startup + inference + 15, "共有サービス待ち時間")
-    return {"url": value.rstrip("/"), "timeout": remote, "cpu_dtype": data.get("cpu_dtype", "float32"), "device": data.get("device")}
+    return {"url": value.rstrip("/"), "timeout": remote, "cpu_dtype": data.get("cpu_dtype", "float32"), "device": data.get("device"), "backend": data.get("backend", "pytorch")}
 
 
 def _remote(service, path, payload=None, timeout=3):
@@ -718,18 +835,23 @@ def _remote(service, path, payload=None, timeout=3):
 
 def _public_status(output):
     allowed = ("status", "phase", "loaded", "model", "revision", "device", "precision", "precision_override", "reference_path", "max_length")
+    if output.get("backend") == "llama_cpp":
+        import cpp_decider
+        allowed += cpp_decider.PUBLIC_IDENTITY_FIELDS
     clean = {key: output[key] for key in allowed if key in output}
     for key in ("error", "last_error"):
         if key in output:
             clean[key] = _safe_error(output[key])
     runtime = output.get("runtime")
     if isinstance(runtime, dict):
-        clean["runtime"] = {key: runtime[key] for key in ("load_latency_ms", "max_length", "reference_path", "precision", "precision_override") if key in runtime}
+        fields = ("load_latency_ms", "max_length", "reference_path", "precision", "precision_override")
+        if output.get("backend") == "llama_cpp":
+            import cpp_decider
+            fields += cpp_decider.PUBLIC_IDENTITY_FIELDS
+        clean["runtime"] = {key: runtime[key] for key in fields if key in runtime}
         resources = runtime.get("resources")
         if isinstance(resources, dict):
-            fields = ("ram_available_bytes", "ram_required_bytes", "commit_available_bytes", "commit_required_bytes",
-                      "cuda_available_bytes", "cuda_total_bytes", "cuda_required_bytes")
-            clean["runtime"]["resources"] = {key: resources[key] for key in fields if isinstance(resources.get(key), (int, float))}
+            clean["runtime"]["resources"] = public_error({"details": resources})["details"]
     return clean
 
 

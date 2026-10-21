@@ -17,11 +17,11 @@ MESSAGES = {
     "artifact_mismatch": "モデルまたは公式ソースの照合に失敗しました。モデルの準備をやり直してください。",
     "insufficient_memory": "空きメモリが不足しているため、モデルを読み込んでいません。",
     "resource_check_failed": "空きメモリを確認できません。環境の状態を確認してください。",
-    "device_unavailable": "CUDAを利用できません。NVIDIAドライバーとGPU用PyTorchの導入を確認してください。",
+    "device_unavailable": "指定したGPUを利用できません。ドライバーと、その実行方式に対応したワーカーを確認してください。",
     "precision_unsupported": "指定した精度の演算を確認できません。別精度へは切り替えていません。",
     "precision_override_error": "公式ローダーの精度指定が想定と異なるため、読み込みを停止しました。",
     "identity_mismatch": "指定したDeciderのモデル・版・実行方式と応答が一致しません。",
-    "launch_error": "専用PythonでDeciderを起動できませんでした。",
+    "launch_error": "Deciderの専用ワーカーを起動できませんでした。",
     "startup_error": "Deciderの起動に失敗しました。専用環境とモデルの準備を確認してください。",
     "worker_exited": "ローカルDeciderのプロセスが終了しました。",
     "worker_io_error": "Deciderとの通信が切れました。推論結果は得られていません。",
@@ -35,13 +35,15 @@ MESSAGES = {
     "invalid_request": "Deciderへの要求形式を確認してください。",
     "invalid_answer": "Deciderの判定結果を読み取れませんでした。",
     "cuda_out_of_memory": "推論用のVRAMが不足しました。文章を短くして再実行してください。",
+    "allocation_failed": "PPDDのメモリを確保できませんでした。空きRAMとGPUの使用状況を確認してください。",
     "inference_error": "Deciderの推論を完了できませんでした。",
 }
 EXCEPTION_TYPES = frozenset({"OSError", "PermissionError", "FileNotFoundError", "ImportError", "ModuleNotFoundError",
     "RuntimeError", "ValueError", "TypeError", "KeyError", "MemoryError", "JSONDecodeError", "UnicodeDecodeError",
     "LengthError", "RequestError", "OutOfMemoryError", "WorkerError"})
 RESOURCE_FIELDS = frozenset({"ram_available_bytes", "ram_required_bytes", "commit_available_bytes", "commit_required_bytes",
-                            "cuda_available_bytes", "cuda_total_bytes", "cuda_required_bytes"})
+                            "cuda_available_bytes", "cuda_total_bytes", "cuda_required_bytes",
+                            "metal_available_bytes", "metal_total_bytes", "gpu_margin_bytes"})
 OPERATIONS = frozenset({"process_stop", "taskkill", "wait_after_taskkill", "startup_exit_without_protocol_eof"})
 RECOVERABLE_CODES = frozenset({"timeout", "request_too_long", "invalid_request", "cuda_out_of_memory"})
 

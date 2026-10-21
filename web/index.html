@@ -132,16 +132,18 @@
           </section>
           <section class="settings-section" aria-labelledby="connection-title">
             <h3 id="connection-title">接続状態</h3>
-            <div class="settings-grid"><div class="field-group"><label for="decider-device">PPDDの実行先</label><select id="decider-device"><option value="cpu">CPU（GPU不要）</option><option value="cuda:0">NVIDIA GPU（CUDA）</option></select></div><div class="field-group"><button id="save-decider-device" type="button" class="button button-small button-secondary">実行先を保存</button></div></div>
+            <div class="settings-grid"><div class="field-group"><label for="decider-backend">PPDDの実行方式</label><select id="decider-backend"><option value="llama_cpp">C++・公式Q8</option><option value="pytorch">従来版・PyTorch</option></select></div><div class="field-group"><button id="save-decider-backend" type="button" class="button button-small button-secondary">実行方式を保存</button></div></div>
+            <p id="decider-backend-status" class="field-description" role="status" aria-live="polite"></p>
+            <div class="settings-grid"><div class="field-group"><label for="decider-device">PPDDの実行先</label><select id="decider-device"><option value="auto">GPU優先・メモリに合わせて自動</option><option value="cpu">CPU（GPU不要）</option><option value="cuda:0">NVIDIA GPU優先（CUDA）</option><option value="metal">Apple GPU優先（Metal）</option></select></div><div class="field-group"><button id="save-decider-device" type="button" class="button button-small button-secondary">実行先を保存</button></div></div>
             <p id="decider-device-status" class="field-description" role="status" aria-live="polite"></p>
-            <p class="field-description">GPU版は空きVRAM 11GiB・空きRAM 12GiB以上が目安です。保存時と読み込み時に確認します。Apple SiliconはCPUを選んでください。</p>
+            <p class="field-description">C++・Q8版は空きRAM 8GiB以上、Windowsのコミット余裕3GiB以上が目安です。GPUの空きに応じてCPUを併用し、メモリ不足時はGPUの使用を減らして再試行します。従来版はCPUまたはCUDAの指定が必要です。</p>
             <div class="availability-row"><span>Yomiyasuの規則点検</span><span id="rules-stage" class="stage-badge">確認中</span></div><div class="availability-row"><span>修正案の生成</span><span id="generator-stage" class="stage-badge">確認中</span></div><div class="availability-row"><span>Deciderの意味判定</span><span id="decider-stage" class="stage-badge stage-muted">確認中</span></div>
             <p id="decider-note" class="field-description">接続状態を確認しています。</p><div class="settings-actions"><button id="refresh-decider" type="button" class="text-button" disabled>接続状態を更新</button><button id="release-decider" type="button" class="text-button" disabled>判定モデルのメモリを解放</button><a href="https://github.com/studio-yebisu/yomiyasu-studio/blob/main/docs/INSTALL.md" target="_blank" rel="noreferrer noopener">ローカルDeciderの準備</a></div>
             <p id="decider-resource-error" class="resource-error" hidden></p>
             <details id="decider-setup-guide" class="setup-guide"><summary>PPDDの準備と必要なPC</summary>
               <p>PPDDはPerplexity Decider Flashです。意味判定はPC内で行い、PerplexityのAPIキーは使いません。Sarashina校正では準備が必要です。</p>
-              <ul><li>CPU版：空きRAM 11GiB以上。Windowsはコミット余裕も11GiB以上。GPUは不要です。</li><li>初回取得：モデル約9.10GB。依存と取得中の一時領域も使うため、空きディスク30GiBを目安にします。</li><li>Mac：Apple Silicon・総RAM 24GiB以上向けの実験設定。空きRAMは別途11GiB以上必要で、実機は未検証です。</li></ul>
-              <p>初回はPythonとuvを用意し、ターミナルで準備します。アプリ内での自動導入には未対応です。</p>
+              <ul><li>C++・Q8版：モデル約5.16GB、空きRAM 8GiB以上。初回取得用の空きディスクは12GiB以上が目安です。Windows配布版にワーカーを同梱します。</li><li>NVIDIA GPUを優先し、空きVRAMに合わせてCPUを併用します。GPUが使えない場合は自動モードでCPUを使います。</li><li>Mac：Apple Silicon・総RAM 24GB程度を対象にMetalへ対応。空きRAMは別途必要で、Mac実機の推論は未検証です。</li><li>従来版：モデル約9.10GBとPyTorchの準備が必要です。CPU BF16は空きRAM 11GiB以上、CUDAは空きVRAM 11GiB・RAM 12GiB以上が目安です。</li></ul>
+              <p>初回のモデル取得はPythonを用意してターミナルで行います。MacではCMakeとC++コンパイラーも必要です。詳しい手順は導入案内にあります。</p>
               <p><a href="https://github.com/studio-yebisu/yomiyasu-studio/blob/main/docs/INSTALL.md" target="_blank" rel="noreferrer noopener">Windows・Macの導入手順を開く</a></p>
               <p class="field-description">準備後に「接続状態を更新」を押します。総メモリ容量だけで動作を保証するものではありません。</p>
             </details>

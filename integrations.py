@@ -21,7 +21,8 @@ MANIFEST = PERSISTENT_ROOT / "codex-integration.json"
 IS_WINDOWS = os.name == "nt"
 PUBLIC_DOCS = ("PLUGINS.md", "PROVIDERS.md", "DECIDER_RUNTIME.md", "SOURCES.md", "STATUS.md", "WINDOWS.md", "INSTALL.md")
 PUBLIC_ROOT_FILES = ("README.md", "THIRD_PARTY_NOTICES.md", "CONTRIBUTING.md", "SECURITY.md", "LICENSE", "verification.json")
-PUBLIC_EVALUATION = ("README.md", "cases.json", "controls.json", "runtime-results.json")
+PUBLIC_EVALUATION = ("README.md", "cases.json", "controls.json", "runtime-results.json", "cpp-parity-inputs.json", "cpp-parity-results.json")
+PUBLIC_CPP = ("README.md", "manifest.json", "PERPLEXITY-LICENSE.txt", "PERPLEXITY-NOTICE.txt")
 
 
 class IntegrationError(ValueError):
@@ -276,6 +277,8 @@ def _skill_contents():
             files["references/docs/" + name] = (RESOURCE_ROOT / "docs" / name).read_bytes()
         for name in PUBLIC_EVALUATION:
             files["references/evaluation/" + name] = (RESOURCE_ROOT / "evaluation" / name).read_bytes()
+        for name in PUBLIC_CPP:
+            files["references/cpp/" + name] = (RESOURCE_ROOT / "cpp" / name).read_bytes()
         import yomiyasu_updates
         vendor = yomiyasu_updates.current_root()
         metadata = (vendor / "UPSTREAM.json").read_bytes()

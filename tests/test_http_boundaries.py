@@ -105,6 +105,13 @@ class HttpBoundaryTests(unittest.TestCase):
         finally:
             app.Handler.semaphore.release()
 
+    def test_browser_backend_setting_accepts_only_a_prepared_name(self):
+        headers = {'Content-Type': 'application/json'}
+        with patch.object(app.decider_runtime, 'local_set_backend', return_value={'status': 'saved'}) as backend:
+            self.assertEqual(self.request('POST', '/api/decider/settings', '{"backend":"llama_cpp"}', headers)[0], 200)
+            backend.assert_called_once_with('llama_cpp')
+            self.assertEqual(self.request('POST', '/api/decider/settings', '{"backend":"llama_cpp","cpp_executable":"other"}', headers)[0], 400)
+
     def test_body_limit_accepts_exact_maximum_and_rejects_empty_or_negative_lengths(self):
         prefix, suffix = b'{"text":"', b'"}'
         raw = prefix + b"x" * (256000 - len(prefix) - len(suffix)) + suffix

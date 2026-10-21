@@ -1839,5 +1839,546 @@
       "Native GUI launched and accessibility observed; foreground visual recording deferred by user.",
       "Examples are not a broad proofreading quality guarantee."
     ]
+  },
+  "cpp_q8_v0216": {
+    "version": "0.2.16",
+    "dates": [
+      "2026-10-21",
+      "2026-10-22"
+    ],
+    "model_manifest": {
+      "schema_version": 1,
+      "worker_protocol": "yomiyasu-ppdd-jsonl-v1",
+      "llama_commit": "0a1ef309cdbb9f2024f58a38fb4c42352c5db569",
+      "llama_release": "b11796",
+      "model": "pplx-decider-flash-v1.2",
+      "reference_revision": "6d771ad7b5ecff5e93b8fc7b90d4c5ccc341954d",
+      "gguf_repo": "perplexity-ai/pplx-decider-flash-gguf-v1.2",
+      "gguf_revision": "2514d5f0b7fbbe1ee1bfec9ffb5801a60289b4cc",
+      "gguf_file": "decider-flash-v1.2-q8_0.gguf",
+      "gguf_bytes": 5157837472,
+      "gguf_sha256": "ffb27ade8976765b0e6943a0b7f5f3fd0f7042d45ad90256a76d608bcd3942c2",
+      "quantization": "Q8_0",
+      "decision_protocol_version": 3,
+      "model_license": "Apache-2.0",
+      "runtime_license": "MIT"
+    },
+    "consultation": {
+      "model": "claude-opus-5-5",
+      "design_review": "executed",
+      "focused_inference_review": "executed",
+      "full_code_review_timeout_not_treated_as_approval": true
+    },
+    "protocol_exact_cases": 16,
+    "cpu_parity": {
+      "reference": "pytorch CPU BF16 (not official FP32)",
+      "candidate": "official Q8_0, llama.cpp, CPU; shared core CRT build",
+      "cases": 16,
+      "choice_agreement": 16,
+      "input_token_agreement": 16,
+      "max_probability_delta": 0.012363797167990409,
+      "median_reference_latency_ms": 2664.8,
+      "median_cpp_latency_ms": 4508.755,
+      "rows": [
+        {
+          "id": "number-change",
+          "agree": true,
+          "max_probability_delta": 0.00848751971135775,
+          "tokens_equal": true
+        },
+        {
+          "id": "negation-loss",
+          "agree": true,
+          "max_probability_delta": 0.0014164802461793524,
+          "tokens_equal": true
+        },
+        {
+          "id": "conditional-scope",
+          "agree": true,
+          "max_probability_delta": 0.0002776358506196841,
+          "tokens_equal": true
+        },
+        {
+          "id": "certainty-strengthening",
+          "agree": true,
+          "max_probability_delta": 0.0036439956658053108,
+          "tokens_equal": true
+        },
+        {
+          "id": "invented-actor",
+          "agree": true,
+          "max_probability_delta": 0.005748265627828819,
+          "tokens_equal": true
+        },
+        {
+          "id": "actor-recipient-swap",
+          "agree": true,
+          "max_probability_delta": 0.0008551057564691877,
+          "tokens_equal": true
+        },
+        {
+          "id": "already-good-noop",
+          "agree": true,
+          "max_probability_delta": 0.0006074299633084257,
+          "tokens_equal": true
+        },
+        {
+          "id": "technical-clear-rewrite",
+          "agree": true,
+          "max_probability_delta": 0.001446523632852803,
+          "tokens_equal": true
+        },
+        {
+          "id": "fiction-metaphor-retained",
+          "agree": true,
+          "max_probability_delta": 0.0031383317552537843,
+          "tokens_equal": true
+        },
+        {
+          "id": "dialogue-dialect-erased",
+          "agree": true,
+          "max_probability_delta": 0.012363797167990409,
+          "tokens_equal": true
+        },
+        {
+          "id": "ambiguous-referent",
+          "agree": true,
+          "max_probability_delta": 0.0019964513533611283,
+          "tokens_equal": true
+        },
+        {
+          "id": "auxiliary-kana",
+          "agree": true,
+          "max_probability_delta": 0.005521094051259556,
+          "tokens_equal": true
+        },
+        {
+          "id": "token-edge-0",
+          "agree": true,
+          "max_probability_delta": 0.005573681112741813,
+          "tokens_equal": true
+        },
+        {
+          "id": "token-edge-1",
+          "agree": true,
+          "max_probability_delta": 0.0014072096298775039,
+          "tokens_equal": true
+        },
+        {
+          "id": "token-edge-2",
+          "agree": true,
+          "max_probability_delta": 0.0003190131261969764,
+          "tokens_equal": true
+        },
+        {
+          "id": "token-edge-3",
+          "agree": true,
+          "max_probability_delta": 0.0004198571670056706,
+          "tokens_equal": true
+        }
+      ]
+    },
+    "cuda_parity": {
+      "reference": "pytorch CPU BF16",
+      "candidate": "official Q8_0, CUDA partial offload",
+      "cases": 16,
+      "choice_agreement": 16,
+      "max_probability_delta": 0.012076715873824417,
+      "gpu_layers": [
+        3
+      ],
+      "cpu_q8_vs_cuda_q8_max_delta": 0.0023968480150630134,
+      "gpu_margin_mib": 512,
+      "note": "Validation override only; app default reserve is 1024 MiB. Other GPU work stayed running.",
+      "rows": [
+        {
+          "id": "number-change",
+          "agree": true,
+          "max_probability_delta": 0.007658769935051546,
+          "tokens_equal": true
+        },
+        {
+          "id": "negation-loss",
+          "agree": true,
+          "max_probability_delta": 0.0013283009515614452,
+          "tokens_equal": true
+        },
+        {
+          "id": "conditional-scope",
+          "agree": true,
+          "max_probability_delta": 0.0005296675384874883,
+          "tokens_equal": true
+        },
+        {
+          "id": "certainty-strengthening",
+          "agree": true,
+          "max_probability_delta": 0.0020031159496493034,
+          "tokens_equal": true
+        },
+        {
+          "id": "invented-actor",
+          "agree": true,
+          "max_probability_delta": 0.00806729016729979,
+          "tokens_equal": true
+        },
+        {
+          "id": "actor-recipient-swap",
+          "agree": true,
+          "max_probability_delta": 0.0009140056648552219,
+          "tokens_equal": true
+        },
+        {
+          "id": "already-good-noop",
+          "agree": true,
+          "max_probability_delta": 0.0006097652251558783,
+          "tokens_equal": true
+        },
+        {
+          "id": "technical-clear-rewrite",
+          "agree": true,
+          "max_probability_delta": 0.0009864412650749665,
+          "tokens_equal": true
+        },
+        {
+          "id": "fiction-metaphor-retained",
+          "agree": true,
+          "max_probability_delta": 0.0034121569117837106,
+          "tokens_equal": true
+        },
+        {
+          "id": "dialogue-dialect-erased",
+          "agree": true,
+          "max_probability_delta": 0.012076715873824417,
+          "tokens_equal": true
+        },
+        {
+          "id": "ambiguous-referent",
+          "agree": true,
+          "max_probability_delta": 0.002970220220128106,
+          "tokens_equal": true
+        },
+        {
+          "id": "auxiliary-kana",
+          "agree": true,
+          "max_probability_delta": 0.005204894782203873,
+          "tokens_equal": true
+        },
+        {
+          "id": "token-edge-0",
+          "agree": true,
+          "max_probability_delta": 0.005185436448804537,
+          "tokens_equal": true
+        },
+        {
+          "id": "token-edge-1",
+          "agree": true,
+          "max_probability_delta": 0.0012543846888222188,
+          "tokens_equal": true
+        },
+        {
+          "id": "token-edge-2",
+          "agree": true,
+          "max_probability_delta": 0.00028226222528918155,
+          "tokens_equal": true
+        },
+        {
+          "id": "token-edge-3",
+          "agree": true,
+          "max_probability_delta": 0.0003841647789710502,
+          "tokens_equal": true
+        }
+      ]
+    },
+    "fault_injection_and_backend_settings_tests": 12,
+    "web_ui_tests": 50,
+    "http_tests": 15,
+    "existing_decider_tests": 68,
+    "runtime_path_tests": 7,
+    "desktop_build_tests": 14,
+    "input_recovery": {
+      "unicode_model_path": true,
+      "invalid_question_recoverable": true,
+      "too_long_rejected_without_truncation": true,
+      "same_owned_worker_reused": true
+    },
+    "real_sarashina_novel": {
+      "version": "0.2.16",
+      "characters": 2860,
+      "elapsed_seconds": 135.02,
+      "stages": {
+        "rules": "executed",
+        "generation": "executed",
+        "decider": "executed"
+      },
+      "edits": 4,
+      "decider": {
+        "model": "pplx-decider-flash-v1.2",
+        "revision": "6d771ad7b5ecff5e93b8fc7b90d4c5ccc341954d",
+        "backend": "local",
+        "device": "cuda:0",
+        "executed": 4,
+        "total": 4,
+        "precision": "q8_0",
+        "precision_override": true,
+        "reference_path": "llama_cpp_protocol_v3_q8_0",
+        "runtime_backend": "llama_cpp",
+        "quantization": "Q8_0",
+        "gguf_revision": "2514d5f0b7fbbe1ee1bfec9ffb5801a60289b4cc",
+        "gguf_sha256": "ffb27ade8976765b0e6943a0b7f5f3fd0f7042d45ad90256a76d608bcd3942c2",
+        "llama_commit": "0a1ef309cdbb9f2024f58a38fb4c42352c5db569",
+        "gpu_layers": 3,
+        "cpu_assisted": true,
+        "oom_retries": 0
+      },
+      "decisions": [
+        {
+          "before": "を",
+          "after": "",
+          "choice": "preserved"
+        },
+        {
+          "before": "な",
+          "after": "なか",
+          "choice": "preserved"
+        },
+        {
+          "before": "事",
+          "after": "こと",
+          "choice": "preserved"
+        },
+        {
+          "before": "だ",
+          "after": "た",
+          "choice": "preserved"
+        }
+      ],
+      "check": "executed",
+      "verification": "executed",
+      "exact_export": true,
+      "seeded_typos_remaining": [
+        "読み返して読んだ"
+      ]
+    },
+    "windows_runtime_build": {
+      "cuda_toolkit": "12.8",
+      "architectures": [
+        "75",
+        "80",
+        "86",
+        "89",
+        "90"
+      ],
+      "core_shared_crt": true,
+      "cuda_plugin_crt": "static with C ABI; core FILE* uses shared CRT",
+      "runtime_inventory_file": "cpp/runtime/BUILD.json in binary distribution"
+    },
+    "limitations": [
+      "Synthetic comparison is not a broad proofreading benchmark or official FP32 comparison.",
+      "One seeded redundant expression was missed by Sarashina in this run. PPDD judged the supplied proposals.",
+      "Full GPU offload and Mac hardware not validated.",
+      "Recording deferred by user."
+    ],
+    "cuda_final_portable": {
+      "reference": "pytorch CPU BF16",
+      "candidate": "final portable CUDA worker, shared core CRT and C ABI CUDA plugin, authenticated shared service",
+      "cases": 16,
+      "choice_agreement": 16,
+      "input_token_agreement": 16,
+      "max_probability_delta": 0.01223323349560912,
+      "gpu_layers": [
+        4
+      ],
+      "cpu_q8_vs_cuda_q8_max_delta": 0.003318596439253807,
+      "gpu_margin_mib": 1024,
+      "rows": [
+        {
+          "id": "number-change",
+          "agree": true,
+          "max_probability_delta": 0.00853817825438885,
+          "tokens_equal": true
+        },
+        {
+          "id": "negation-loss",
+          "agree": true,
+          "max_probability_delta": 0.0015425587174467958,
+          "tokens_equal": true
+        },
+        {
+          "id": "conditional-scope",
+          "agree": true,
+          "max_probability_delta": 0.0004985708436274772,
+          "tokens_equal": true
+        },
+        {
+          "id": "certainty-strengthening",
+          "agree": true,
+          "max_probability_delta": 0.003498956393235164,
+          "tokens_equal": true
+        },
+        {
+          "id": "invented-actor",
+          "agree": true,
+          "max_probability_delta": 0.009066862067082626,
+          "tokens_equal": true
+        },
+        {
+          "id": "actor-recipient-swap",
+          "agree": true,
+          "max_probability_delta": 0.0006345592727582394,
+          "tokens_equal": true
+        },
+        {
+          "id": "already-good-noop",
+          "agree": true,
+          "max_probability_delta": 0.0005223833830575453,
+          "tokens_equal": true
+        },
+        {
+          "id": "technical-clear-rewrite",
+          "agree": true,
+          "max_probability_delta": 0.0026438976736695707,
+          "tokens_equal": true
+        },
+        {
+          "id": "fiction-metaphor-retained",
+          "agree": true,
+          "max_probability_delta": 0.00342153612095112,
+          "tokens_equal": true
+        },
+        {
+          "id": "dialogue-dialect-erased",
+          "agree": true,
+          "max_probability_delta": 0.01223323349560912,
+          "tokens_equal": true
+        },
+        {
+          "id": "ambiguous-referent",
+          "agree": true,
+          "max_probability_delta": 0.0010656810792658011,
+          "tokens_equal": true
+        },
+        {
+          "id": "auxiliary-kana",
+          "agree": true,
+          "max_probability_delta": 0.005508967981266544,
+          "tokens_equal": true
+        },
+        {
+          "id": "token-edge-0",
+          "agree": true,
+          "max_probability_delta": 0.003965367283388699,
+          "tokens_equal": true
+        },
+        {
+          "id": "token-edge-1",
+          "agree": true,
+          "max_probability_delta": 0.0018680239535062704,
+          "tokens_equal": true
+        },
+        {
+          "id": "token-edge-2",
+          "agree": true,
+          "max_probability_delta": 0.0003724412495650642,
+          "tokens_equal": true
+        },
+        {
+          "id": "token-edge-3",
+          "agree": true,
+          "max_probability_delta": 0.0005690787890672393,
+          "tokens_equal": true
+        }
+      ]
+    },
+    "frozen_http_review": {
+      "version": "0.2.16",
+      "edits": 5,
+      "decider": {
+        "model": "pplx-decider-flash-v1.2",
+        "revision": "6d771ad7b5ecff5e93b8fc7b90d4c5ccc341954d",
+        "backend": "local",
+        "device": "cuda:0",
+        "executed": 5,
+        "total": 5,
+        "precision": "q8_0",
+        "precision_override": true,
+        "reference_path": "llama_cpp_protocol_v3_q8_0",
+        "runtime_backend": "llama_cpp",
+        "quantization": "Q8_0",
+        "gguf_revision": "2514d5f0b7fbbe1ee1bfec9ffb5801a60289b4cc",
+        "gguf_sha256": "ffb27ade8976765b0e6943a0b7f5f3fd0f7042d45ad90256a76d608bcd3942c2",
+        "llama_commit": "0a1ef309cdbb9f2024f58a38fb4c42352c5db569",
+        "gpu_layers": 5,
+        "cpu_assisted": true,
+        "oom_retries": 0
+      },
+      "host_supplied_additional_proposal": true,
+      "all_executed": true,
+      "choices": [
+        "preserved",
+        "preserved",
+        "preserved",
+        "preserved",
+        "preserved"
+      ],
+      "exact_export": true,
+      "elapsed_seconds": 72.82,
+      "remaining_seeded_typos": []
+    },
+    "integration_tests": 22,
+    "windows_cli_sha256": "5b099e260d1104c194a90392bfaaeb00766958a8b182df49b58e5b783faf2061",
+    "installed_mcp": {
+      "version": "0.2.16",
+      "stdio_initialized": true,
+      "configured_backend": "llama_cpp",
+      "decision": {
+        "status": "executed",
+        "choice": "preserved",
+        "backend": "local",
+        "model": "pplx-decider-flash-v1.2",
+        "revision": "6d771ad7b5ecff5e93b8fc7b90d4c5ccc341954d",
+        "device": "cuda:0",
+        "latency_ms": 4228.2285,
+        "precision": "q8_0",
+        "precision_override": true,
+        "reference_path": "llama_cpp_protocol_v3_q8_0",
+        "quantization": "Q8_0",
+        "gguf_revision": "2514d5f0b7fbbe1ee1bfec9ffb5801a60289b4cc",
+        "gguf_sha256": "ffb27ade8976765b0e6943a0b7f5f3fd0f7042d45ad90256a76d608bcd3942c2",
+        "llama_commit": "0a1ef309cdbb9f2024f58a38fb4c42352c5db569",
+        "worker_protocol": "yomiyasu-ppdd-jsonl-v1",
+        "protocol_version": 3,
+        "requested_device": "auto",
+        "gpu_layers": 5,
+        "total_layers": 32,
+        "cpu_assisted": true,
+        "oom_retries": 0,
+        "runtime_backend": "llama_cpp",
+        "scope": "document",
+        "context_characters": 20
+      },
+      "crlf_preserved": true,
+      "exact_final": true,
+      "model_and_sha_verified": true
+    },
+    "native_gui_smoke": {
+      "status": "passed",
+      "renderer": "edgechromium",
+      "rules_visible": true,
+      "cloud_calls": 0,
+      "model_calls": 0
+    },
+    "frozen_cli_smoke": {
+      "status": "passed",
+      "crlf_preserved": true
+    },
+    "installed_bundle": {
+      "version": "0.2.16",
+      "cli_sha256": "5b099e260d1104c194a90392bfaaeb00766958a8b182df49b58e5b783faf2061",
+      "verified_files": 245,
+      "other_codex_settings_preserved": true,
+      "app_local_cpp_worker_selected": true
+    },
+    "duplicate_cuda_bytes_removed": 792648704,
+    "installed_service_executable_verified": true
   }
 }

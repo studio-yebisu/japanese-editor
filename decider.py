@@ -85,8 +85,18 @@ def availability():
             "revision": state.get("revision", decider_runtime.REVISION),
             "device": state.get("device"), "backend": "local", "loaded": state.get("loaded", False),
             "max_length": state.get("max_length", 8192),
-            **{key: state[key] for key in ("precision", "precision_override", "reference_path") if key in state},
+            "prepared_backends": decider_runtime.prepared_backends(),
+            **runtime_identity(state),
             "error": state.get("error") or state.get("last_error")}
+
+
+def runtime_identity(state):
+    keys = ("precision", "precision_override", "reference_path")
+    if state.get("backend") == "llama_cpp":
+        import cpp_decider
+        keys += tuple(key for key in cpp_decider.PUBLIC_IDENTITY_FIELDS if key != "backend")
+    return {**{key: state[key] for key in keys if key in state},
+            "runtime_backend": state.get("backend", "pytorch")}
 
 
 def _motion_for_edits(text, edits):
@@ -189,7 +199,8 @@ def attach(output, text):
             edit["decision"] = {"status": "executed", "choice": choice, "backend": "local",
                                 "model": response["model"], "revision": response["revision"],
                                 "device": response["device"], "latency_ms": response.get("latency_ms"),
-                                **{key: response[key] for key in ("precision", "precision_override", "reference_path") if key in response}, **context}
+                                **runtime_identity(response), **context}
+            info.update(device=response["device"], **runtime_identity(response))
             update_motion(index, "executed", choice)
             successes += 1
         except decider_runtime.DeciderRuntimeError as exc:
@@ -208,7 +219,7 @@ def attach(output, text):
     output["stages"]["decider"] = "executed" if successes == len(output["edits"]) else "partial" if successes else "deferred" if failure is None or failure.get("code") == "deadline" else "unavailable"
     output["decider"] = {"model": info["model"], "revision": info["revision"], "backend": "local",
                          "device": info["device"], "executed": successes, "total": len(output["edits"])}
-    output["decider"].update({key: info[key] for key in ("precision", "precision_override", "reference_path") if key in info})
+    output["decider"].update({key: info[key] for key in ("precision", "precision_override", "reference_path", "runtime_backend", "quantization", "gguf_revision", "gguf_sha256", "llama_commit", "gpu_layers", "cpu_assisted", "oom_retries") if key in info})
     output["notes"].append("Deciderの結果は意味が変わったかどうかについてのモデルの判定です。")
     if output.get("generator", {}).get("requested_provider") == "sarashina":
         output["notes"].append("Sarashinaの校正後の本文と原文をアプリ内で比較し、変更位置を取り出しています。変更の説明はDeciderの判定理由ではありません。")

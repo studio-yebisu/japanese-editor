@@ -4,14 +4,14 @@ Yomiyasu Studioは日本語の文章を整え、どこを変えたか左右で�
 
 ## ダウンロード
 
-[最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/tag/v0.2.15)
+[最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/tag/v0.2.16)
 
-| 使う環境 | v0.2.15のダウンロード | 提供状況 |
+| 使う環境 | v0.2.16のダウンロード | 提供状況 |
 | --- | --- | --- |
-| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.15/YomiyasuStudio-windows-x64-0.2.15.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
-| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.15/YomiyasuStudio-source-0.2.15.zip) | Pythonで起動する実験版。Mac実機は未検証 |
+| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.16/YomiyasuStudio-windows-x64-0.2.16.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
+| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.16/YomiyasuStudio-source-0.2.16.zip) | Pythonで起動する実験版。Mac実機は未検証 |
 
-ベータ版です。v0.2.15では、Sarashinaの応答の扱いを修正し、長文校正が修正位置の照合エラーで止まる問題に対応しました。PPDDは設定からCPU／NVIDIA GPUを選べます。[GPU用の準備と必要メモリ](docs/INSTALL.md#nvidia-gpuを使う場合)を確認してください。画面上部の「校正AI」からSarashinaとGeminiを切り替えられます。モデルは誤字を見逃したり、誤った修正を提案したりすることがあります。Deciderの意味判定も、誤字がないことや文章品質の保証にはなりません。Mac実機は未検証です。[確認した範囲](docs/STATUS.md)
+ベータ版です。v0.2.16では、公式Q8モデルとllama.cppを使うPPDDのC++ワーカーを追加しました。NVIDIA GPUを優先し、空きメモリに合わせてCPUを併用します。Apple Silicon向けのMetalにも対応する実装ですが、Mac実機は未検証です。[準備と必要メモリ](docs/INSTALL.md)を確認してください。画面上部の「校正AI」からSarashinaとGeminiを切り替えられます。モデルは誤字を見逃したり、誤った修正を提案したりすることがあります。意味判定も文章品質の保証にはなりません。[確認した範囲](docs/STATUS.md)
 
 起動時にYomiyasu公式の更新を裏で確認し、対応する新版があれば校正方針・参照資料・検査スクリプトをまとめて更新します。同梱版も2.1.0へ更新しました。**旧版からはアプリと共有サービスの両方を更新し、サービスを起動し直してください。** MCPも新版へ登録し直して、新しい会話で使います。[更新と接続の案内](docs/PLUGINS.md#共有サービスの更新)
 
@@ -38,7 +38,7 @@ Mac用の `.app` はまだ用意していません。ブラウザーで使うソ
 3. 「ターミナル」を開きます。ダウンロード先が通常の「ダウンロード」フォルダーなら、次を1行ずつ実行します。
 
 ```sh
-cd "$HOME/Downloads/YomiyasuStudio-source-0.2.15"
+cd "$HOME/Downloads/YomiyasuStudio-source-0.2.16"
 python3 --version
 python3 -B app.py serve
 ```
@@ -53,7 +53,7 @@ python3 -B app.py serve
 
 1. [SarashinaのAPIキー画面](https://chat.sarashina.ai/dashboard/api-keys)へアクセスし、Googleアカウントで登録・ログインします。「API Keys」で新しいキーを作成してコピーします。現在は無料ベータで、地域・回数・入出力の利用条件があります。[公式の取得手順](https://docs.sarashina.ai/introduction#1-api-キーの取得) / [利用条件の案内](docs/PROVIDERS.md#sarashina-の利用条件)
 2. アプリ右上の「設定」で「Sarashina」を選び、モデルを `sarashina3-mini` にしてAPIキーを保存します。キーはWindowsの資格情報マネージャー、Macのキーチェーンで管理します。チャットやGitHubへキーを貼らないでください。
-3. [Windows・MacのDecider導入手順](docs/INSTALL.md)に従い、固定したFlashモデル約9.10GBと専用環境を準備します。これは利用者のPCで動き、PerplexityのAPIキーは不要です。CPU BF16・短い文脈の構成では空きRAM約11GiBが必要です。Mac実機は未検証です。
+3. [Windows・MacのDecider導入手順](docs/INSTALL.md)に従い、公式Q8モデル約5.16GBとC++ワーカーを準備します。これは利用者のPCで動き、PerplexityのAPIキーは不要です。空きRAM 8GiB以上が目安です。Mac実機は未検証です。
 4. 「接続状態を更新」を押し、生成と意味判定の設定を確認します。Sarashinaの校正では生成と意味判定をセットで使います。
 
 生成前にDeciderの設定を確認し、未設定なら原文をSarashinaへ送信しません。生成後に意味判定が失敗した場合は、原文と修正候補を残し、コピー・保存を止めます。原文を変更したり、古い判定を新しい文章へ流用したりしません。
@@ -137,7 +137,7 @@ Macのソース版では、上で展開した `app.py` のあるフォルダー�
 python3 -B install.py
 ```
 
-既存のCodex設定をこのPC内へバックアップしてから、アプリの設定とスキルを加えます。同名の別設定や利用者が変更したスキルは上書きしません。この登録で約9GBのモデルを取得することはありません。 登録後は新しいCodexの会話を開き、たとえば次のように依頼します。
+既存のCodex設定をこのPC内へバックアップしてから、アプリの設定とスキルを加えます。同名の別設定や利用者が変更したスキルは上書きしません。この登録では校正モデルを取得しません。 登録後は新しいCodexの会話を開き、たとえば次のように依頼します。
 
 > studio-yebisu-japanese-editorを使って、次の文章をブログ向けに整えて。意味と口調を残し、変更点と理由も見せて。
 
@@ -147,40 +147,33 @@ python3 -B install.py
 
 ## ローカルの意味判定を準備する（Sarashinaでは必須）
 
-Decider Flashは用意した原文と修正案を比較する判断モデルです。使う場合だけ、約 **9.10GBの固定モデル**と専用環境を別途取得します。Pythonと、環境の準備に使う `uv` が必要です。[Python公式](https://www.python.org/downloads/)と [uv公式の導入手順](https://docs.astral.sh/uv/getting-started/installation/)を参照し、Python 3.13とuvを用意してください。
+Decider Flashは原文と修正案を比較する判断モデルです。C++版は公式Q8モデル約 **5.16GB**を別途取得します。モデル重みやAPIキーは配布物に含めません。初回の取得には[Python 3.12以降](https://www.python.org/downloads/)が必要です。C++版の準備にPyTorchやuvは使いません。
 
 ### Windows
 
-`YomiyasuStudio.exe` があるフォルダーでPowerShellを開き、次を実行します。
+`YomiyasuStudio.exe`があるフォルダーでPowerShellを開き、次を実行します。
 
 ```powershell
 python --version
-uv --version
-python -B _internal/editor/tools/setup_decider.py --device cpu --cpu-dtype bfloat16 --max-length 2048
+python -B _internal/editor/tools/setup_cpp_decider.py
 ```
 
-CPU BF16・文脈2048では、**空きRAMとコミット可能メモリが各11GiB以上**必要です。コミット可能メモリにはWindowsのページファイルも関係します。詳しい条件と保管先は [Deciderの実行条件](docs/DECIDER_RUNTIME.md)にあります。
+Windows配布版にC++ワーカーとCUDA用ライブラリを同梱しています。NVIDIAドライバーは別途必要です。標準はGPU優先で、空きVRAMに合わせてCPUを併用し、GPUが使えない場合はCPUで動きます。**空きRAM 8GiB以上、初回の空きディスク12GiB以上**を目安にしてください。メモリ不足時はGPUへの割り当てを減らし、最後はCPUで自動再試行します。アプリの設定と各候補の詳細に、実際の実行先を表示します。
 
-### Mac・総メモリ24GBのApple Silicon（実験設定）
+### Mac・総メモリ24GB程度のApple Silicon（実験段階）
 
-macOS 14以降、arm64 Python 3.12〜3.14（3.14.1を除く）が対象です。ここでは3.13を推奨します。Intel MacやRosettaのx86_64 Pythonは、このプリセットの対象外です。
+Apple Silicon用のPython 3.12以降、Git、CMake 3.20以降、C++17コンパイラーを用意します。Xcode Command Line Toolsがなければ`xcode-select --install`で導入します。CMakeは[公式配布](https://cmake.org/download/)または既存のパッケージ管理環境を使ってください。
 
-ソースを展開した `app.py` のあるフォルダーで実行します。最初のコマンドは点検だけで、取得・インストール・設定変更を行いません。
+ソースを展開した`app.py`があるフォルダーで実行します。固定したllama.cppを取得してMetal用ワーカーをビルドし、公式Q8モデルを取得します。
 
 ```sh
-uv --version
-python3 -B tools/setup_decider.py --preset mac24 --check-only
+python3 -B tools/setup_cpp_decider.py --build
+python3 -B app.py serve
 ```
 
-`ready_to_setup` は導入前の条件を満たしたという表示で、推論できたという意味ではありません。条件を確認してモデルを取得する場合だけ、次を実行します。
+[http://127.0.0.1:8896](http://127.0.0.1:8896)を開きます。総メモリ24GB程度のMacを開発対象にしていますが、空きRAMは別途8GiB以上必要です。GPUとRAMは同じメモリを共有するため、別容量として足し合わせません。**Mac実機のビルド・推論・速度は未検証**です。すべての24GB搭載Macで動く保証はありません。
 
-```sh
-python3 -B tools/setup_decider.py --preset mac24
-```
-
-総RAM 24GiB以上と、現在の空きRAMの目安11GiB以上を別々に確認します。CPU BF16・文脈2048・8 threadsを使い、MPSは使いません。**Mac実機の導入・推論・速度は未検証**で、すべての24GB搭載Macで動く保証はありません。既存設定は上書きしません。
-
-準備後はアプリの「接続状態を更新」を押し、意味判定をオンにします。判定が不要になったら、設定の「判定モデルのメモリを解放」でメモリを空けられます。無操作が5分続いた場合も自動で解放します。
+準備後はアプリの「接続状態を更新」を押します。既存設定がある場合はそのまま保持するため、「PPDDの実行方式」で「C++・公式Q8」を選んで保存します。新規導入ではQ8版を使います。従来版PyTorchを準備済みなら同じ設定から戻せます。判定が不要になったら「判定モデルのメモリを解放」で空けられます。無操作が5分続いた場合も解放します。[詳しい実行条件と従来版の手順](docs/DECIDER_RUNTIME.md)
 
 ## 困ったとき
 

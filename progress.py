@@ -27,6 +27,7 @@ MESSAGES = {
     "generation_resplit": "応答を完了できなかった部分を、段落・文末でさらに分けてやり直します。",
     "decider": "Deciderを準備し、修正候補を判定しています。",
     "decider_running": "Deciderで修正候補を判定しています。",
+    "decider_oom_retry": "GPUのメモリが不足したため、GPUへ載せる量を減らして再試行しています。原文は変更していません。",
     "decider_finished": "修正候補の判定を終了しました。",
     "decider_unfinished": "判定を終了しました（未判定またはエラーの候補があります）。",
     "decider_empty": "修正候補がないため、Decider判定は実行していません。",

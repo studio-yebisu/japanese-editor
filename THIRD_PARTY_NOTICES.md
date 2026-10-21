@@ -18,7 +18,17 @@ Yomiyasu StudioはStudioYebisuが制作する独立したアプリです。nanai
 
 公式コード・重みは通常のアプリ配布へ含めず、明示的な別セットアップで取得し、取得元のLICENSE / NOTICEを保持します。依存するPyTorch、Transformers等は、その専用環境へ導入した版の条件が適用されます。CPU BF16での読み込み精度の変更は、結果の `precision_override` に記録します。公式CPU FP32との一致は実証していません。大型27B版やPerplexity hosted APIの利用権・料金は、この配布のMITに含みません。
 
-## 任意の Windows バイナリ
+## C++・公式Q8ワーカー
+
+公式Q8は[perplexity-ai/pplx-decider-flash-gguf-v1.2](https://huggingface.co/perplexity-ai/pplx-decider-flash-gguf-v1.2)の固定コミット`2514d5f0b7fbbe1ee1bfec9ffb5801a60289b4cc`を別途取得します。約5.16GBの重みは配布ZIPへ含めません。取得時にApache-2.0のLICENSE / NOTICEを保持します。プロトコルを参考にしたC++実装についても[LICENSE](cpp/PERPLEXITY-LICENSE.txt)・[NOTICE](cpp/PERPLEXITY-NOTICE.txt)を保持します。
+
+llama.cppはMIT、固定コミット`0a1ef309cdbb9f2024f58a38fb4c42352c5db569`を使います。同依存のnlohmann JSONはMIT、SHA256実装はpublic domainです。ワーカーの配布物に原典の通知と`BUILD.json`のハッシュ一覧を同梱します。
+
+Windows CUDA版にはCUDA Toolkit 12.8の`cudart64_12.dll`、`cublas64_12.dll`、`cublasLt64_12.dll`を無改変で同梱します。これらはNVIDIA CUDA EULAのAttachment Aに記載された再配布対象で、MITではありません。同梱先`_internal/editor/cpp/runtime/licenses/NVIDIA-CUDA-EULA.txt`に第三者通知を含む原文を保持します。NVIDIAドライバーとCUDA Toolkit全体は同梱しません。MacのMetal / FoundationはOSのライブラリを使います。
+
+WindowsのC++ワーカーには、MSVCの再配布用ディレクトリから`msvcp140.dll`、`vcruntime140.dll`、`vcruntime140_1.dll`を無改変で同梱します。これらもMITではありません。[Microsoftの再配布一覧](https://learn.microsoft.com/en-us/visualstudio/releases/2019/redistribution)と[ランタイムの利用条件](https://visualstudio.microsoft.com/license-terms/vs2022-cruntime/)を参照してください。同梱先の`MICROSOFT-REDISTRIBUTION.txt`にも出典を残します。
+
+## Windowsアプリの同梱部品
 
 ソース版の MCP・規則のチェック・外部サービスの呼び出し部分は Python 標準ライブラリで動きます。Antigravity CLI や Claude Code 本体は、利用者が別途導入します。Windows専用ウィンドウのバイナリには、実際に同梱した部品の通知を `_internal/editor/third_party_licenses/` に保持します。正確な版とファイルは、その配布物の通知・マニフェストを参照してください。
 

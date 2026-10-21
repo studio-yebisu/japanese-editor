@@ -10,8 +10,8 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_ROOT = ROOT / ".local/build"
-VERSION = "0.2.15"
-SOURCE_FILES = ("app.py", "desktop.py", "engine.py", "segmentation.py", "yomiyasu_updates.py", "decider.py", "decider_runtime.py", "decider_errors.py", "rpc_auth.py", "runtime_paths.py", "progress.py",
+VERSION = "0.2.16"
+SOURCE_FILES = ("app.py", "desktop.py", "engine.py", "segmentation.py", "yomiyasu_updates.py", "decider.py", "decider_runtime.py", "decider_errors.py", "cpp_decider.py", "rpc_auth.py", "runtime_paths.py", "progress.py",
                 "generators.py", "gemini_cli.py", "cli_login.py", "provider_settings.py", "mac_credentials.py", "service_runtime.py", "integrations.py",
                 "install.py", "install.ps1", "install.sh", "plugin.json",
                 "profiles.json", "LICENSE", "README.md", "NOTICES.md", "THIRD_PARTY_NOTICES.md",
@@ -19,7 +19,7 @@ SOURCE_FILES = ("app.py", "desktop.py", "engine.py", "segmentation.py", "yomiyas
                 "docs/assets/editor.png")
 PUBLIC_DOCS = ("STATUS.md", "PLUGINS.md", "PROVIDERS.md", "WINDOWS.md", "DECIDER_RUNTIME.md", "SOURCES.md",
                "INSTALL.md", "RELEASE.md", "RELEASING.md")
-SOURCE_DIRECTORIES = ("web", "vendor", "skills", ".claude-plugin", "evaluation", "tests", "tools", "build")
+SOURCE_DIRECTORIES = ("web", "vendor", "skills", ".claude-plugin", "evaluation", "tests", "tools", "build", "cpp")
 FORBIDDEN_PARTS = {".local", ".git", ".venv", "__pycache__", "node_modules", "models", "logs", "cache"}
 FORBIDDEN_SUFFIXES = {".pyc", ".pyo", ".safetensors", ".gguf", ".key", ".pem", ".log"}
 

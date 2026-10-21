@@ -143,7 +143,7 @@ def mcp():
                 validate_unicode_input(params)
                 result = {"protocolVersion": params.get("protocolVersion", "2024-11-05"),
                           "capabilities": {"tools": {"listChanged": False}},
-                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.15"},
+                          "serverInfo": {"name": "yomiyasu-studio", "version": "0.2.16"},
                           "instructions": "日本語の校正は用途・強さを選び、ホスト自身が修正候補を作りreview_proposalsで比較する。採用案だけをfinalizeへ渡し返ったtextを最終稿にする。未実行の判定を成功と扱わない。小説・台詞の作風を保つ。generate=trueは外部送信を伴うため通常のホスト校正では不要。"}
             elif method == "ping":
                 result = {}
@@ -299,7 +299,7 @@ class Handler(BaseHTTPRequestHandler):
             except (rpc_auth.AuthenticationError, ValueError):
                 return self.reject(401, "共有サービスの認証要求を確認できません。")
         if path == "/api/health":
-            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.15", "data_id": data_id(), "closing": self.server.closing})
+            return self.send(200, {"application": "studio-yebisu-japanese-editor", "protocol_version": 1, "version": "0.2.16", "data_id": data_id(), "closing": self.server.closing})
         if path == "/api/providers":
             return self.send(200, provider_settings.public_config())
         if path == "/api/yomiyasu/status":
@@ -358,12 +358,12 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 payload = self._read_json(length)
                 if route in ("/api/decider/settings", "/api/decider/release"):
-                    if route.endswith("/settings") and set(payload) != {"device"} or route.endswith("/release") and payload:
-                        raise EditorError("PPDDの実行先だけを指定してください。")
+                    if route.endswith("/settings") and set(payload) not in ({"device"}, {"backend"}) or route.endswith("/release") and payload:
+                        raise EditorError("PPDDの実行先または実行方式を1つ指定してください。")
                     if not self.semaphore.acquire(blocking=False):
                         return self.reject(409, "校正を実行中です。完了してからPPDDの設定を変更してください。")
                     try:
-                        result = decider_runtime.local_set_device(payload["device"]) if route.endswith("/settings") else decider_runtime.local_release()
+                        result = (decider_runtime.local_set_backend(payload["backend"]) if "backend" in payload else decider_runtime.local_set_device(payload["device"])) if route.endswith("/settings") else decider_runtime.local_release()
                         return self.send(200, result)
                     except decider_runtime.DeciderRuntimeError as exc:
                         return self.send(409 if exc.code in ("busy", "settings_changed") else 422,
