@@ -249,6 +249,16 @@ test("Sarashina executed warnings and zero-edit results remain exportable", asyn
   }
 });
 
+test("unchanged-only Sarashina responses preserve original and explicitly warn about missed edits", async () => {
+  const { state, get, h } = harness(); useSarashina(state); await h.loadConfig(); h.setSourceText(raw); h.invalidate();
+  state.analysis = analysisFixture(raw); state.analysis.edits = []; state.analysis.stages.decider = "not_run";
+  state.analysis.generator = { ...state.analysis.generator, result: "unchanged_proposals_only" };
+  await h.analyze();
+  assert.equal(h.getOutput(), raw);
+  assert.match(get("status-text").textContent, /有効な修正案を得られませんでした/);
+  assert.match(get("status-text").textContent, /見逃し/);
+});
+
 test("saved Gemini settings retain independent toggles and export exact corrected raw text", async () => {
   const { state, get, h } = harness(); await h.loadConfig();
   assert.equal(get("provider").value, "gemini"); assert.equal(get("provider-model").value, "gemini-3.8-flash-high");

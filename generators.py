@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from contextvars import ContextVar
+import hashlib
 import json
 import threading
 import time
@@ -17,14 +19,43 @@ MAX_REQUEST_BYTES = 1_000_000
 TIMEOUT_SECONDS = 180
 SARASHINA_ENDPOINT = "https://api.sarashina.ai/v1/chat/completions"
 SARASHINA_INTERVAL_SECONDS = 10.0
+SARASHINA_OUTPUT_TOKENS = 4000
 _SARASHINA_LOCK = threading.Lock()
 _SARASHINA_NEXT_REQUEST_AT = 0.0
+_DEADLINE = ContextVar("sarashina_generation_deadline", default=None)
+SARASHINA_PROMPT = (
+    "Yomiyasuに基づく日本語校正を依頼します。次のJSONのsourceが校正する原文です。"
+    "style_notesは文体の希望です。規則資料の例文ではなくsourceの全文を読み、"
+    "明確な誤字・脱字・助詞の重複を検出してeditsに入れてください。小説の作風は保ちます。"
+    "回答は指定のJSONだけです。editsの各案にはbefore・after・reason・ruleの4項目を書いてください。\n\n"
+)
 
 
 class GenerationError(ValueError):
-    def __init__(self, code, message):
+    def __init__(self, code, message, diagnostics=None):
         super().__init__(message)
         self.code = code
+        self.diagnostics = diagnostics
+
+
+@contextmanager
+def generation_budget(deadline):
+    """One wall-clock budget across requests, lock waits, and cooldowns."""
+    token = _DEADLINE.set(deadline)
+    try:
+        yield
+    finally:
+        _DEADLINE.reset(token)
+
+
+def _remaining():
+    deadline = _DEADLINE.get()
+    if deadline is None:
+        return None
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise GenerationError("generation_deadline", "Sarashina校正の時間上限に達しました。途中の修正案は採用せず、原文を残しています。文章を分けて再実行してください。")
+    return remaining
 
 
 class _NoRedirect(HTTPRedirectHandler):
@@ -44,15 +75,23 @@ def _sarashina_slot():
     waiting = not _SARASHINA_LOCK.acquire(blocking=False)
     if waiting:
         progress.report("generation", message="generation_chunk_wait")
-        _SARASHINA_LOCK.acquire()
+        remaining = _remaining()
+        if remaining is None:
+            _SARASHINA_LOCK.acquire()
+        elif not _SARASHINA_LOCK.acquire(timeout=remaining):
+            _remaining()
+            raise GenerationError("generation_deadline", "Sarashinaの送信待ちが時間上限に達しました。原文は残っています。")
     try:
+        _remaining()
         remaining = _SARASHINA_NEXT_REQUEST_AT - time.monotonic()
         if remaining > 0:
             waiting = True
             progress.report("generation", message="generation_chunk_wait")
             while remaining > 0:
-                time.sleep(remaining)
+                budget = _remaining()
+                time.sleep(remaining if budget is None else min(remaining, budget))
                 remaining = _SARASHINA_NEXT_REQUEST_AT - time.monotonic()
+            _remaining()
         if waiting:
             progress.report("generation", message="generation_chunk")
         try:
@@ -83,8 +122,11 @@ def _post_json(endpoint, body, key, provider):
     opener = build_opener(ProxyHandler({}), _NoRedirect())
     try:
         with _sarashina_slot():
-            with opener.open(request, timeout=TIMEOUT_SECONDS) as response:
+            remaining = _remaining()
+            timeout = TIMEOUT_SECONDS if remaining is None else min(TIMEOUT_SECONDS, remaining)
+            with opener.open(request, timeout=timeout) as response:
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
+            _remaining()
         if len(raw) > MAX_RESPONSE_BYTES:
             raise GenerationError("response_too_large", "生成結果がアプリの受信上限を超えています。原文は変更していません。")
         data = json.loads(raw)
@@ -123,7 +165,7 @@ def _validate_schema(value, schema):
         for item in value:
             _validate_schema(item, schema.get("items", {}))
     elif kind == "string":
-        if not isinstance(value, str) or len(value) > schema.get("maxLength", 100000):
+        if not isinstance(value, str) or not schema.get("minLength", 0) <= len(value) <= schema.get("maxLength", 100000):
             raise ValueError("invalid string")
     if "enum" in schema and value not in schema["enum"]:
         raise ValueError("invalid enum")
@@ -198,20 +240,45 @@ def generate(payload, instructions, schema):
         prompt = json.dumps(data_payload, ensure_ascii=False, allow_nan=False)
     except (ValueError, TypeError, UnicodeError, RecursionError):
         raise GenerationError("invalid_request", "生成用の入力をJSONとして扱えません。") from None
+    started = time.monotonic()
     response = _post_json(SARASHINA_ENDPOINT, {
-        "model": model, "messages": [{"role": "system", "content": instructions}, {"role": "user", "content": prompt}],
-        "max_completion_tokens": 8000, "n": 1, "stream": False,
+        "model": model, "messages": [{"role": "system", "content": instructions}, {"role": "user", "content": SARASHINA_PROMPT + prompt}],
+        "max_completion_tokens": SARASHINA_OUTPUT_TOKENS, "temperature": 0.7, "n": 1, "stream": False,
         "response_format": {"type": "json_schema", "json_schema": {"name": "japanese_editor", "schema": schema, "strict": True}},
     }, key, provider)
     identity = _identity(provider, model, response.get("model"))
     choices = response.get("choices")
-    if not isinstance(choices, list) or len(choices) != 1 or not isinstance(choices[0], dict) or choices[0].get("finish_reason") != "stop":
+    if not isinstance(choices, list) or len(choices) != 1 or not isinstance(choices[0], dict):
         raise GenerationError("generation_incomplete", "生成が完了していません。文章を分けて再実行してください。途中の文章は採用していません。")
+    finish = choices[0].get("finish_reason")
+    # Allowlisted counts and hashes only. Never retain manuscript, API errors,
+    # authorization, or arbitrary upstream metadata as application diagnostics.
+    usage = response.get("usage")
+    diagnostics = {"elapsed_seconds": round(time.monotonic() - started, 3),
+                   "temperature": 0.7,
+                   "max_completion_tokens": SARASHINA_OUTPUT_TOKENS,
+                   "finish_reason": finish if finish in ("stop", "length", "tool_calls", "content_filter") else "unknown",
+                   "prompt_adapter_sha256": hashlib.sha256(SARASHINA_PROMPT.encode()).hexdigest(),
+                   "usage": {name: usage[name] for name in ("prompt_tokens", "completion_tokens", "total_tokens")
+                             if isinstance(usage, dict) and type(usage.get(name)) is int and 0 <= usage[name] <= 10000000}}
+    if finish == "length":
+        raise GenerationError("generation_length", "Sarashinaの出力上限に達しました。途中の文章は採用していません。", diagnostics)
+    if finish != "stop":
+        raise GenerationError("generation_incomplete", "生成が完了していません。途中の文章は採用していません。", diagnostics)
     message = choices[0].get("message")
     if not isinstance(message, dict):
         raise GenerationError("invalid_response", "生成APIから本文を読み取れませんでした。")
     text = message.get("content")
-    return {"proposal": _proposal(text, schema), "identity": identity}
+    proposal = _proposal(text, schema)
+    try:
+        content_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    except UnicodeError:
+        raise GenerationError("invalid_proposal", "修正案に不正なUnicode文字が含まれています。原文は変更していません。") from None
+    edits = proposal.get("edits", [])
+    no_ops = sum(isinstance(edit, dict) and edit.get("before") == edit.get("after") for edit in edits)
+    diagnostics.update(raw_edit_count=len(edits), unchanged_edit_count=no_ops,
+                       content_characters=len(text), content_sha256=content_hash)
+    return {"proposal": proposal, "identity": identity, "diagnostics": diagnostics}
 
 
 generate_generation = generate
