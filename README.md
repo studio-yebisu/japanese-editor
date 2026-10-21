@@ -4,14 +4,14 @@ Yomiyasu Studioは日本語の文章を整え、どこを変えたか左右で�
 
 ## ダウンロード
 
-[最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/tag/v0.2.13)
+[最新版と更新内容を見る](https://github.com/studio-yebisu/yomiyasu-studio/releases/tag/v0.2.14)
 
-| 使う環境 | v0.2.13のダウンロード | 提供状況 |
+| 使う環境 | v0.2.14のダウンロード | 提供状況 |
 | --- | --- | --- |
-| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.13/YomiyasuStudio-windows-x64-0.2.13.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
-| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.13/YomiyasuStudio-source-0.2.13.zip) | Pythonで起動する実験版。Mac実機は未検証 |
+| Windows x64 | [Windowsアプリ ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.14/YomiyasuStudio-windows-x64-0.2.14.zip) | 専用ウィンドウ版。実推論の確認範囲は下記参照 |
+| macOS | [ソース ZIP](https://github.com/studio-yebisu/yomiyasu-studio/releases/download/v0.2.14/YomiyasuStudio-source-0.2.14.zip) | Pythonで起動する実験版。Mac実機は未検証 |
 
-ベータ版です。v0.2.13では画面上部の「校正AI」からSarashinaとGeminiを切り替えられます。モデルは誤字を見逃したり、誤った修正を提案したりすることがあります。Deciderの意味判定も、誤字がないことや文章品質の保証にはなりません。Mac実機は未検証です。確認した範囲は [STATUS.md](docs/STATUS.md) を参照してください。
+ベータ版です。v0.2.14では、保留した修正案の表示、コピー失敗時の代替手段、長文の文字数上限の扱いを改善しました。画面上部の「校正AI」からSarashinaとGeminiを切り替えられます。モデルは誤字を見逃したり、誤った修正を提案したりすることがあります。Deciderの意味判定も、誤字がないことや文章品質の保証にはなりません。Mac実機は未検証です。確認した範囲は [STATUS.md](docs/STATUS.md) を参照してください。
 
 起動時にYomiyasu公式の更新を裏で確認し、対応する新版があれば校正方針・参照資料・検査スクリプトをまとめて更新します。同梱版も2.1.0へ更新しました。**旧版からはアプリと共有サービスの両方を更新し、サービスを起動し直してください。** MCPも新版へ登録し直して、新しい会話で使います。[更新と接続の案内](docs/PLUGINS.md#共有サービスの更新)
 
@@ -38,7 +38,7 @@ Mac用の `.app` はまだ用意していません。ブラウザーで使うソ
 3. 「ターミナル」を開きます。ダウンロード先が通常の「ダウンロード」フォルダーなら、次を1行ずつ実行します。
 
 ```sh
-cd "$HOME/Downloads/YomiyasuStudio-source-0.2.13"
+cd "$HOME/Downloads/YomiyasuStudio-source-0.2.14"
 python3 --version
 python3 -B app.py serve
 ```
@@ -189,7 +189,7 @@ python3 -B tools/setup_decider.py --preset mac24
 | Windowsアプリが起動しない | ZIPをすべて展開し、exe・CLI・`_internal` を一緒に置きます。WebView2 Runtimeが必要と出た場合はMicrosoft公式から導入します |
 | `app.py` が見つからない | ターミナルの場所が違います。`app.py` がある展開先フォルダーへ `cd` で移動します |
 | `python` / `python3` が見つからない、版が古い | Pythonを導入してターミナルを開き直します。`--version` で確認し、Macで複数版がある場合は各コマンドの `python3` を `python3.13` に読み替えます |
-| GeminiのCLIが見つからない・版が未対応 | 必要なのは `agy` 1.4.0または1.4.1です。`agy --version` を確認し、導入後はアプリも起動し直します |
+| GeminiのCLIが見つからない・版が未対応 | 対応する `agy` は1.4.0・1.4.1・1.4.4です。`agy --version` を確認し、導入後はアプリも起動し直します |
 | Google認証後も使えない | ブラウザーとCLI両方の完了を確認します。ブラウザーが開かなければ、CLIの案内にある認証URLを自分で開いて手順を続けます。その後「接続状態を更新」を押します |
 | `127.0.0.1:8896` が開かない・使用中と出る | Macはサーバー用ターミナルを確認します。既に本アプリが起動していればその画面を使います。別アプリや旧版が使用中の場合は表示された案内に従います |
 | Deciderの資源不足・未接続 | 空きRAMと導入先を確認します。Sarashina校正は意味判定の準備後に使います。生成をオフにした規則点検は先に使えます。総RAMの容量だけでは起動を判断できません |

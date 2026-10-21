@@ -1,5 +1,5 @@
 {
-  "stage": "source_regressions_and_installed_windows_real_generation_judgment_and_save_observed",
+  "stage": "v0_2_14_installed_windows_and_mcp_checks_plus_prior_generation_records",
   "verified_on": "2026-10-21",
   "spec_consultations": [
     {
@@ -1698,5 +1698,49 @@
       "unchanged": true
     },
     "other_codex_config_preserved": true
+  },
+  "v0_2_14": {
+    "version": "0.2.14",
+    "date": "2026-10-21",
+    "status": "installed_windows_native_and_fresh_mcp_confirmed",
+    "included_source_fix_commit": "2ce9cde9f30da99aac00944135a3eaf39135d3f1",
+    "regressions": {
+      "python": 114,
+      "web_ui": 46,
+      "scope": "Source checks for PR 19; packaging checks and frozen execution additionally performed."
+    },
+    "frozen_cli": "passed",
+    "frozen_gui": "passed",
+    "installed_gui": {
+      "status": "passed",
+      "renderer": "edgechromium",
+      "rules_check": "executed"
+    },
+    "installed_cli_sha256": "bf01088b8835e8e7092e98898a48072cff7b8f571d270c7bb6ae629a3562e075",
+    "fresh_mcp": {
+      "version": "0.2.14",
+      "fresh_stdio_mcp": "passed",
+      "registered_command_matches_installed_cli": true,
+      "held_proposal_count": true,
+      "numeric_risk_flag": true,
+      "document_limit": true,
+      "final_check": "executed",
+      "final_verification": "executed",
+      "crlf_preserved": true,
+      "external_generation": false,
+      "decider_inference": false
+    },
+    "codex_registration": {
+      "updated": true,
+      "other_configuration_preserved": true,
+      "new_chat_required_for_preloaded_mcp": true
+    },
+    "settings_preserved": true,
+    "browser_rules_check": "executed",
+    "limits": [
+      "No new external-generation or PPDD inference run.",
+      "No Mac hardware validation or broad proofreading-quality evaluation.",
+      "Existing loaded Codex sessions may keep an older MCP process."
+    ]
   }
 }
